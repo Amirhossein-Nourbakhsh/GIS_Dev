@@ -1,6 +1,6 @@
 #-------------------------------------------------------------------------------
 # Name:        Extract_Footprint.py
-# Purpose:     Extract footprint of the input images
+# Purpose:     Create seamless map of Mosaic US imagery
 # Author:      Hamid Kiavarz
 # Created:     06/2020
 #-------------------------------------------------------------------------------
