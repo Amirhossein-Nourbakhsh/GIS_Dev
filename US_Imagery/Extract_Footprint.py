@@ -4,7 +4,7 @@
 # Author:      Hamid Kiavarz
 # Created:     06/2020
 #-------------------------------------------------------------------------------
-import arcpy, os ,timeit
+import arcpy, os ,timeit      
 import cx_Oracle
 import json
 from arcpy.sa import *
