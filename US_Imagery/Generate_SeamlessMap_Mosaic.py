@@ -11,20 +11,8 @@ from arcpy.sa import *
 import pandas as pd
 arcpy.CheckOutExtension("Spatial")
 
-if __name__ == '__main__':
-    
-    # raster_Folder = r'\\cabcvan1nas003\doqq\osa\AK\FAIRBANKS NORTH STAR\2006'
-    # raster_Folder = r'\\cabcvan1nas003\doqq\osa\CA\Los Angeles\2009'
-    
-    # raster_Folder = r'C:\Users\HKiavarz\AppData\Local\Temp\scratch'
-    ws =  arcpy.env.scratchFolder
-    arcpy.env.workspace = ws
-    arcpy.env.overwriteOutput = True   
-    arcpy.AddMessage(ws)
-
+def get_Footprint(inputRaster):
     try:
-        inputRaster = arcpy.GetParameterAsText(0)
-        arcpy.AddMessage(inputRaster)
         tmpGDB =os.path.join(ws,r"temp.gdb")
         if not os.path.exists(tmpGDB):
             arcpy.CreateFileGDB_management(ws,r"temp.gdb")
@@ -42,7 +30,6 @@ if __name__ == '__main__':
         arcpy.AddMessage('Start resampling the input raster...')
         start1 = timeit.default_timer()
         rasterProp = arcpy.GetRasterProperties_management(inputRaster, "CELLSIZEX")
-        # int(str(rasterProp))*4
         resample = arcpy.Resample_management(inputRaster,resampleRaster ,4, "NEAREST")
         end1 = timeit.default_timer()
         arcpy.AddMessage(('End resampling the input raster. Duration:', round(end1 -start1,4)))
@@ -121,3 +108,16 @@ if __name__ == '__main__':
         msgs = "ArcPy ERRORS:\n %s\n"%arcpy.GetMessages(2)
         arcpy.AddError(msgs)
         raise
+
+if __name__ == '__main__':
+    
+    ws =  arcpy.env.scratchFolder
+    arcpy.env.workspace = ws
+    arcpy.env.overwriteOutput = True   
+    arcpy.AddMessage(ws)
+    inputRaster = arcpy.GetParameterAsText(0)
+    
+    get_Footprint(inputRaster)
+    
+    
+    
