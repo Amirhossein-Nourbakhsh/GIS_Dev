@@ -135,6 +135,7 @@ if __name__ == '__main__':
     arcpy.env.overwriteOutput = True   
     arcpy.AddMessage(ws)
     inputRaster = arcpy.GetParameterAsText(0)
+    footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic'
     
     startTotal = timeit.default_timer()
     
