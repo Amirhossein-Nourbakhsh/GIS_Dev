@@ -10,10 +10,10 @@ def image_properties(image_path):
 orig_image_file = r'C:\Users\JLoucks\Desktop\imagetest_US'
 arc_image_output = r'C:\Users\JLoucks\Desktop\output_test'
 file_extensions = ('.tif','.tiff','.jpg','.jpeg','.png','.sid')
-for aerial_image in orig_image_file:
+for aerial_image in os.listdir(orig_image_file):
     if aerial_image.endswith(file_extensions):
         image_properties(aerial_image)
     else:
-        pass
+        print aerial_image
 
         
