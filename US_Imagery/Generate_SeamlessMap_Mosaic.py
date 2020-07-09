@@ -6,10 +6,10 @@
 #-------------------------------------------------------------------------------
 import arcpy, os ,timeit      
 import json
+import logging
 from arcpy.sa import *
-
-
 from multiprocessing import Pool
+import os.path
 
 arcpy.CheckOutExtension("Spatial")
 
@@ -22,8 +22,7 @@ def get_spatial_res(imagepath):
     else:
         return str(cellsizeX)
    
-def get_filesize(imagepath,ext):
-    imagepath = imagepath.replace('.TAB',ext)
+def get_filesize(imagepath):
     return str(os.stat(imagepath).st_size)
 def get_imagepath(imagepath,ext):
     imagepath = imagepath.replace('.TAB',ext)
@@ -40,23 +39,39 @@ def get_year(filename,netpath):
     for item in x:
         if item in no_years:
              return item
-def get_Image_Metadata(imagepath):
-    dpi = 'NA'
+        
+def get_ImageName(inputFile):
+    fileName = []
+    if os.path.exists(inputFile):
+        tab_File = open(inputFile, 'r')
+        all_lines = tab_File.readlines()
+        for line in all_lines:
+            if 'File' in line:
+                fileName = line.split('"')[1::2]
+                return fileName
+    else:
+        return fileName
+def get_Image_Metadata(imagepath,extension,FID):
+    originalFID = 'NA'
     bits = 'NA'
-    comp = 'NA'
     width = 'NA'
     length = 'NA'
-    # imagepath = filepath.replace('TAB',ext)
+    ext = 'NA'
+    geoRef = 'Y'
+    fileSize = 'NA'
     spatial_res = 'NA'
+    
+    originalFID = str(FID)
     bits = arcpy.GetRasterProperties_management(imagepath,'VALUETYPE')
-    dpi = arcpy.GetRasterProperties_management(imagepath,'CELLSIZEX')
     width = arcpy.GetRasterProperties_management(imagepath,'COLUMNCOUNT')
     length = arcpy.GetRasterProperties_management(imagepath,'ROWCOUNT')
+    ext = extension.split('.')[1]
+    fileSize = get_filesize(imagepath)
     spatial_res = get_spatial_res(imagepath)
     desc = arcpy.Describe(imagepath)
     year = get_year(desc.baseName,desc.path)
     
-    return [bits,width,length,imagepath,spatial_res,year]
+    return [originalFID, bits, width, length, ext, geoRef, fileSize, imagepath, spatial_res, year]
 def get_Footprint(inputRaster):
     try:
         ws = arcpy.env.scratchFolder
@@ -155,10 +170,14 @@ def get_Footprint(inputRaster):
         arcpy.AddError(msgs)
         raise
 def UpdateSeamlessFC(DQQQ_footprint_FC,metaData,ft_Polygon):
+    arcpy.AddMessage('Start Uploading to seamless FC...')
+    start7 = timeit.default_timer() 
     srWGS84 = arcpy.SpatialReference('WGS 1984')
-    insertRow = arcpy.da.InsertCursor(DQQQ_footprint_FC, ['BITS','WIDTH','LENGTH','IMAGEPATH','SPATIAL_RESOLUTION','YEAR','SHAPE@'])
-    rowtuple=[str(metaData[0]),str(metaData[1]),str(metaData[2]),str(metaData[3]),str(metaData[4]),str(metaData[5]),ft_Polygon]
+    insertRow = arcpy.da.InsertCursor(DQQQ_footprint_FC, ['Original_FID','BITS','WIDTH','LENGTH','EXT','GEOREF','FILESIZE','IMAGEPATH','SPATIAL_RESOLUTION','YEAR','SHAPE@'])
+    rowtuple=[str(metaData[0]),str(metaData[1]),str(metaData[2]),str(metaData[3]),str(metaData[4]),str(metaData[5]),str(metaData[6]),str(metaData[7]),str(metaData[8]),str(metaData[9]),ft_Polygon]
     insertRow.insertRow(rowtuple)
+    end7 = timeit.default_timer()
+    arcpy.AddMessage(('End Uploading to seamless FC. Duration:', round(end7 -start7,4)))
     del insertRow
 
 if __name__ == '__main__':
@@ -168,31 +187,36 @@ if __name__ == '__main__':
     arcpy.env.overwriteOutput = True   
     arcpy.AddMessage(ws)
     inputRaster = arcpy.GetParameterAsText(0)
-    DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic'
+    DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic_test'
     DQQQ_ALL_FC = r'F:\Aerial_US\USImagery\Data\DOQQ_ALL.shp'
+    
+    # logger = logging.getLogger(__name__)
+    # logger.setLevel(logging.DEBUG)
+    # handler = logging.FileHandler(os.path.join(connectionPath,r"python\log\USTopoSearch_Terracon_Log.txt"))
+    # handler.setLevel(logging.DEBUG)
+    # logger.addHandler(handler)
     
     startTotal = timeit.default_timer()
     
     params =[]
-    # params = [[r'\\cabcvan1nas003\doqq\201x\MA\BARNSTABLE\2014\ortho_1-1_1n_s_ma001_2014_1.sid', 'a'],[r'\\cabcvan1nas003\doqq\201x\MA\FRANKLIN\2014\ortho_1-1_1n_s_ma011_2014_1.sid','b']]
-    # pool = Pool(processes=2)
-    # pool.map(get_Footprint, params)
-    
-    # year = get_year('ortho_1-1_1n_s_ma003_2014_1','\\nas2520\doqq\201x\MA\BERKSHIRE\2014\ortho_1-1_1n_s_ma003_2014_1.TAB')
-    # pool.close()
-    
-    # get_Footprint(r'\\cabcvan1nas003\doqq\201x\MA\BARNSTABLE\2014\ortho_1-1_1n_s_ma001_2014_1.sid')
-    
-    with arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE_']) as dqq_cursor:
+    expression = "FID >= 34 AND FID < 40"
+    # expression = "FID = 16"
+    # i = 0
+    with arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE_'],where_clause=expression) as dqq_cursor:
          for row in dqq_cursor:
-            if row[0] > 4 :
-                 break   
+            # if i > 10:
+            #     break   
             print('FID = {}, Image = {}'.format(row[0], row[1])) 
-            rasterPath = row[1].replace('nas2520','cabcvan1nas003')
-            params.append([rasterPath.replace('TAB','sid'),str(row[0])])
-            footprint_Polygon = get_Footprint(rasterPath.replace('.TAB','.sid'))
-            metaData = get_Image_Metadata(rasterPath.replace('.TAB','.sid'))
-            UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
+            tabfile_Path = row[1].replace('nas2520','cabcvan1nas003')
+            # i += 1
+            if len(get_ImageName(tabfile_Path)) > 0: # check if path of image is exist
+                fileName = get_ImageName(tabfile_Path)
+                ext = os.path.splitext(fileName[0])[1]
+                image_Path = tabfile_Path.replace('.TAB',ext)
+                params.append([get_ImageName(image_Path),str(row[0])])
+                metaData = get_Image_Metadata(image_Path,ext,row[0])
+                footprint_Polygon = get_Footprint(image_Path)
+                UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
 
     # pool = Pool(processes=2)
     # pool.map(get_Footprint, params)       
