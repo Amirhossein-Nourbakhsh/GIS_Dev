@@ -3,6 +3,7 @@
 
 import arcpy
 import cx_Oracle
+import json
 import os
 import shutil
 import timeit
@@ -18,6 +19,22 @@ class Credential:
 class ReportPath:
     caaerial_prod= r"\\CABCVAN1OBI007\ErisData\prod\aerial_ca"
     caaerial_test= r"\\CABCVAN1OBI007\ErisData\test\aerial_ca"
+class TestConfig:
+    machine_path=Machine.machine_test
+    caaerial_path = ReportPath.caaerial_test
+
+    def __init__(self):
+        machine_path=self.machine_path
+        self.LAYER=LAYER(machine_path)
+        self.MXD=MXD(machine_path)
+class ProdConfig:
+    machine_path=Machine.machine_prod
+    caaerial_path = ReportPath.caaerial_prod
+
+    def __init__(self):
+        machine_path=self.machine_path
+        self.LAYER=LAYER(machine_path)
+        self.MXD=MXD(machine_path)
 class Oracle:
     # static variable: oracle_functions
     oracle_functions = {'getorderinfo':"eris_gis.getOrderInfo"
@@ -35,7 +52,7 @@ class Oracle:
             self.oracle_connection = cx_Oracle.connect(self.oracle_credential)
             self.cursor = self.oracle_connection.cursor()
         except cx_Oracle.Error as e:
-            print(e,'Oralce connection failed, review credentials.')
+            print(e,'Oracle connection failed, review credentials.')
     def close_connection(self):
         self.cursor.close()
         self.oracle_connection.close()
@@ -84,20 +101,36 @@ class Oracle:
             raise Exception("Bad Function")
         finally:
             self.close_connection()
+## Custom Exceptions ##
+class EmptySingleFrame(Exception):
+    pass
+class EmptyDOQQ(Exception):
+    pass
 
 if __name__ == '__main__':
     start = timeit.default_timer()
     orderID = '828239'#arcpy.GetParameterAsText(0)
+    scratch = r'C:\Users\JLoucks\Documents\JL\usaerial'
+    job_directory = r'C:\Users\JLoucks\Documents\JL'
 
     ##get info for order from oracle
-    try:
-        orderInfo = Oracle('prod').call_function('getorderinfo',orderID)
-        OrderNumText = str(orderInfo['ORDER_NUM'])
-    try:
-        #call Oracle to get list of images
-        image_candidates = {[]}
 
-        if image_candidates == {}: #this will be oracle message
-            arcpy.AddMessage('No images available for this location')
-        else:
-            #### Run process and create job folder
+    orderInfo = Oracle('test').call_function('getorderinfo',orderID)
+    OrderNumText = str(orderInfo['ORDER_NUM'])
+    
+
+    #call Oracle to get list of images
+    image_candidates = {'singleframe':[]}
+    try:
+        job_folder = os.path.join(os.path.join(job_directory,OrderNumText))
+        org_image_folder = os.path.join(job_folder,'org')
+        if os.path.exists(job_folder):
+            shutil.rmtree(job_folder)
+        os.mkdir(job_folder)
+        os.mkdir(org_image_folder)
+        if len(image_candidates['singleframe']) == 0:
+            raise EmptySingleFrame
+        for singleframe_image in image_candidates['singleframe']:
+            arcpy.Copy_management(singleframe_image[0],org_image_folder)
+    except EmptySingleFrame:
+        arcpy.AddWarning('No single frame image candidates')
