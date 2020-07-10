@@ -120,7 +120,7 @@ if __name__ == '__main__':
     
 
     #call Oracle to get list of images
-    image_candidates = {'singleframe':[]}
+    image_candidates = {'singleframe':[imagename,path,year,source,auid]}
     try:
         job_folder = os.path.join(os.path.join(job_directory,OrderNumText))
         org_image_folder = os.path.join(job_folder,'org')
@@ -131,6 +131,7 @@ if __name__ == '__main__':
         if len(image_candidates['singleframe']) == 0:
             raise EmptySingleFrame
         for singleframe_image in image_candidates['singleframe']:
+            ### CONVERSION OR COPY???###
             arcpy.Copy_management(singleframe_image[0],org_image_folder)
     except EmptySingleFrame:
         arcpy.AddWarning('No single frame image candidates')
