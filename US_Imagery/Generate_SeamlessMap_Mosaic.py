@@ -10,13 +10,14 @@ import logging
 from arcpy.sa import *
 from multiprocessing import Pool
 import os.path
+import logging
 
 arcpy.CheckOutExtension("Spatial")
 
 def get_spatial_res(imagepath):
 
-    cellsizeX = arcpy.GetRasterProperties_management(imagepath,'CELLSIZEX')
-    cellsizeY = arcpy.GetRasterProperties_management(imagepath,'CELLSIZEY')
+    cellsizeX = int(str(arcpy.GetRasterProperties_management(imagepath,'CELLSIZEX')))
+    cellsizeY = int(str(arcpy.GetRasterProperties_management(imagepath,'CELLSIZEY')))
     if cellsizeY > cellsizeX:
         return str(cellsizeY)
     else:
@@ -41,16 +42,17 @@ def get_year(filename,netpath):
              return item
         
 def get_ImageName(inputFile):
-    fileName = []
+    fileName = ""
     if os.path.exists(inputFile):
         tab_File = open(inputFile, 'r')
         all_lines = tab_File.readlines()
+        
         for line in all_lines:
             if 'File' in line:
-                fileName = line.split('"')[1::2]
-                return fileName
-    else:
-        return fileName
+                # fileName = line.split('"')[1::2]
+                fileName = line.split('"')[1]
+                break
+    return fileName
 def get_Image_Metadata(imagepath,extension,FID):
     originalFID = 'NA'
     bits = 'NA'
@@ -188,36 +190,42 @@ if __name__ == '__main__':
     arcpy.AddMessage(ws)
     inputRaster = arcpy.GetParameterAsText(0)
     DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic_test'
+    logfile = r'F:\Aerial_US\USImagery\logs\US_Imagery_SeamlessMap.txt'
     DQQQ_ALL_FC = r'F:\Aerial_US\USImagery\Data\DOQQ_ALL.shp'
     
-    # logger = logging.getLogger(__name__)
-    # logger.setLevel(logging.DEBUG)
-    # handler = logging.FileHandler(os.path.join(connectionPath,r"python\log\USTopoSearch_Terracon_Log.txt"))
-    # handler.setLevel(logging.DEBUG)
-    # logger.addHandler(handler)
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.WARNING)
+    handler = logging.FileHandler(logfile)
+    handler.setLevel(logging.WARNING)
+    logger.addHandler(handler)
     
     startTotal = timeit.default_timer()
     
     params =[]
-    expression = "FID >= 34 AND FID < 40"
-    # expression = "FID = 16"
-    # i = 0
-    with arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE_'],where_clause=expression) as dqq_cursor:
-         for row in dqq_cursor:
-            # if i > 10:
-            #     break   
-            print('FID = {}, Image = {}'.format(row[0], row[1])) 
-            tabfile_Path = row[1].replace('nas2520','cabcvan1nas003')
-            # i += 1
-            if len(get_ImageName(tabfile_Path)) > 0: # check if path of image is exist
-                fileName = get_ImageName(tabfile_Path)
-                ext = os.path.splitext(fileName[0])[1]
-                image_Path = tabfile_Path.replace('.TAB',ext)
-                params.append([get_ImageName(image_Path),str(row[0])])
-                metaData = get_Image_Metadata(image_Path,ext,row[0])
-                footprint_Polygon = get_Footprint(image_Path)
-                UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
-
+    expression = "FID >= 101 AND FID <= 200"
+    # expression = "FID = 35"
+    # rows =  arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE_'],where_clause=expression) as dqq_cursor:
+    rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE_'],where_clause=expression)
+    for row in rows:
+        startDataset = timeit.default_timer()   
+        arcpy.AddMessage('-------------------------------------------------------------------------------------------------')
+        arcpy.AddMessage('Start FID: ' + str(row[0]) + ' - processing Dataset: ' + row[1])
+        tabfile_Path = row[1].replace('nas2520','cabcvan1nas003')
+        fileName = get_ImageName(tabfile_Path)
+        if len(fileName) > 0:
+            
+            ### check if path of image is exist
+            ext = '.' + fileName.split('.')[1]
+            image_Path = tabfile_Path.replace('.TAB',ext)
+            # params.append([get_ImageName(image_Path),str(row[0])])
+            metaData = get_Image_Metadata(image_Path,ext,row[0])
+            footprint_Polygon = get_Footprint(image_Path)
+            UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
+        else:
+             arcpy.AddWarning("FID : {} - Path or Images is not valid or available".format(row[0]))
+             logger.warning("FID : {} - Path or Images is not valid or available for :  {} ".format(row[0], row[1]))
+        endDataset = timeit.default_timer()
+        arcpy.AddMessage(('End FID: ' + str(row[0]) + ' - processed Dataset. Duration:', round(endDataset - startDataset,4)))
     # pool = Pool(processes=2)
     # pool.map(get_Footprint, params)       
              
