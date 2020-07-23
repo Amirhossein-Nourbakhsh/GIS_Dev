@@ -3,10 +3,12 @@
 
 import arcpy
 import cx_Oracle
+import contextlib
 import json
 import os
 import shutil
 import timeit
+import urllib
 start1 = timeit.default_timer()
 arcpy.env.overwriteOutput = True
 
@@ -102,25 +104,37 @@ class Oracle:
         finally:
             self.close_connection()
 ## Custom Exceptions ##
-class EmptySingleFrame(Exception):
+class EmptyImage(Exception):
     pass
-class EmptyDOQQ(Exception):
-    pass
+def get_ordergeometry(coordinates,geometry_type):
+    ordergeometry = os.path.join(scratch,'OrderGeometry.shp')
+    if geometry_type == 'POINT':
+        arcpy.CreateFeatureclass_management(scratch,'OrderGeometry.shp','POINT','','','',4326)
+        cursor = arcpy.da.InsertCursor(ordergeometry,["SHAPE@XY"])
+        print coordinates[0]
+        xy = (coordinates[0])
 
 if __name__ == '__main__':
     start = timeit.default_timer()
     orderID = '828239'#arcpy.GetParameterAsText(0)
     scratch = r'C:\Users\JLoucks\Documents\JL\usaerial'
     job_directory = r'C:\Users\JLoucks\Documents\JL'
+    conversion_input = r'\\192.168.136.164\v2_usaerial\input'
+    conversion_output = r'\\192.168.136.164\v2_usaerial\output'
+    Conversion_URL = r'http://erisservice3.ecologeris.com/ErisInt/USAerialAppService_test/USAerial.svc/USAerialImagePromote_temp?inputfile='
 
     ##get info for order from oracle
 
     orderInfo = Oracle('test').call_function('getorderinfo',orderID)
     OrderNumText = str(orderInfo['ORDER_NUM'])
+    get_ordergeometry(orderInfo['ORDER_GEOMETRY']['GEOMETRY'],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'])
     
 
     #call Oracle to get list of images
-    image_candidates = {'singleframe':[imagename,path,year,source,auid]}
+    #image_candidates = {'singleframe':[imagename,path,year,source,auid], 'doqq':[imagename,path,year,source,auid]} ## inhouse only
+    image_candidates = {'AR1VBIO00030260': {'IMAGE_NAME' :r'66_USGS_AR1VBIO00030260.tif', 'IMAGE_PATH' : r'C:\Users\JLoucks\Desktop\Mike_samples\processed\arc_info_added\66_USGS_AR1VBIO00030260.tif',
+    'YEAR':'1966', 'SOURCE':'USGS','TYPE':'singleframe'}, 'AR1VBIO00030260': {'IMAGE_NAME' :r'66_USGS_AR1VBIO00030260.tif', 'IMAGE_PATH' : r'C:\Users\JLoucks\Desktop\Mike_samples\processed\arc_info_added\66_USGS_AR1VBIO00030260.tif',
+    'YEAR':'1966', 'SOURCE':'USGS','TYPE':'doqq'}}
     try:
         job_folder = os.path.join(os.path.join(job_directory,OrderNumText))
         org_image_folder = os.path.join(job_folder,'org')
@@ -128,10 +142,23 @@ if __name__ == '__main__':
             shutil.rmtree(job_folder)
         os.mkdir(job_folder)
         os.mkdir(org_image_folder)
-        if len(image_candidates['singleframe']) == 0:
-            raise EmptySingleFrame
-        for singleframe_image in image_candidates['singleframe']:
+        if len(list(image_candidates.keys())) == 0:
+            raise EmptyImage
+        for inhouse_image in list(image_candidates.keys()):
             ### CONVERSION OR COPY???###
-            arcpy.Copy_management(singleframe_image[0],org_image_folder)
-    except EmptySingleFrame:
-        arcpy.AddWarning('No single frame image candidates')
+            image_auid = inhouse_image
+            image_name = image_candidates[image_auid]['IMAGE_NAME']
+            image_path = image_candidates[image_auid]['IMAGE_PATH']
+            image_year = image_candidates[image_auid]['YEAR']
+            image_source = image_candidates[image_auid]['SOURCE']
+            image_type = image_candidates[image_auid]['TYPE']
+            #arcpy.Copy_management(image_path,os.path.join(conversion_input,image_auid+'.'+image_name.split('.')[-1]))
+            arcpy.CopyRaster_management (image_path, os.path.join(conversion_input,image_auid+'.'+image_name.split('.')[-1]), '', '', '', '', 'ColormapToRGB', '8_BIT_UNSIGNED')
+            #try:
+            call_url = Conversion_URL + image_auid + '.' + image_name.split('.')[-1]
+            contextlib.closing(urllib.urlopen(call_url))
+            #except:
+                #arcpy.AddError('Unable to convert image')
+    except EmptyImage:
+        arcpy.AddWarning('No image candidates')
+
