@@ -19,7 +19,7 @@ def get_type(path):
     else:
         return 'IMAGE'
 def get_extension(path):
-    extensions = ['.tif','.jpg','.sid','.png','.tiff','.jpeg']
+    extensions = ['.tif','.jpg','.sid','.png','.tiff','.jpeg','.tif','.jp2']
     foundext = []
     for ext in extensions:
         if os.path.exists(path.replace('.TAB',ext)):
@@ -155,14 +155,17 @@ def get_imagepath(imagepath,ext):
     imagepath = imagepath.replace('.TAB',ext)
     return imagepath
 def get_spatialres(imagepath,ext):
-    imagepath = imagepath.replace('.TAB',ext)
+    try:
+        imagepath = imagepath.replace('.TAB',ext)
 
-    cellsizeX = arcpy.GetRasterProperties_management(imagepath,'CELLSIZEX')
-    cellsizeY = arcpy.GetRasterProperties_management(imagepath,'CELLSIZEY')
-    if cellsizeY > cellsizeX:
-        return str(cellsizeY)
-    else:
-        return str(cellsizeX)
+        cellsizeX = arcpy.GetRasterProperties_management(imagepath,'CELLSIZEX')
+        cellsizeY = arcpy.GetRasterProperties_management(imagepath,'CELLSIZEY')
+        if cellsizeY > cellsizeX:
+            return str(cellsizeY)
+        else:
+            return str(cellsizeX)
+    except Exception:
+        return '0'
 
 
 master_xl = r'C:\Users\JLoucks\Desktop\FULLOSA\current_total_osa_SF.csv'
@@ -197,7 +200,7 @@ for item in r:
     item.append(get_source(filename,netpath))
     item.append(get_id(filename))
 
-    if get_extension(netpath) in ['.tif','.jpg','.sid','.png','.tiff','.jpeg']:
+    if get_extension(netpath) in ['.tif','.jpg','.sid','.png','.tiff','.jpeg','.tif','.jp2']:
         metadata = get_filemetadata(netpath, get_extension(netpath))
         item.append(metadata[0])
         item.append(metadata[1])
@@ -218,7 +221,7 @@ for item in r:
         item.append('No readable spatial res')
     #print item
     data.append(item)
-with open(r'C:\Users\JLoucks\Desktop\meta_with__cell.csv','wb') as result_file:
+with open(r'C:\Users\JLoucks\Desktop\meta_with_cell_20200720.csv','wb') as result_file:
     wr = csv.writer(result_file,dialect='excel')
     wr.writerows(data)
 result_file.close()
