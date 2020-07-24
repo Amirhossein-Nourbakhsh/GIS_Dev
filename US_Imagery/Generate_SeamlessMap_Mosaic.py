@@ -16,8 +16,8 @@ arcpy.CheckOutExtension("Spatial")
 
 def get_spatial_res(imagepath):
 
-    cellsizeX = int(str(arcpy.GetRasterProperties_management(imagepath,'CELLSIZEX')))
-    cellsizeY = int(str(arcpy.GetRasterProperties_management(imagepath,'CELLSIZEY')))
+    cellsizeX = float(str(arcpy.GetRasterProperties_management(imagepath,'CELLSIZEX')))
+    cellsizeY = float(str(arcpy.GetRasterProperties_management(imagepath,'CELLSIZEY')))
     if cellsizeY > cellsizeX:
         return str(cellsizeY)
     else:
@@ -40,19 +40,43 @@ def get_year(filename,netpath):
     for item in x:
         if item in no_years:
              return item
-        
-def get_ImageName(inputFile):
-    fileName = ""
-    if os.path.exists(inputFile):
-        tab_File = open(inputFile, 'r')
-        all_lines = tab_File.readlines()
-        
-        for line in all_lines:
-            if 'File' in line:
-                # fileName = line.split('"')[1::2]
-                fileName = line.split('"')[1]
-                break
-    return fileName
+def get_file_extension(fileName):
+    extArray = fileName.split('.')
+    ext = '.' + extArray[len(extArray)-1]
+    if ext == '.alg':
+        ext = '.jp2'
+    return ext       
+def get_ImagePathandExt(inputFile):
+    image_Path = ""
+    ext=""
+    tab_File = open(inputFile, 'r')
+    all_lines = tab_File.readlines()
+    for line in all_lines:
+        if 'File' in line:
+            file = line.split('"')[1]
+            ext = get_file_extension(file)
+            if os.path.isfile(inputFile.replace(".TAB", ext)):
+                image_Path = inputFile.replace(".TAB", ext)
+                print("yes1")
+            elif os.path.isfile(os.path.join(os.path.dirname((os.path.dirname(inputFile))),os.path.basename(file))):
+                image_Path = os.path.join(os.path.dirname((os.path.dirname(inputFile))),os.path.basename(file))
+                print("yes2")
+            elif len(os.path.dirname(file)) > 0: ## if there is a folder and file name in TAB file, extract file and its direct folder then replace by TAB folder
+                print("yes3")
+                splt = file.split('\\')
+                filepPath = os.path.join(splt[len(splt)-2],splt[len(splt)-1])
+                tabFile_parentFolder = os.path.dirname((inputFile))
+                print(os.path.join(tabFile_parentFolder,filepPath))
+                if os.path.isfile(os.path.join(tabFile_parentFolder,filepPath)):
+                    image_Path = os.path.join(tabFile_parentFolder,filepPath)
+            elif os.path.isfile(os.path.join(os.path.dirname(inputFile), file)): ## if only file name is in TAB file, join it to TAB folder
+                print("yes4")
+                image_Path = os.path.join(os.path.dirname(inputFile), file)
+            # if os.path.isfile(os.path.join(r'\\cabcvan1nas003\doqq\200x\TX\_FULL_STATE_COVERAGE\2005\UTM\15',os.path.basename(file))):
+            #     image_Path = os.path.join(r'\\cabcvan1nas003\doqq\200x\TX\_FULL_STATE_COVERAGE\2005\UTM\15',os.path.basename(file))
+
+            break
+    return [image_Path,ext]
 def get_Image_Metadata(imagepath,extension,FID):
     originalFID = 'NA'
     bits = 'NA'
@@ -189,9 +213,11 @@ if __name__ == '__main__':
     arcpy.env.overwriteOutput = True   
     arcpy.AddMessage(ws)
     inputRaster = arcpy.GetParameterAsText(0)
-    DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic_test'
-    logfile = r'F:\Aerial_US\USImagery\logs\US_Imagery_SeamlessMap.txt'
+    DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic'
+    # DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic_Envelope'
+    logfile = r'C:\Users\HKiavarz\Documents\log2.txt'
     DQQQ_ALL_FC = r'F:\Aerial_US\USImagery\Data\DOQQ_ALL.shp'
+    
     
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.WARNING)
@@ -201,35 +227,178 @@ if __name__ == '__main__':
     
     startTotal = timeit.default_timer()
     
+    srWGS84 = arcpy.SpatialReference('WGS 1984')
+    
     params =[]
-    expression = "FID >= 101 AND FID <= 200"
-    # expression = "FID = 35"
-    # rows =  arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE_'],where_clause=expression) as dqq_cursor:
-    rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE_'],where_clause=expression)
-    for row in rows:
-        startDataset = timeit.default_timer()   
-        arcpy.AddMessage('-------------------------------------------------------------------------------------------------')
-        arcpy.AddMessage('Start FID: ' + str(row[0]) + ' - processing Dataset: ' + row[1])
-        tabfile_Path = row[1].replace('nas2520','cabcvan1nas003')
-        fileName = get_ImageName(tabfile_Path)
-        if len(fileName) > 0:
+    
+    # expression = "FID >= 170000 AND FID <= 170691"
+    # expression = "FID = 170000"
+    list = [70015,
+70016,
+70017,
+70018,
+70019,
+70020,
+70021,
+70022,
+70023,
+70024,
+70025,
+70026,
+70027,
+70028,
+70029,
+70030,
+70031,
+70032,
+70033,
+70034,
+70035,
+70036,
+70037,
+70038,
+70039,
+70040,
+70041,
+70042,
+70043,
+70044,
+70045,
+70046,
+70047,
+70048,
+70049,
+70050,
+70051,
+70052,
+70053,
+70054,
+70055,
+70056,
+70057,
+70058,
+70059,
+70060,
+70061,
+70062,
+70063,
+70064,
+70065,
+70066,
+70067,
+70068,
+70069,
+70070,
+70071,
+70072,
+70073,
+70074,
+70268,
+70269,
+70270,
+70271,
+70272,
+70273,
+70274,
+70275,
+70276,
+70277,
+70278,
+70279,
+70280,
+70281,
+70282,
+70283,
+70284,
+70285,
+70286,
+70287,
+70288,
+70289,
+70290,
+70291,
+70292,
+70293,
+70294,
+70295,
+70296,
+70297,
+70298,
+70299,
+70300,
+70301,
+70302,
+70303,
+70304,
+70305,
+70306,
+70307,
+70308,
+70309,
+70310,
+70311,
+70312,
+70313,
+70314,
+70315,
+70316,
+70317,
+70318,
+70319,
+70320,
+70321,
+70322,
+70323,
+70324,
+70325,
+70326,
+70327,
+70328,
+70329,
+70330,
+70331,
+70332,
+70333,
+70334,
+70335,
+70336
+]
+    rowExist = 0
+    for item in list:
+        expression = "FID = " + str(item)
+        # expressionFC = "Original_FID = '" + str(item) + "'"
+        # try:
+        #     Original_FID = arcpy.da.SearchCursor(DQQQ_footprint_FC, ['Original_FID'],expression).next()[0]
+        #     rowExist = 1
+        # except StopIteration:
+        #     rowExist = 0
+        # if rowExist == 0: # check if it is already processed
+        rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE_','SHAPE@'],where_clause=expression)
+        for row in rows:
+            startDataset = timeit.default_timer()   
+            arcpy.AddMessage('-------------------------------------------------------------------------------------------------')
+            arcpy.AddMessage('Start FID: ' + str(row[0]) + ' - processing Dataset: ' + row[1])
+            tabfile_Path = row[1].replace('nas2520','cabcvan1nas003')
+            if os.path.isfile(tabfile_Path) > 0:
+                imagePathInfo = get_ImagePathandExt(tabfile_Path)
+                if len(imagePathInfo[0]) > 0:
+                    if imagePathInfo[1].lower() in ['.tif','.jpg','.sid','.png','.tiff','.jpeg','.jp2','.ecw']:
+                        metaData = get_Image_Metadata(imagePathInfo[0],imagePathInfo[1],row[0])
+                        # footprint_Polygon = get_Footprint(image_Path)
+                        footprint_Polygon = row[2].projectAs(srWGS84)
+                        UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
+                    else:
+                        arcpy.AddWarning("FID : {} - Input raster: is not the type of Composite Geodataset, or does not exist".format(row[0]))
+                        logger.warning("FID :, {}, Input raster: is not the type of Composite Geodataset, or does not exist:, {} ".format(row[0], row[1]))
+                else:
+                    arcpy.AddWarning("FID :  {} -  Images is not available forthis path : {} ".format(row[0], row[1]))
+                    logger.warning("FID : , {}, Images is not available for this path :, {} ".format(row[0], row[1]))
+            else:
+                arcpy.AddWarning("FID : {} - Tab file Path is not valid or available for: ".format(row[0]))
+                logger.warning("FID : , {}, Tab file Path is not valid or available for:, {} ".format(row[0], row[1]))
+            endDataset = timeit.default_timer()
+            arcpy.AddMessage(('End FID: ' + str(row[0]) + ' - processed Dataset. Duration:', round(endDataset - startDataset,4)))    
             
-            ### check if path of image is exist
-            ext = '.' + fileName.split('.')[1]
-            image_Path = tabfile_Path.replace('.TAB',ext)
-            # params.append([get_ImageName(image_Path),str(row[0])])
-            metaData = get_Image_Metadata(image_Path,ext,row[0])
-            footprint_Polygon = get_Footprint(image_Path)
-            UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
-        else:
-             arcpy.AddWarning("FID : {} - Path or Images is not valid or available".format(row[0]))
-             logger.warning("FID : {} - Path or Images is not valid or available for :  {} ".format(row[0], row[1]))
-        endDataset = timeit.default_timer()
-        arcpy.AddMessage(('End FID: ' + str(row[0]) + ' - processed Dataset. Duration:', round(endDataset - startDataset,4)))
-    # pool = Pool(processes=2)
-    # pool.map(get_Footprint, params)       
-             
-        
     endTotal= timeit.default_timer()
     arcpy.AddMessage(('Total Duration:', round(endTotal -startTotal,4)))
     
