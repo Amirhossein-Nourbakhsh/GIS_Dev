@@ -233,171 +233,42 @@ if __name__ == '__main__':
     
     # expression = "FID >= 170000 AND FID <= 170691"
     # expression = "FID = 170000"
-    list = [70015,
-70016,
-70017,
-70018,
-70019,
-70020,
-70021,
-70022,
-70023,
-70024,
-70025,
-70026,
-70027,
-70028,
-70029,
-70030,
-70031,
-70032,
-70033,
-70034,
-70035,
-70036,
-70037,
-70038,
-70039,
-70040,
-70041,
-70042,
-70043,
-70044,
-70045,
-70046,
-70047,
-70048,
-70049,
-70050,
-70051,
-70052,
-70053,
-70054,
-70055,
-70056,
-70057,
-70058,
-70059,
-70060,
-70061,
-70062,
-70063,
-70064,
-70065,
-70066,
-70067,
-70068,
-70069,
-70070,
-70071,
-70072,
-70073,
-70074,
-70268,
-70269,
-70270,
-70271,
-70272,
-70273,
-70274,
-70275,
-70276,
-70277,
-70278,
-70279,
-70280,
-70281,
-70282,
-70283,
-70284,
-70285,
-70286,
-70287,
-70288,
-70289,
-70290,
-70291,
-70292,
-70293,
-70294,
-70295,
-70296,
-70297,
-70298,
-70299,
-70300,
-70301,
-70302,
-70303,
-70304,
-70305,
-70306,
-70307,
-70308,
-70309,
-70310,
-70311,
-70312,
-70313,
-70314,
-70315,
-70316,
-70317,
-70318,
-70319,
-70320,
-70321,
-70322,
-70323,
-70324,
-70325,
-70326,
-70327,
-70328,
-70329,
-70330,
-70331,
-70332,
-70333,
-70334,
-70335,
-70336
+    list = [
 ]
     rowExist = 0
     for item in list:
-        expression = "FID = " + str(item)
-        # expressionFC = "Original_FID = '" + str(item) + "'"
-        # try:
-        #     Original_FID = arcpy.da.SearchCursor(DQQQ_footprint_FC, ['Original_FID'],expression).next()[0]
-        #     rowExist = 1
-        # except StopIteration:
-        #     rowExist = 0
-        # if rowExist == 0: # check if it is already processed
-        rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE_','SHAPE@'],where_clause=expression)
-        for row in rows:
-            startDataset = timeit.default_timer()   
-            arcpy.AddMessage('-------------------------------------------------------------------------------------------------')
-            arcpy.AddMessage('Start FID: ' + str(row[0]) + ' - processing Dataset: ' + row[1])
-            tabfile_Path = row[1].replace('nas2520','cabcvan1nas003')
-            if os.path.isfile(tabfile_Path) > 0:
-                imagePathInfo = get_ImagePathandExt(tabfile_Path)
-                if len(imagePathInfo[0]) > 0:
-                    if imagePathInfo[1].lower() in ['.tif','.jpg','.sid','.png','.tiff','.jpeg','.jp2','.ecw']:
-                        metaData = get_Image_Metadata(imagePathInfo[0],imagePathInfo[1],row[0])
-                        # footprint_Polygon = get_Footprint(image_Path)
-                        footprint_Polygon = row[2].projectAs(srWGS84)
-                        UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
+        expressionFC = "Original_FID = '" + str(item) + "'"
+        try:
+            Original_FID = arcpy.da.SearchCursor(DQQQ_footprint_FC, ['Original_FID'],expressionFC).next()[0]
+            rowExist = 1
+        except StopIteration:
+            rowExist = 0
+        if rowExist == 0: # check if it is already processed
+            rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE_','SHAPE@'],where_clause=expression)
+            for row in rows:
+                startDataset = timeit.default_timer()   
+                arcpy.AddMessage('-------------------------------------------------------------------------------------------------')
+                arcpy.AddMessage('Start FID: ' + str(row[0]) + ' - processing Dataset: ' + row[1])
+                tabfile_Path = row[1].replace('nas2520','cabcvan1nas003')
+                if os.path.isfile(tabfile_Path) > 0:
+                    imagePathInfo = get_ImagePathandExt(tabfile_Path)
+                    if len(imagePathInfo[0]) > 0:
+                        if imagePathInfo[1].lower() in ['.tif','.jpg','.sid','.png','.tiff','.jpeg','.jp2','.ecw']:
+                            metaData = get_Image_Metadata(imagePathInfo[0],imagePathInfo[1],row[0])
+                            # footprint_Polygon = get_Footprint(image_Path)
+                            footprint_Polygon = row[2].projectAs(srWGS84)
+                            UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
+                        else:
+                            arcpy.AddWarning("FID : {} - Input raster: is not the type of Composite Geodataset, or does not exist".format(row[0]))
+                            logger.warning("FID :, {}, Input raster: is not the type of Composite Geodataset, or does not exist:, {} ".format(row[0], row[1]))
                     else:
-                        arcpy.AddWarning("FID : {} - Input raster: is not the type of Composite Geodataset, or does not exist".format(row[0]))
-                        logger.warning("FID :, {}, Input raster: is not the type of Composite Geodataset, or does not exist:, {} ".format(row[0], row[1]))
+                        arcpy.AddWarning("FID :  {} -  Images is not available forthis path : {} ".format(row[0], row[1]))
+                        logger.warning("FID : , {}, Images is not available for this path :, {} ".format(row[0], row[1]))
                 else:
-                    arcpy.AddWarning("FID :  {} -  Images is not available forthis path : {} ".format(row[0], row[1]))
-                    logger.warning("FID : , {}, Images is not available for this path :, {} ".format(row[0], row[1]))
-            else:
-                arcpy.AddWarning("FID : {} - Tab file Path is not valid or available for: ".format(row[0]))
-                logger.warning("FID : , {}, Tab file Path is not valid or available for:, {} ".format(row[0], row[1]))
-            endDataset = timeit.default_timer()
-            arcpy.AddMessage(('End FID: ' + str(row[0]) + ' - processed Dataset. Duration:', round(endDataset - startDataset,4)))    
+                    arcpy.AddWarning("FID : {} - Tab file Path is not valid or available for: ".format(row[0]))
+                    logger.warning("FID : , {}, Tab file Path is not valid or available for:, {} ".format(row[0], row[1]))
+                endDataset = timeit.default_timer()
+                arcpy.AddMessage(('End FID: ' + str(row[0]) + ' - processed Dataset. Duration:', round(endDataset - startDataset,4)))    
             
     endTotal= timeit.default_timer()
     arcpy.AddMessage(('Total Duration:', round(endTotal -startTotal,4)))
