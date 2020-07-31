@@ -1,6 +1,6 @@
 ## Create job folder, pull images from nas, copy images to job folder/clip doqq images for process
 ## may need to pass back json to FE or DB
-
+import sys
 import arcpy
 import cx_Oracle
 import contextlib
@@ -41,7 +41,7 @@ class Oracle:
     # static variable: oracle_functions
     oracle_functions = {'getorderinfo':"eris_gis.getOrderInfo"
     }
-    oracle_procedures = {'getaeriallist':"flow_autoprep.getAerialImageJson",'passclipextent': 'flow_autoprep.setClipImageDetail'}
+    erisapi_procedures = {'getaeriallist':'flow_autoprep.getAerialImageJson','passclipextent': 'flow_autoprep.setClipImageDetail'}
     def __init__(self,machine_name):
         # initiate connection credential
         if machine_name.lower() =='test':
@@ -83,12 +83,10 @@ class Oracle:
             raise Exception("Bad Function")
         finally:
             self.close_connection()
-    def call_erisapi(self,function_name,orderNum='20200310309'):
+    def call_erisapi(self,erisapi_input):
         self.connect_to_oracle()
-        con = cx_Oracle.connect(Credential.oracle_test)
         cursor = self.cursor
-        arg1 = con.createlob(cx_Oracle.CLOB)
-        arg1.write(str({"PROCEDURE":"flow_autoprep.getAerialImageJson", "ORDER_NUM":"20200310309"}))
+        arg1 = erisapi_input
         arg2 = cursor.var(cx_Oracle.CLOB)
         arg3 = cursor.var(cx_Oracle.CLOB)
         arg4 = cursor.var(str)
@@ -96,12 +94,12 @@ class Oracle:
             func = ['eris_api.callOracle']
             if func !=[] and len(func)==1:
                 try:
-                    output = cursor.callproc('eris_api.callOracle',[arg1,arg2,arg3,arg4])
+                    output = cursor.callproc(func[0],[arg1,arg2,arg3,arg4])
                 except ValueError:
                     output = cursor.callproc(func[0],[arg1,arg2,arg3,arg4])
                 except AttributeError:
                     output = cursor.callproc(func[0],[arg1,arg2,arg3,arg4])
-            return output
+            return [output[0],cx_Oracle.LOB.read(output[1]),cx_Oracle.LOB.read(output[2]),output[3]]
         except cx_Oracle.Error as e:
             raise Exception(("Oracle Failure",e.message))
         except Exception as e:
@@ -133,6 +131,8 @@ class Oracle:
             self.close_connection()
 ## Custom Exceptions ##
 class EmptyImage(Exception):
+    pass
+class OracleBadReturn(Exception):
     pass
 def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef = arcpy.SpatialReference(4326)):
     outputSHP = os.path.join(output_folder,output_name)
@@ -181,19 +181,12 @@ def export_reportimage(imagepath,ordergeometry,auid):
     SW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMin)
     SE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMin)
     try:
-        con = cx_Oracle.connect(Credential.oracle_test)
-        cur = con.cursor()
-        json_in = con.createlob(cx_Oracle.CLOB)
-        json_in.write(str({"PROCEDURE":Oracle.oracle_procedures['passclipextent'], "ORDER_NUM" : OrderNumText,"AUI_ID":auid,"NW_CORNER":str(df.extent.XMin),"NE_CORNER":str(df.extent.XMax),"SW_CORNER":(df.extent.YMin),"SE_CORNER":str(df.extent.YMax)}))
-        json_out_var = cur.var(cx_Oracle.CLOB)     
-        message_var = cur.var(cx_Oracle.CLOB)
-        status_var = cur.var(str)
-        output = cur.callproc('eris_api.callOracle',[json_in,json_out_var,message_var,status_var])
-        oracle_return = cx_Oracle.LOB.read(output[2])
-        print oracle_return
-        #image_json = json.loads(oracle_return)
-    except Exception as e:
-        print 'Oracle Failure', e.message
+        image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : OrderNumText,"AUI_ID":auid,"NW_CORNER":str(df.extent.XMin),"NE_CORNER":str(df.extent.XMax),"SW_CORNER":(df.extent.YMin),"SE_CORNER":str(df.extent.YMax)})
+        message_return = Oracle('test').call_erisapi(image_extents)
+        if message_return[3] != 'Y':
+            raise OracleBadReturn
+    except OracleBadReturn:
+        arcpy.AddError('status: '+message_return[3]+' - '+message_return[2])
     ##############################
     arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),df,df_export_width=5100,df_export_height=6600,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
     arcpy.DefineProjection_management(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'), 3857)
@@ -214,32 +207,22 @@ if __name__ == '__main__':
     MapScale = 6000
 
     ##get info for order from oracle
-
     orderInfo = Oracle('test').call_function('getorderinfo',orderID)
     OrderNumText = str(orderInfo['ORDER_NUM'])
-    #aerialList = Oracle('test').call_erisapi('getaeriallist',orderInfo['ORDER_NUM'])
-    try:
-        con = cx_Oracle.connect(Credential.oracle_test)
-        cur = con.cursor()
-        json_in = con.createlob(cx_Oracle.CLOB)
-        json_in.write(str({"PROCEDURE":Oracle.oracle_procedures['getaeriallist'], "ORDER_NUM" : OrderNumText}))
-        #json_in = str({"PROCEDURE":Oracle.oracle_procedures['getaeriallist'], "ORDER_NUM" : OrderNumText})
-        json_out_var = cur.var(cx_Oracle.CLOB)
-        message_var = cur.var(cx_Oracle.CLOB)
-        status_var = cur.var(str)
-        output = cur.callproc('eris_api.callOracle',[json_in,json_out_var,message_var,status_var])
-        oracle_return = cx_Oracle.LOB.read(output[1])
-        image_json = json.loads(oracle_return)
-    except Exception as e:
-        print 'Oracle Failure', e.message
 
+    ## Return aerial list from oracle
+    oracle_autoprep = str({"PROCEDURE":Oracle.erisapi_procedures['getaeriallist'],"ORDER_NUM":OrderNumText})
+    aerial_list_return = Oracle('test').call_erisapi(oracle_autoprep)
+    aerial_list_json = json.loads(aerial_list_return[1])
+
+    ## Get order geometry 
     OrderGeometry = createGeometry(eval(orderInfo[u'ORDER_GEOMETRY'][u'GEOMETRY'])[0],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'],scratch,'OrderGeometry.shp')
-    
-    single_image_candidates = image_json['INHOUSE_IMAGE']
-    doqq_image_candidates = image_json['INHOUSE_IMAGE']
-    #call Oracle to get list of images
-    #image_candidates = {'singleframe':[imagename,path,year,source,auid], 'doqq':[imagename,path,year,source,auid]} ## inhouse only
 
+    ## Seperate processes for singleframe and DOQQ
+    single_image_candidates = aerial_list_json['INHOUSE_IMAGE']
+    doqq_image_candidates = aerial_list_json['DOQQ_IMAGE']
+
+    ##Create job folder and copy images
     try:
         job_folder = os.path.join(job_directory,OrderNumText)
         org_image_folder = os.path.join(job_folder,'org')
@@ -251,17 +234,13 @@ if __name__ == '__main__':
         os.mkdir(jpg_image_folder)
         for inhouse_image in single_image_candidates:
             image_auid = str(inhouse_image['AUI_ID'])
-            image_name = inhouse_image['IMAGE_NAME'].replace('.TAB','.jpg')
-            image_path = inhouse_image['IMAGE_NAME'].replace('.TAB','.jpg')
+            image_name = inhouse_image['IMAGE_NAME']
             #image_year = image_candidates[image_auid]['YEAR']
             #image_source = image_candidates[image_auid]['SOURCE']
             #image_type = image_candidates[image_auid]['TYPE']
   
             #arcpy.Copy_management(image_path,os.path.join(conversion_input,image_auid+'.'+image_name.split('.')[-1]))
-            if os.path.exists(image_path):
-                export_reportimage(image_path,OrderGeometry,image_auid)
-            else:
-                print 'path missing: ' + image_path
+            export_reportimage(image_name,OrderGeometry,image_auid)
             #arcpy.CopyRaster_management (image_path, os.path.join(conversion_input,image_auid+'.'+image_name.split('.')[-1]), '', '', '', '', 'ColormapToRGB', '8_BIT_UNSIGNED')
                 #try:
             #call_url = Conversion_URL + image_auid + '.' + image_name.split('.')[-1]
