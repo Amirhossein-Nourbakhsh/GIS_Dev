@@ -41,6 +41,7 @@ class Oracle:
     # static variable: oracle_functions
     oracle_functions = {'getorderinfo':"eris_gis.getOrderInfo"
     }
+    oracle_procedures = {'getaeriallist':"flow_autoprep.getAerialImageJson",'passclipextent': 'flow_autoprep.setClipImageDetail'}
     def __init__(self,machine_name):
         # initiate connection credential
         if machine_name.lower() =='test':
@@ -82,6 +83,33 @@ class Oracle:
             raise Exception("Bad Function")
         finally:
             self.close_connection()
+    def call_erisapi(self,function_name,orderNum='20200310309'):
+        self.connect_to_oracle()
+        con = cx_Oracle.connect(Credential.oracle_test)
+        cursor = self.cursor
+        arg1 = con.createlob(cx_Oracle.CLOB)
+        arg1.write(str({"PROCEDURE":"flow_autoprep.getAerialImageJson", "ORDER_NUM":"20200310309"}))
+        arg2 = cursor.var(cx_Oracle.CLOB)
+        arg3 = cursor.var(cx_Oracle.CLOB)
+        arg4 = cursor.var(str)
+        try:
+            func = ['eris_api.callOracle']
+            if func !=[] and len(func)==1:
+                try:
+                    output = cursor.callproc('eris_api.callOracle',[arg1,arg2,arg3,arg4])
+                except ValueError:
+                    output = cursor.callproc(func[0],[arg1,arg2,arg3,arg4])
+                except AttributeError:
+                    output = cursor.callproc(func[0],[arg1,arg2,arg3,arg4])
+            return output
+        except cx_Oracle.Error as e:
+            raise Exception(("Oracle Failure",e.message))
+        except Exception as e:
+            raise Exception(("JSON Failure",e.message))
+        except NameError as e:
+            raise Exception("Bad Function")
+        finally:
+            self.close_connection()
     def pass_values(self,function_name,value):#(self,function_name,data_type,value):
         self.connect_to_oracle()
         cursor = self.cursor
@@ -106,59 +134,139 @@ class Oracle:
 ## Custom Exceptions ##
 class EmptyImage(Exception):
     pass
-def get_ordergeometry(coordinates,geometry_type):
-    ordergeometry = os.path.join(scratch,'OrderGeometry.shp')
-    if geometry_type == 'POINT':
-        arcpy.CreateFeatureclass_management(scratch,'OrderGeometry.shp','POINT','','','',4326)
-        cursor = arcpy.da.InsertCursor(ordergeometry,["SHAPE@XY"])
-        print coordinates[0]
-        xy = (coordinates[0])
+def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef = arcpy.SpatialReference(4326)):
+    outputSHP = os.path.join(output_folder,output_name)
+    if geometry_type.lower()== 'point':
+        arcpy.CreateFeatureclass_management(output_folder, output_name, "MULTIPOINT", "", "DISABLED", "DISABLED", spatialRef)
+        cursor = arcpy.da.InsertCursor(outputSHP, ['SHAPE@'])
+        cursor.insertRow([arcpy.Multipoint(arcpy.Array([arcpy.Point(*coords) for coords in pntCoords]),spatialRef)])
+    elif geometry_type.lower() =='polyline':
+        arcpy.CreateFeatureclass_management(output_folder, output_name, "POLYLINE", "", "DISABLED", "DISABLED", spatialRef)
+        cursor = arcpy.da.InsertCursor(outputSHP, ['SHAPE@'])
+        cursor.insertRow([arcpy.Polyline(arcpy.Array([arcpy.Point(*coords) for coords in pntCoords]),spatialRef)])
+    elif geometry_type.lower() =='polygon':
+        arcpy.CreateFeatureclass_management(output_folder,output_name, "POLYGON", "", "DISABLED", "DISABLED", spatialRef)
+        cursor = arcpy.da.InsertCursor(outputSHP, ['SHAPE@'])
+        cursor.insertRow([arcpy.Polygon(arcpy.Array([arcpy.Point(*coords) for coords in pntCoords]),spatialRef)])
+    del cursor
+    return outputSHP
+def export_reportimage(imagepath,ordergeometry,auid):
+    ## In memory
+    mxd = arcpy.mapping.MapDocument(mxdexport_template)
+    df = arcpy.mapping.ListDataFrames(mxd,'*')[0]
+    sr = arcpy.SpatialReference(4326)
+    df.SpatialReference = sr
+    lyrpath = os.path.join(scratch,str(auid) + '.lyr')
+    arcpy.MakeRasterLayer_management(imagepath,lyrpath)
+    image_lyr = arcpy.mapping.Layer(lyrpath)
+    geo_lyr = arcpy.mapping.Layer(ordergeometry)
+    arcpy.mapping.AddLayer(df,image_lyr,'TOP')
+    arcpy.mapping.AddLayer(df,geo_lyr,'TOP')
+    geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
+    geo_extent = geometry_layer.getExtent(True)
+    df.extent = geo_extent
+    if df.scale <= MapScale:
+        df.scale = MapScale
+    elif df.scale > MapScale:
+        df.scale = ((int(df.scale)/100)+1)*100
+    arcpy.RefreshActiveView()
+    ###############################
+    ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
+    print df.extent.XMin,df.extent.YMax
+    print df.extent.XMax,df.extent.YMax
+    print df.extent.XMin,df.extent.YMin
+    print df.extent.XMax,df.extent.YMin
+    NW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMax)
+    NE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMax)
+    SW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMin)
+    SE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMin)
+    try:
+        con = cx_Oracle.connect(Credential.oracle_test)
+        cur = con.cursor()
+        json_in = con.createlob(cx_Oracle.CLOB)
+        json_in.write(str({"PROCEDURE":Oracle.oracle_procedures['passclipextent'], "ORDER_NUM" : OrderNumText,"AUI_ID":auid,"NW_CORNER":str(df.extent.XMin),"NE_CORNER":str(df.extent.XMax),"SW_CORNER":(df.extent.YMin),"SE_CORNER":str(df.extent.YMax)}))
+        json_out_var = cur.var(cx_Oracle.CLOB)     
+        message_var = cur.var(cx_Oracle.CLOB)
+        status_var = cur.var(str)
+        output = cur.callproc('eris_api.callOracle',[json_in,json_out_var,message_var,status_var])
+        oracle_return = cx_Oracle.LOB.read(output[2])
+        print oracle_return
+        #image_json = json.loads(oracle_return)
+    except Exception as e:
+        print 'Oracle Failure', e.message
+    ##############################
+    arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),df,df_export_width=5100,df_export_height=6600,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
+    arcpy.DefineProjection_management(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'), 3857)
+    shutil.copy(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),os.path.join(jpg_image_folder,auid + '.jpg'))
+    mxd.saveACopy(os.path.join(scratch,auid+'_export.mxd'))
+    del mxd
+
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '828239'#arcpy.GetParameterAsText(0)
+    orderID = '850757'#arcpy.GetParameterAsText(0)
     scratch = r'C:\Users\JLoucks\Documents\JL\usaerial'
-    job_directory = r'C:\Users\JLoucks\Documents\JL'
+    job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
+    mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
     conversion_input = r'\\192.168.136.164\v2_usaerial\input'
     conversion_output = r'\\192.168.136.164\v2_usaerial\output'
     Conversion_URL = r'http://erisservice3.ecologeris.com/ErisInt/USAerialAppService_test/USAerial.svc/USAerialImagePromote_temp?inputfile='
+    MapScale = 6000
 
     ##get info for order from oracle
 
     orderInfo = Oracle('test').call_function('getorderinfo',orderID)
     OrderNumText = str(orderInfo['ORDER_NUM'])
-    get_ordergeometry(orderInfo['ORDER_GEOMETRY']['GEOMETRY'],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'])
-    
+    #aerialList = Oracle('test').call_erisapi('getaeriallist',orderInfo['ORDER_NUM'])
+    try:
+        con = cx_Oracle.connect(Credential.oracle_test)
+        cur = con.cursor()
+        json_in = con.createlob(cx_Oracle.CLOB)
+        json_in.write(str({"PROCEDURE":Oracle.oracle_procedures['getaeriallist'], "ORDER_NUM" : OrderNumText}))
+        #json_in = str({"PROCEDURE":Oracle.oracle_procedures['getaeriallist'], "ORDER_NUM" : OrderNumText})
+        json_out_var = cur.var(cx_Oracle.CLOB)
+        message_var = cur.var(cx_Oracle.CLOB)
+        status_var = cur.var(str)
+        output = cur.callproc('eris_api.callOracle',[json_in,json_out_var,message_var,status_var])
+        oracle_return = cx_Oracle.LOB.read(output[1])
+        image_json = json.loads(oracle_return)
+    except Exception as e:
+        print 'Oracle Failure', e.message
 
+    OrderGeometry = createGeometry(eval(orderInfo[u'ORDER_GEOMETRY'][u'GEOMETRY'])[0],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'],scratch,'OrderGeometry.shp')
+    
+    single_image_candidates = image_json['INHOUSE_IMAGE']
+    doqq_image_candidates = image_json['INHOUSE_IMAGE']
     #call Oracle to get list of images
     #image_candidates = {'singleframe':[imagename,path,year,source,auid], 'doqq':[imagename,path,year,source,auid]} ## inhouse only
-    image_candidates = {'AR1VBIO00030260': {'IMAGE_NAME' :r'66_USGS_AR1VBIO00030260.tif', 'IMAGE_PATH' : r'C:\Users\JLoucks\Desktop\Mike_samples\processed\arc_info_added\66_USGS_AR1VBIO00030260.tif',
-    'YEAR':'1966', 'SOURCE':'USGS','TYPE':'singleframe'}, 'AR1VBIO00030260': {'IMAGE_NAME' :r'66_USGS_AR1VBIO00030260.tif', 'IMAGE_PATH' : r'C:\Users\JLoucks\Desktop\Mike_samples\processed\arc_info_added\66_USGS_AR1VBIO00030260.tif',
-    'YEAR':'1966', 'SOURCE':'USGS','TYPE':'doqq'}}
+
     try:
-        job_folder = os.path.join(os.path.join(job_directory,OrderNumText))
+        job_folder = os.path.join(job_directory,OrderNumText)
         org_image_folder = os.path.join(job_folder,'org')
+        jpg_image_folder = os.path.join(job_folder,'jpg')
         if os.path.exists(job_folder):
             shutil.rmtree(job_folder)
         os.mkdir(job_folder)
         os.mkdir(org_image_folder)
-        if len(list(image_candidates.keys())) == 0:
-            raise EmptyImage
-        for inhouse_image in list(image_candidates.keys()):
-            ### CONVERSION OR COPY???###
-            image_auid = inhouse_image
-            image_name = image_candidates[image_auid]['IMAGE_NAME']
-            image_path = image_candidates[image_auid]['IMAGE_PATH']
-            image_year = image_candidates[image_auid]['YEAR']
-            image_source = image_candidates[image_auid]['SOURCE']
-            image_type = image_candidates[image_auid]['TYPE']
+        os.mkdir(jpg_image_folder)
+        for inhouse_image in single_image_candidates:
+            image_auid = str(inhouse_image['AUI_ID'])
+            image_name = inhouse_image['IMAGE_NAME'].replace('.TAB','.jpg')
+            image_path = inhouse_image['IMAGE_NAME'].replace('.TAB','.jpg')
+            #image_year = image_candidates[image_auid]['YEAR']
+            #image_source = image_candidates[image_auid]['SOURCE']
+            #image_type = image_candidates[image_auid]['TYPE']
+  
             #arcpy.Copy_management(image_path,os.path.join(conversion_input,image_auid+'.'+image_name.split('.')[-1]))
-            arcpy.CopyRaster_management (image_path, os.path.join(conversion_input,image_auid+'.'+image_name.split('.')[-1]), '', '', '', '', 'ColormapToRGB', '8_BIT_UNSIGNED')
-            #try:
-            call_url = Conversion_URL + image_auid + '.' + image_name.split('.')[-1]
-            contextlib.closing(urllib.urlopen(call_url))
+            if os.path.exists(image_path):
+                export_reportimage(image_path,OrderGeometry,image_auid)
+            else:
+                print 'path missing: ' + image_path
+            #arcpy.CopyRaster_management (image_path, os.path.join(conversion_input,image_auid+'.'+image_name.split('.')[-1]), '', '', '', '', 'ColormapToRGB', '8_BIT_UNSIGNED')
+                #try:
+            #call_url = Conversion_URL + image_auid + '.' + image_name.split('.')[-1]
+            #contextlib.closing(urllib.urlopen(call_url))
             #except:
                 #arcpy.AddError('Unable to convert image')
     except EmptyImage:
         arcpy.AddWarning('No image candidates')
-
