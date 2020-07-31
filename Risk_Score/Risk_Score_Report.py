@@ -116,12 +116,12 @@ if __name__ == '__main__':
     
     ### input parameters
     request_Id = arcpy.GetParameterAsText(0)
-    env = arcpy.GetParameterAsText(1)                                                 
+    # env = arcpy.GetParameterAsText(1)                                                 
                                    
     startTotal = timeit.default_timer()
     ###input RequestId
     # request_Id = 466
-    # env = 'test'
+    env = 'test'
     ws = arcpy.env.scratchFolder
     arcpy.env.overwriteOutput = True   
     arcpy.env.workspace = ws
@@ -149,7 +149,7 @@ if __name__ == '__main__':
     outputLayoutPDF = os.path.join(reportpath, "RiskScore_Map_" + str(request_Id) + ".pdf")
     arcpy.mapping.ExportToPDF(copied_mxd, outputLayoutPDF, "PAGE_LAYOUT", 640, 480, 250, "BEST", "RGB", True, "ADAPTIVE", "VECTORIZE_BITMAP", False, True, "LAYERS_AND_ATTRIBUTES", True, 90)
     arcpy.AddMessage("Output Report: %s"%outputLayoutPDF)
-    arcpy.SetParameterAsText(2,outputLayoutPDF)
+    arcpy.SetParameterAsText(1,outputLayoutPDF)
      
     endTotal= timeit.default_timer()
     arcpy.AddMessage(('Total Duration:', round(endTotal -startTotal,4)))
