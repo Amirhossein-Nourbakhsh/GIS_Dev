@@ -6,24 +6,24 @@
 #-------------------------------------------------------------------------------
 import arcpy, os ,timeit      
 import json
+import logging
 from arcpy.sa import *
-
-
 from multiprocessing import Pool
+import os.path
+import logging
 
 arcpy.CheckOutExtension("Spatial")
 
 def get_spatial_res(imagepath):
 
-    cellsizeX = arcpy.GetRasterProperties_management(imagepath,'CELLSIZEX')
-    cellsizeY = arcpy.GetRasterProperties_management(imagepath,'CELLSIZEY')
+    cellsizeX = float(str(arcpy.GetRasterProperties_management(imagepath,'CELLSIZEX')))
+    cellsizeY = float(str(arcpy.GetRasterProperties_management(imagepath,'CELLSIZEY')))
     if cellsizeY > cellsizeX:
         return str(cellsizeY)
     else:
         return str(cellsizeX)
    
-def get_filesize(imagepath,ext):
-    imagepath = imagepath.replace('.TAB',ext)
+def get_filesize(imagepath):
     return str(os.stat(imagepath).st_size)
 def get_imagepath(imagepath,ext):
     imagepath = imagepath.replace('.TAB',ext)
@@ -40,23 +40,64 @@ def get_year(filename,netpath):
     for item in x:
         if item in no_years:
              return item
-def get_Image_Metadata(imagepath):
-    dpi = 'NA'
+def get_file_extension(fileName):
+    extArray = fileName.split('.')
+    ext = '.' + extArray[len(extArray)-1]
+    if ext == '.alg':
+        ext = '.jp2'
+    return ext       
+def get_ImagePathandExt(inputFile):
+    image_Path = ""
+    ext=""
+    tab_File = open(inputFile, 'r')
+    all_lines = tab_File.readlines()
+    for line in all_lines:
+        if 'File' in line:
+            file = line.split('"')[1]
+            ext = get_file_extension(file)
+            if os.path.isfile(inputFile.replace(".TAB", ext)):
+                image_Path = inputFile.replace(".TAB", ext)
+                print("yes1")
+            elif os.path.isfile(os.path.join(os.path.dirname((os.path.dirname(inputFile))),os.path.basename(file))):
+                image_Path = os.path.join(os.path.dirname((os.path.dirname(inputFile))),os.path.basename(file))
+                print("yes2")
+            elif len(os.path.dirname(file)) > 0: ## if there is a folder and file name in TAB file, extract file and its direct folder then replace by TAB folder
+                print("yes3")
+                splt = file.split('\\')
+                filepPath = os.path.join(splt[len(splt)-2],splt[len(splt)-1])
+                tabFile_parentFolder = os.path.dirname((inputFile))
+                print(os.path.join(tabFile_parentFolder,filepPath))
+                if os.path.isfile(os.path.join(tabFile_parentFolder,filepPath)):
+                    image_Path = os.path.join(tabFile_parentFolder,filepPath)
+            elif os.path.isfile(os.path.join(os.path.dirname(inputFile), file)): ## if only file name is in TAB file, join it to TAB folder
+                print("yes4")
+                image_Path = os.path.join(os.path.dirname(inputFile), file)
+            # if os.path.isfile(os.path.join(r'\\cabcvan1nas003\doqq\200x\TX\_FULL_STATE_COVERAGE\2005\UTM\15',os.path.basename(file))):
+            #     image_Path = os.path.join(r'\\cabcvan1nas003\doqq\200x\TX\_FULL_STATE_COVERAGE\2005\UTM\15',os.path.basename(file))
+
+            break
+    return [image_Path,ext]
+def get_Image_Metadata(imagepath,extension,FID):
+    originalFID = 'NA'
     bits = 'NA'
-    comp = 'NA'
     width = 'NA'
     length = 'NA'
-    # imagepath = filepath.replace('TAB',ext)
+    ext = 'NA'
+    geoRef = 'Y'
+    fileSize = 'NA'
     spatial_res = 'NA'
+    
+    originalFID = str(FID)
     bits = arcpy.GetRasterProperties_management(imagepath,'VALUETYPE')
-    dpi = arcpy.GetRasterProperties_management(imagepath,'CELLSIZEX')
     width = arcpy.GetRasterProperties_management(imagepath,'COLUMNCOUNT')
     length = arcpy.GetRasterProperties_management(imagepath,'ROWCOUNT')
+    ext = extension.split('.')[1]
+    fileSize = get_filesize(imagepath)
     spatial_res = get_spatial_res(imagepath)
     desc = arcpy.Describe(imagepath)
     year = get_year(desc.baseName,desc.path)
     
-    return [bits,width,length,imagepath,spatial_res,year]
+    return [originalFID, bits, width, length, ext, geoRef, fileSize, imagepath, spatial_res, year]
 def get_Footprint(inputRaster):
     try:
         ws = arcpy.env.scratchFolder
@@ -155,10 +196,14 @@ def get_Footprint(inputRaster):
         arcpy.AddError(msgs)
         raise
 def UpdateSeamlessFC(DQQQ_footprint_FC,metaData,ft_Polygon):
+    arcpy.AddMessage('Start Uploading to seamless FC...')
+    start7 = timeit.default_timer() 
     srWGS84 = arcpy.SpatialReference('WGS 1984')
-    insertRow = arcpy.da.InsertCursor(DQQQ_footprint_FC, ['BITS','WIDTH','LENGTH','IMAGEPATH','SPATIAL_RESOLUTION','YEAR','SHAPE@'])
-    rowtuple=[str(metaData[0]),str(metaData[1]),str(metaData[2]),str(metaData[3]),str(metaData[4]),str(metaData[5]),ft_Polygon]
+    insertRow = arcpy.da.InsertCursor(DQQQ_footprint_FC, ['Original_FID','BITS','WIDTH','LENGTH','EXT','GEOREF','FILESIZE','IMAGEPATH','SPATIAL_RESOLUTION','YEAR','SHAPE@'])
+    rowtuple=[str(metaData[0]),str(metaData[1]),str(metaData[2]),str(metaData[3]),str(metaData[4]),str(metaData[5]),str(metaData[6]),str(metaData[7]),str(metaData[8]),str(metaData[9]),ft_Polygon]
     insertRow.insertRow(rowtuple)
+    end7 = timeit.default_timer()
+    arcpy.AddMessage(('End Uploading to seamless FC. Duration:', round(end7 -start7,4)))
     del insertRow
 
 if __name__ == '__main__':
@@ -169,35 +214,62 @@ if __name__ == '__main__':
     arcpy.AddMessage(ws)
     inputRaster = arcpy.GetParameterAsText(0)
     DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic'
+    # DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic_Envelope'
+    logfile = r'C:\Users\HKiavarz\Documents\log2.txt'
     DQQQ_ALL_FC = r'F:\Aerial_US\USImagery\Data\DOQQ_ALL.shp'
+    
+    
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.WARNING)
+    handler = logging.FileHandler(logfile)
+    handler.setLevel(logging.WARNING)
+    logger.addHandler(handler)
     
     startTotal = timeit.default_timer()
     
+    srWGS84 = arcpy.SpatialReference('WGS 1984')
+    
     params =[]
-    # params = [[r'\\cabcvan1nas003\doqq\201x\MA\BARNSTABLE\2014\ortho_1-1_1n_s_ma001_2014_1.sid', 'a'],[r'\\cabcvan1nas003\doqq\201x\MA\FRANKLIN\2014\ortho_1-1_1n_s_ma011_2014_1.sid','b']]
-    # pool = Pool(processes=2)
-    # pool.map(get_Footprint, params)
     
-    # year = get_year('ortho_1-1_1n_s_ma003_2014_1','\\nas2520\doqq\201x\MA\BERKSHIRE\2014\ortho_1-1_1n_s_ma003_2014_1.TAB')
-    # pool.close()
-    
-    # get_Footprint(r'\\cabcvan1nas003\doqq\201x\MA\BARNSTABLE\2014\ortho_1-1_1n_s_ma001_2014_1.sid')
-    
-    with arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE_']) as dqq_cursor:
-         for row in dqq_cursor:
-            if row[0] > 4 :
-                 break   
-            print('FID = {}, Image = {}'.format(row[0], row[1])) 
-            rasterPath = row[1].replace('nas2520','cabcvan1nas003')
-            params.append([rasterPath.replace('TAB','sid'),str(row[0])])
-            footprint_Polygon = get_Footprint(rasterPath.replace('.TAB','.sid'))
-            metaData = get_Image_Metadata(rasterPath.replace('.TAB','.sid'))
-            UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
-
-    # pool = Pool(processes=2)
-    # pool.map(get_Footprint, params)       
-             
-        
+    # expression = "FID >= 170000 AND FID <= 170691"
+    # expression = "FID = 170000"
+    list = [
+]
+    rowExist = 0
+    for item in list:
+        expressionFC = "Original_FID = '" + str(item) + "'"
+        try:
+            Original_FID = arcpy.da.SearchCursor(DQQQ_footprint_FC, ['Original_FID'],expressionFC).next()[0]
+            rowExist = 1
+        except StopIteration:
+            rowExist = 0
+        if rowExist == 0: # check if it is already processed
+            rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE_','SHAPE@'],where_clause=expression)
+            for row in rows:
+                startDataset = timeit.default_timer()   
+                arcpy.AddMessage('-------------------------------------------------------------------------------------------------')
+                arcpy.AddMessage('Start FID: ' + str(row[0]) + ' - processing Dataset: ' + row[1])
+                tabfile_Path = row[1].replace('nas2520','cabcvan1nas003')
+                if os.path.isfile(tabfile_Path) > 0:
+                    imagePathInfo = get_ImagePathandExt(tabfile_Path)
+                    if len(imagePathInfo[0]) > 0:
+                        if imagePathInfo[1].lower() in ['.tif','.jpg','.sid','.png','.tiff','.jpeg','.jp2','.ecw']:
+                            metaData = get_Image_Metadata(imagePathInfo[0],imagePathInfo[1],row[0])
+                            # footprint_Polygon = get_Footprint(image_Path)
+                            footprint_Polygon = row[2].projectAs(srWGS84)
+                            UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
+                        else:
+                            arcpy.AddWarning("FID : {} - Input raster: is not the type of Composite Geodataset, or does not exist".format(row[0]))
+                            logger.warning("FID :, {}, Input raster: is not the type of Composite Geodataset, or does not exist:, {} ".format(row[0], row[1]))
+                    else:
+                        arcpy.AddWarning("FID :  {} -  Images is not available forthis path : {} ".format(row[0], row[1]))
+                        logger.warning("FID : , {}, Images is not available for this path :, {} ".format(row[0], row[1]))
+                else:
+                    arcpy.AddWarning("FID : {} - Tab file Path is not valid or available for: ".format(row[0]))
+                    logger.warning("FID : , {}, Tab file Path is not valid or available for:, {} ".format(row[0], row[1]))
+                endDataset = timeit.default_timer()
+                arcpy.AddMessage(('End FID: ' + str(row[0]) + ' - processed Dataset. Duration:', round(endDataset - startDataset,4)))    
+            
     endTotal= timeit.default_timer()
     arcpy.AddMessage(('Total Duration:', round(endTotal -startTotal,4)))
     
