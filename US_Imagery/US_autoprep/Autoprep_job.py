@@ -181,23 +181,24 @@ def export_reportimage(imagepath,ordergeometry,auid):
     SW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMin)
     SE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMin)
     try:
-        image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : OrderNumText,"AUI_ID":auid,"NW_CORNER":str(df.extent.XMin),"NE_CORNER":str(df.extent.XMax),"SW_CORNER":(df.extent.YMin),"SE_CORNER":str(df.extent.YMax)})
+        image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : OrderNumText,"AUI_ID":auid,"SWLAT":str(df.extent.YMin),"SWLONG":str(df.extent.XMin),"NELAT":(df.extent.XMax),"NELONG":str(df.extent.XMax)})
         message_return = Oracle('test').call_erisapi(image_extents)
         if message_return[3] != 'Y':
             raise OracleBadReturn
     except OracleBadReturn:
         arcpy.AddError('status: '+message_return[3]+' - '+message_return[2])
     ##############################
-    arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),df,df_export_width=5100,df_export_height=6600,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
-    arcpy.DefineProjection_management(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'), 3857)
-    shutil.copy(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),os.path.join(jpg_image_folder,auid + '.jpg'))
+    #arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),df,df_export_width=5100,df_export_height=6600,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
+    #arcpy.DefineProjection_management(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'), 3857)
+    #shutil.copy(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),os.path.join(jpg_image_folder,auid + '.jpg'))
+    arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),df,df_export_width=5100,df_export_height=6600,world_file=False,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
     mxd.saveACopy(os.path.join(scratch,auid+'_export.mxd'))
     del mxd
 
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '850757'#arcpy.GetParameterAsText(0)
+    orderID = '889842'#arcpy.GetParameterAsText(0)
     scratch = r'C:\Users\JLoucks\Documents\JL\usaerial'
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
@@ -235,8 +236,8 @@ if __name__ == '__main__':
         for inhouse_image in single_image_candidates:
             image_auid = str(inhouse_image['AUI_ID'])
             image_name = inhouse_image['IMAGE_NAME']
-            #image_year = image_candidates[image_auid]['YEAR']
-            #image_source = image_candidates[image_auid]['SOURCE']
+            image_year = image_candidates[image_auid]['AERIAL_YEAR']
+            image_source = image_candidates[image_auid]['AERIAL_SOURCE']
             #image_type = image_candidates[image_auid]['TYPE']
   
             #arcpy.Copy_management(image_path,os.path.join(conversion_input,image_auid+'.'+image_name.split('.')[-1]))
