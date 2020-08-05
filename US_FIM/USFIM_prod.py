@@ -14,12 +14,12 @@ import logging, time,json
 import arcpy, os, sys, glob
 import cx_Oracle, urllib, shutil
 import traceback
-import textwrap
+import re
 import ConfigParser
-sys.path.append(r"C:\Program Files (x86)\Python2.7.7\Lib\site-packages")
 
 from xlrd import open_workbook
 from PyPDF2 import PdfFileReader,PdfFileWriter
+from PyPDF2.generic import NameObject, createStringObject, ArrayObject, FloatObject
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Frame,Table
 from reportlab.lib.styles import getSampleStyleSheet,ParagraphStyle
 from reportlab.lib.units import inch
@@ -54,6 +54,76 @@ def server_loc_config(configpath,environment):
         return server_config
     else:
         return 'invalid server configuration'
+
+def createAnnotPdf(geom_type, myShapePdf):
+    #input variables
+    #geom_type = 'POLYLINE'      #or POLYGON
+
+    # part 1: read geometry pdf to get the vertices and rectangle to use
+    source  = PdfFileReader(open(myShapePdf,'rb'))
+    geomPage = source.getPage(0)
+    mystr = geomPage.getObject()['/Contents'].getData()
+    #to pinpoint the string part: 1.19997 791.75999 m 1.19997 0.19466 l 611.98627 0.19466 l 611.98627 791.75999 l 1.19997 791.75999 l
+    #the format seems to follow x1 y1 m x2 y2 l x3 y3 l x4 y4 l x5 y5 l
+    geomString = mystr.split('S\r\n')[0].split('M\r\n')[1]
+    coordsString = [value for value in geomString.split(' ') if value not in ['m','l','']]
+
+    # part 2: update geometry in the map
+    if geom_type.upper() == 'POLYGON':
+        pdf_geom = PdfFileReader(open(annot_poly,'rb'))
+    elif geom_type.upper() == 'POLYLINE':
+        pdf_geom = PdfFileReader(open(annot_line,'rb'))
+    page_geom = pdf_geom.getPage(0)
+
+    annot = page_geom['/Annots'][0]
+    updateVertices = "annot.getObject().update({NameObject('/Vertices'):ArrayObject([FloatObject("+coordsString[0]+")"
+    for item in coordsString[1:]:
+        updateVertices = updateVertices + ',FloatObject('+item+')'
+    updateVertices = updateVertices + "])})"
+    exec(updateVertices)
+
+    xcoords = []
+    ycoords = []
+    for i in range(0,len(coordsString)-1):
+        if i%2 == 0:
+            xcoords.append(float(coordsString[i]))
+        else:
+            ycoords.append(float(coordsString[i]))
+
+    #below rect seems to be geom bounding box coordinates: xmin, ymin, xmax,ymax
+    annot.getObject().update({NameObject('/Rect'):ArrayObject([FloatObject(min(xcoords)), FloatObject(min(ycoords)), FloatObject(max(xcoords)), FloatObject(max(ycoords))])})
+    annot.getObject().pop('/AP')  # this is to get rid of the ghost shape
+
+    annot.getObject().update({NameObject('/T'):createStringObject(u'ERIS')})
+
+    output = PdfFileWriter()
+    output.addPage(page_geom)
+    annotPdf = os.path.join(scratch, "annot.pdf")
+    outputStream = open(annotPdf,"wb")
+    #output.setPageMode('/UseOutlines')
+    output.write(outputStream)
+    outputStream.close()
+    output = None
+    return annotPdf
+
+def annotatePdf(mapPdf, myAnnotPdf):
+    pdf = PdfFileReader(open(mapPdf,'rb'))
+    FIMpage = pdf.getPage(0)
+
+    pdf_intermediate = PdfFileReader(open(myAnnotPdf,'rb'))
+    page= pdf_intermediate.getPage(0)
+    page.mergePage(FIMpage)
+
+    output = PdfFileWriter()
+    output.addPage(page)
+
+    annotatedPdf = mapPdf[:-4]+'_a.pdf'
+    outputStream = open(annotatedPdf,"wb")
+    #output.setPageMode('/UseOutlines')
+    output.write(outputStream)
+    outputStream.close()
+    output = None
+    return annotatedPdf
 
 def goCoverPage(coverPdf):
     from reportlab.pdfgen import canvas
@@ -102,7 +172,6 @@ def myFirstSummaryPage(canvas,doc):
     del canvas
 
 def myLaterSummaryPage(canvas,doc):
-
     canvas.saveState()
     canvas.drawImage(secondPic,0,0, PAGE_WIDTH,PAGE_HEIGHT)
     canvas.setFont('Helvetica', 9)
@@ -137,8 +206,8 @@ def goSummaryPage(summaryfile,data,years):
     doc = None
 
 def selectbyyear(selectionLayer):
-    print '============================================================'
-    print  '########## in image site selection'
+    print('==================================================')
+    print('########## in image site selection')
     years_s = []
     summaryList_s = []
 
@@ -159,26 +228,29 @@ def selectbyyear(selectionLayer):
         filenameL = filename.lower()
         if filenameL[:3] == 'vol':   # the mosaicked file (vol***)
             apath = row.getValue(pathFieldName)
-            bpath = apath.replace("W:\FIM_DATA_USA",r"\\cabcvan1fpr009\FIM_DATA_USA")
+            bpath = apath.replace(r"W:\FIM_DATA_USA",r"\\cabcvan1fpr009\FIM_DATA_USA")
             filepathList_m.append(bpath)            #path list for mosaicked images
             filenameList_m.append(filename)
-            i = i+ 1
+            i = i+1
         if 'image_boundary' in filenameL:
             apath = row.getValue(pathFieldName)
-            bpath = apath.replace("W:\FIM_DATA_USA",r"\\cabcvan1fpr009\FIM_DATA_USA")
-            if bpath ==r"\\cabcvan1fpr009\FIM_DATA_USA\FIM_DATA_NY\VOL27099":
-                bpath=r"\\cabcvan1gis001\FIMData\New York\Revisions\23102018\VOL27099"
+            bpath = apath.replace(r"W:\FIM_DATA_USA",r"\\cabcvan1fpr009\FIM_DATA_USA")
             filepathList_b.append(bpath)             #path list for boundary file
             filenameList_b.append(filename)
+
     del row
-    del rows 
+    del rows
 
     if len(filepathList_b) != len(filepathList_m):
         logger.info("order " + OrderIDText + ":        Data ERROR: different number image_boundary files and vol### files. Pay attention!!")
-        print "Data Issue: different number image_boundary files and vol### files. Pay attention!" #could happen due to multiple mosaic, and site falls in gap
+        print("Data Issue: different number image_boundary files and vol### files. Pay attention!") #could happen due to multiple mosaic, and site falls in gap
+    
+    print("VOLUME NAMES SELECTED: " + str(filenameList_m))
+    print("VOLUMES SELECTED: " + str(filepathList_m))
+    print("IMAGE BOUNDARIES SELECTED: " + str(filenameList_b))
 
     # one boundary file could correspond to one or more mosaicked image files
-    
+
     for i in range(0, len(filepathList_b)):
 
         mosaickedimagepathList= []   #this is a clip and mosaic of images from the same volume
@@ -186,41 +258,34 @@ def selectbyyear(selectionLayer):
 
         boundarypath = filepathList_b[i]
         boundaryfilename = filenameList_b[i]
-
-        # CREATE SELECTED BOUNDARIES SHAPEFILE
-        if i == 0:
-            boundaryselectedshp = arcpy.CreateFeatureclass_management(scratch, "boundaryselectedshp.shp", "POLYGON")
-            arcpy.MakeFeatureLayer_management(boundaryselectedshp, "boundaryselected")
-            arcpy.AddField_management(boundaryselectedshp, "VOLUMENAME", "TEXT")
-            arcpy.AddField_management(boundaryselectedshp, "IMAGE_NO", "TEXT")
-        arcpy.Append_management(os.path.join(boundarypath,boundaryfilename + ".shp"), boundaryselectedshp, "NO_TEST")
-        
+        print("___" + str(i) + ". " + str(boundarypath).split('\\')[5])
         # further check with the boundary file to see if intersected.
 
         logger.info("order " + OrderIDText + ":        boundarypath is " + boundarypath)
-        print "___" + str(i) + ". boundarypath is " + boundarypath
+        # print("order " + OrderIDText + ":        boundarypath is " + boundarypath
 
         boundarySHP = os.path.join(boundarypath, boundaryfilename + '.shp')
         arcpy.MakeFeatureLayer_management(boundarySHP, "boundary_lyr")
-        arcpy.SelectLayerByLocation_management("boundary_lyr",'intersect', orderGeometryPR,selectionDist)
+        arcpy.SelectLayerByLocation_management("boundary_lyr","INTERSECT", orderGeometryPR,selectionDist)
+        print("NUMBER OF FEATURES SELECTED: " + str(int((arcpy.GetCount_management("boundary_lyr").getOutput(0)))))
 
-        if(int((arcpy.GetCount_management("boundary_lyr").getOutput(0))) ==0):
-
+        if(int((arcpy.GetCount_management("boundary_lyr").getOutput(0))) ==0): #GET TABLE ROW COUNT
             logger.info("order " + OrderIDText + ":            NO records selected in the boundary layer file in path " + boundarypath)    # this may eleminate the false positives
-            print "order " + OrderIDText + ":            NO records selected in the boundary layer file in path " + boundarypath
+            print("order " + OrderIDText + ":            NO records selected in the boundary layer file in path " + boundarypath)
 
         else:
 
             # find the same path in filepathList_b, to locate the corresponding vol### file(s)
             # note the image_boudary path is missing last "/" compared to other paths
             if boundarypath+"\\" not in filepathList_m:   #path is also path for the vol###, always at the same level. Note difference by an ending '/'
+
                 logger.info("order " + OrderIDText + ":            ERROR: the boundary file doesn't have a matching vol### file!!! in " + boundarypath)
                 raise Exception("order " + OrderIDText + ":            ERROR: the boundary file doesn't have a matching vol### file!!! in " + boundarypath)
 
             else:
 
-                print "##### MXD addlayer and exporting #" + str(i) + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-                # need to consider multi-part images, their boudnaries could overlap. cannot just randomly pick one
+                print("##### MXD addlayer and exporting #" + str(i) + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
+                # need to consider multi-part images, their boundaries could overlap. cannot just randomly pick one
                 # if both of the multi-part images are selected, it means both intersect with the buffer, even though the intersection could be blank.
                 # may need to add both to mxd,
                 # and clip (and mosaicked) both
@@ -232,11 +297,10 @@ def selectbyyear(selectionLayer):
                 for ind,x in enumerate(filepathList_m):
                     if x==boundarypath+"\\":
                         mosaickedimagepathList.append(x)
-                        print "" + x + "" + filenameList_m[ind]
+                        print("" + x + "" + filenameList_m[ind].replace(" ",""))
                         imagefile = getImagefile(x,filenameList_m[ind])
                         mosaickedfilenameList.append(imagefile)
 
-                #OPEN WORKBOOK
                 book = open_workbook(excelfile)              #[vol123, los angeles 1983 vol 2, los angeles@@@CA@los angeles@1983@2, ... ]
                 sheet = book.sheet_by_name('Sheet1')
                 num_rows = sheet.nrows-1
@@ -252,15 +316,15 @@ def selectbyyear(selectionLayer):
                     volnum1 = str(sheet.cell_value(curr_row,0)).strip()     # e.g. vol112
                     duplicate = 0 if str(sheet.cell_value(curr_row,8)).strip() == '' else 1     # 1 if duplicate flag
 
-                    #print "volumeNum is #" + volumeNum + "# and volnum1 is #" + volnum1 + "#"
                     if volnum1.lower() == volumeNum.lower(): #volumeNum is always like vol123
-                        #print "volumeNum found " + volumeNum
+                        print("VOLUMENUM FOUND: " + volumeNum)
                         volumeName_new = str(sheet.cell_value(curr_row,3)).strip()     #e.g. Long Beach 1914 - Sep 1963; Volume 3@@@California@Long Beach@1963@3
                         state = volumeName_new.split('@@@')[1].split('@')[0]          #e.g. California
                         city = volumeName_new.split('@@@')[1].split('@')[1]           #e.g. los angeles
-                        year = int(volumeName_new.split('@@@')[1].split('@')[2].split('(')[0].strip())           #e.g. 1980
+                        year = int(volumeName_new.split('@@@')[1].split('@')[2].split('(')[0].strip())             #e.g. 1980
                         volseq = volumeName_new.split('@@@')[1].split('@')[3]         #e.g. volume 2 of a particular series
                         break
+                    
                 book.unload_sheet('Sheet1')
 
                 # loop through relevant records in boundary file, locate the sheet numbers for this volume
@@ -288,8 +352,9 @@ def selectbyyear(selectionLayer):
                     if year not in years_s:
                         years_s.append(year)
                 del book
-    print  '########## finish image site selection'
-    print '============================================================'
+
+    print('########## finish image site selection')
+    print('==================================================')
 
     return (summaryList_s, years_s)
 
@@ -303,7 +368,7 @@ def reorgbyyear(summaryList):
             if summaryList[i][10] == 0:              #duplicate folder won't be on dedup list
                 dictsummary_dedup[summaryList[i][5]] = [summaryList[i]]
             else:
-                print "duplicate folder removed " + summaryList[i][0]
+                print("duplicate folder removed " + summaryList[i][0])
         else:
             dictsummary[summaryList[i][5]].append(summaryList[i])
             if summaryList[i][10] == 0:                                     #the same year, but supplementary
@@ -312,7 +377,7 @@ def reorgbyyear(summaryList):
                 else:
                     dictsummary_dedup[summaryList[i][5]].append(summaryList[i])
             else:
-                print "duplicate folder removed " + summaryList[i][0]
+                print("duplicate folder removed " + summaryList[i][0])
     return (dictsummary, dictsummary_dedup)
 
 def getImagefile(mosaicpath, mosaicname):
@@ -324,9 +389,9 @@ def getImagefile(mosaicpath, mosaicname):
     elif os.path.exists(os.path.join(mosaicpath, mosaicname+'.tif')):
         imagefile = mosaicname + '.tif'
     else:
-        print "mosaic path is " + mosaicpath
-        print "mosaicname is " + mosaicname
-        print ''+1
+        print("mosaic path is " + mosaicpath)
+        print("mosaicname is " + mosaicname)
+        print(''+1)
         #sys.exit("Unrecognized image file extension for ") + mosaicpath + mosaicname
 
     return imagefile
@@ -348,7 +413,7 @@ def centreFromPolygon(polygonSHP,coordinate_system):
     array1 = arcpy.Array()
 
     featureList = []
-    arcpy.CreateFeatureclass_management(scratch, outPointFileName, "POINT", "", "DISABLED", "DISABLED", srGCS83)
+    arcpy.CreateFeatureclass_management(scratch, outPointFileName, "POINT", "", "DISABLED", "DISABLED", coordinate_system)
     cursor = arcpy.InsertCursor(centreSHP)
     feat = cursor.newRow()
 
@@ -371,7 +436,7 @@ def centreFromPolygon(polygonSHP,coordinate_system):
     arcpy.AddXY_management(centreSHP)
     return centreSHP
 
-#------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
 ##deployment variables
 server_environment = 'prod'
 server_config_file = r"\\cabcvan1gis007\gptools\ERISServerConfig.ini"
@@ -380,7 +445,7 @@ connectionString = 'eris_gis/gis295@cabcvan1ora003.glaciermedia.inc:1521/GMPRODC
 reportcheckFolder = server_config["reportcheck"]
 viewerFolder = server_config["viewer"]
 uploadlink =  server_config["viewer_upload"] + r"/ErisInt/BIPublisherPortal_prod/Viewer.svc/FIMUpload?ordernumber="
-
+                 
 ##global variables
 connectionPath = r"\\cabcvan1gis006\GISData\FIMS_USA"
 masterlyr = os.path.join(connectionPath,"master\Master.shp")
@@ -390,9 +455,10 @@ orderGeomlyrfile_point =  os.path.join(connectionPath,r"python\layer\SiteMaker.l
 orderGeomlyrfile_polyline =  os.path.join(connectionPath,r"python\layer\orderLine.lyr")
 orderGeomlyrfile_polygon =  os.path.join(connectionPath,r"python\layer\orderPoly.lyr")
 
-FIMmxdfile =  os.path.join(connectionPath, r"python\mxd\FIMLayout_MM.mxd")
-Summarymxdfile = os.path.join(connectionPath, r"mxd\SummaryPage.mxd")
-NRFmxdfile = os.path.join(connectionPath, r"mxd\NRF_new.mxd")
+FIMmxdfile = os.path.join(connectionPath, r"python\mxd\FIMLayout.mxd")
+##Covermxdfile = os.path.join(connectionPath, r"python\mxd\CoverPage.mxd")
+Summarymxdfile = os.path.join(connectionPath, r"python\mxd\SummaryPage.mxd")
+NRFmxdfile = os.path.join(connectionPath, r"python\mxd\NRF.mxd")
 imagelyr =  os.path.join(connectionPath,r"python\layer\mosaic_jpg_255.lyr")
 boundlyrfile =  os.path.join(connectionPath,r"python\layer\boundary.lyr")
 logopath =  os.path.join(connectionPath,r"python\mxd\logos")
@@ -401,23 +467,19 @@ annot_line =  os.path.join(connectionPath,r"python\mxd\annot_line.pdf")
 srGCS83 = arcpy.SpatialReference(4269)
 srWGS84 = arcpy.SpatialReference(4326)
 selectionDist = '150 FEET'
-coverPic =  os.path.join(connectionPath,"python\coverPic\ERIS_2018_ReportCover_Fire Insurance Maps_F.jpg")
-secondPic =  os.path.join(connectionPath,"python\coverPic\ERIS_2018_ReportCover_Second Page_F.jpg")
+coverPic =  os.path.join(connectionPath,"python\ERIS_2018_ReportCover_Fire Insurance Maps_F.jpg")
+secondPic =  os.path.join(connectionPath,"python\ERIS_2018_ReportCover_Second Page_F.jpg")
 
 try:
-    OrderIDText = r""#arcpy.GetParameterAsText(0) #'686635'#730125
+    OrderIDText = r"" #arcpy.GetParameterAsText(0)
     OrderNumText = r"20200727135"
-    gridsize =  "0.3 KiloMeters"#'0.3 KiloMeters'
-    multisheet_Xplorer = 'no' # yes will upload individual fim sheets per year to Xplorer, no will upload one jpg image per year.
-
     BufsizeText ='0.17'#arcpy.GetParameterAsText(1) # '0.17'#
-    yesBoundary = ""#arcpy.GetParameterAsText(2) #'yes'#
-    selectionDist = '150 FEET'
+    yesBoundary = ''#arcpy.GetParameterAsText(2) #yes/no/fixed
     scratch = os.path.join(r"W:\Data Analysts\Alison\_GIS\FIM_SCRATCHY", OrderNumText)
-#------------------------------------------------------------------------------------------------------------------
-
-    summaryList = []
     emgOrder= 'N'
+    resolution = '800'
+# -------------------------------------------------------------------------------------------------------------------------------------
+
     try:
         con = cx_Oracle.connect(connectionString)
         cur = con.cursor()
@@ -441,23 +503,26 @@ try:
         con.close()
 
     is_newLogofile = 'N'
+
     try:
         con = cx_Oracle.connect(connectionString)
         cur = con.cursor()
         newlogofile = cur.callfunc('ERIS_CUSTOMER.IsCustomLogo', str, (str(OrderIDText),))
 
-        if newlogofile <> None:
+        if newlogofile != None:
             is_newLogofile = 'Y'
             if newlogofile =='RPS_RGB.gif':
                 newlogofile='RPS.png'
             elif newlogofile == 'G2consulting.png':
                 newlogofile = None
                 is_newLogofile = 'N'
+
     finally:
         cur.close()
         con.close()
 
     is_aei = 'N'
+
     try:
         con = cx_Oracle.connect(connectionString)
         cur = con.cursor()
@@ -482,8 +547,8 @@ try:
         proNo = coverInfotext["PROJECT_NUM"]
         ProName = coverInfotext["COMPANY_NAME"]
 
-        coverInfotext["ADDRESS"] = '%s\n%s %s %s'%(coverInfotext["ADDRESS"],coverInfotext["CITY"],coverInfotext["PROVSTATE"],coverInfotext["POSTALZIP"])
-        AddressText=coverInfotext["ADDRESS"].replace("\n"," ")
+        coverInfotext["ADDRESS"] = '%s\n%s %s %s'%(coverInfotext["ADDRESS"].replace("\t"," "),coverInfotext["CITY"],coverInfotext["PROVSTATE"],coverInfotext["POSTALZIP"])
+        AddressText=coverInfotext["ADDRESS"].replace("\n"," ").replace("\t"," ")
 
         cur.execute("select geometry_type, geometry, radius_type  from eris_order_geometry where order_id =" + OrderIDText)
         t = cur.fetchone()
@@ -491,7 +556,7 @@ try:
         OrderCoord = eval(str(t[1]))
         RadiusType = str(t[2])
 
-    except Exception,e:
+    except Exception as e:
         logger.error("Error to get flag from Oracle " + str(e))
         raise
     finally:
@@ -560,9 +625,8 @@ try:
         BufsizeText = "0.001"   # for polygon no buffer orders, buffer set to 1m, to avoid buffer clipping error
     elif float(BufsizeText) < 0.01:   # for site orders, usually has a radius of 0.001
         BufsizeText = "0.25"        # set the FIP search radius to 250m
-    #BufsizeText = "2"
+
     bufferDistance = BufsizeText + " KILOMETERS"
-    #bufferDistance = "1.25 KILOMETERS"
     outBufferSHP = os.path.join(scratch, "buffer.shp")
     logger.info("order " + OrderIDText + " OrderType and RadiusType are " + OrderType + " " + RadiusType)
     if OrderType.lower() == "polygon" and RadiusType.lower() == "centre":
@@ -576,11 +640,11 @@ try:
         arcpy.Buffer_analysis(orderGeometryPR, outBufferSHP, bufferDistance)
         logger.info("order " + OrderIDText + ' polygon centre: no '+time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
-    # bufferDistance_e = str(float(BufsizeText)*15) + " KILOMETERS"
-    # if bufferDistance_e < 0.1:
-    #    bufferDistance_e = "0.5 KILOMETERS"    # for polygon edge orders, arbitrarily assign 500m, thsi will be used for mask clipping
-    # extentBufferSHP = os.path.join(scratch,"buffer_extent.shp")
-    # arcpy.Buffer_analysis(orderGeometryPR, extentBufferSHP, bufferDistance_e)
+    ##bufferDistance_e = str(float(BufsizeText)*15) + " KILOMETERS"
+    ##if bufferDistance_e < 0.1:
+    ##    bufferDistance_e = "0.5 KILOMETERS"    # for polygon edge orders, arbitrarily assign 500m, thsi will be used for mask clipping
+    ##extentBufferSHP = os.path.join(scratch,"buffer_extent.shp")
+    ##arcpy.Buffer_analysis(orderGeometryPR, extentBufferSHP, bufferDistance_e)
 
     arcpy.env.workspace = shapefilepath
     shplist = arcpy.ListFeatureClasses()
@@ -603,15 +667,16 @@ try:
     presentedFIPs = os.path.join(scratch, "presented.shp")
     if arcpy.Exists(presentedFIPs):
         arcpy.Delete_management(presentedFIPs)
+
     for shp in shplist:
         desc = arcpy.Describe(shp)
         extent = desc.extent
-        # print extent.XMax, extent.XMin, extent.YMax, extent.YMin
-        if (xMax < extent.XMax and xMin > extent.XMin and yMax < extent.YMax and yMin > extent.YMin) :        # algorithm optimization
+        # print(extent.XMax, extent.XMin, extent.YMax, extent.YMin
+        if (xMax < extent.XMax and xMin > extent.XMin and yMax < extent.YMax and yMin > extent.YMin):        # algorithm optimization
             if len(shp) == 13 or len(shp) == 14:
-                print "in extent: " + str(shp)
-
+                print("in extent: " + str(shp))
                 shpLayer = arcpy.mapping.Layer(shp)
+
                 arcpy.SelectLayerByLocation_management(shpLayer,'intersect', orderGeometryPR,selectionDist)
                 if(int((arcpy.GetCount_management(shpLayer).getOutput(0))) >0):
                     i = i + 1
@@ -638,14 +703,14 @@ try:
     nFIP = 0
     years_s = []
     if(i ==0):
-
-        print "NO records selected"
+        print("NO records selected")
 
     else:
         years_s = []
         summaryList_s = []
         selectedLayer = arcpy.MakeFeatureLayer_management(selectedFIPs)
         (summaryList_s, years_s) = selectbyyear(selectedLayer)         #to get the selected years
+
         # need to clear selection on the layer
         presentedLayer = arcpy.MakeFeatureLayer_management(presentedFIPs)
         arcpy.SelectLayerByLocation_management(presentedLayer,'intersect', outBufferSHP, '','NEW_SELECTION')    #this is to work on a new selection
@@ -666,31 +731,32 @@ try:
         for row in rows:
             filename = (row.getValue(filenameFieldName)).strip()
             filenameL = filename.lower()
+            # print("filenameL is " + filenameL
             if filenameL[:3] == 'vol':   # the mosaicked file (vol***)
                 apath = row.getValue(pathFieldName)
                 bpath = apath.replace("W:\FIM_DATA_USA",r"\\cabcvan1fpr009\FIM_DATA_USA")
+
+                # print("append to _m list: " + bpath
                 filepathList_m.append(bpath)            #path list for mosaicked images
                 filenameList_m.append(filename)
                 i = i+ 1
-            if 'image' in filenameL:
-                if 'boundary' in filenameL:
-                    apath = row.getValue(pathFieldName)
-                    bpath = apath.replace("W:\FIM_DATA_USA",r"\\cabcvan1fpr009\FIM_DATA_USA")
-                    if bpath ==r"\\cabcvan1fpr009\FIM_DATA_USA\FIM_DATA_NY\VOL27099":
-                        bpath=r"\\cabcvan1gis001\FIMData\New York\Revisions\23102018\VOL27099"
-                    filepathList_b.append(bpath)             #path list for boundary file
-                    filenameList_b.append(filename)
+            if 'image_boundary' in filenameL:
+                apath = row.getValue(pathFieldName)
+                bpath = apath.replace("W:\FIM_DATA_USA",r"\\cabcvan1fpr009\FIM_DATA_USA")
+
+                # print("append to _b list: " + bpath
+                filepathList_b.append(bpath)             #path list for boundary file
+                filenameList_b.append(filename)
         del row
         del rows
 
         if len(filepathList_b) != len(filepathList_m):
             logger.info("order " + OrderIDText + ":        Data ERROR: different number image_boundary files and vol### files. Pay attention!!")
-            print "Data Issue: different number image_boundary files and vol### files. Pay attention!" #could happen due to multiple mosaic, and site falls in gap
+            print("Data Issue: different number image_boundary files and vol### files. Pay attention!") #could happen due to multiple mosaic, and site falls in gap
 
         # one boundary file could correspond to one or more mosaicked image files
 
         for i in range(0, len(filepathList_b)):
-
             mosaickedimagepathList= []   #this is a clip and mosaic of images from the same volume
             mosaickedfilenameList = []
 
@@ -699,27 +765,28 @@ try:
             # further check with the boundary file to see if intersected.
 
             logger.info("order " + OrderIDText + ":        boundarypath is " + boundarypath)
-            print "order " + OrderIDText + ":        boundarypath is " + boundarypath
+            print("order " + OrderIDText + ":        boundarypath is " + boundarypath)
 
             boundarySHP = os.path.join(boundarypath, boundaryfilename + '.shp')
             arcpy.MakeFeatureLayer_management(boundarySHP, "boundary_lyr")
             arcpy.SelectLayerByLocation_management("boundary_lyr",'intersect', outBufferSHP)
 
             if(int((arcpy.GetCount_management("boundary_lyr").getOutput(0))) ==0):
+
                 logger.info("order " + OrderIDText + ":            NO records selected in the boundary layer file in path " + boundarypath)    # this may eleminate the false positives
-                print "order " + OrderIDText + ":            NO records selected in the boundary layer file in path " + boundarypath
+                print("order " + OrderIDText + ":            NO records selected in the boundary layer file in path " + boundarypath)
 
             else:
+
                 # find the same path in filepathList_b, to locate the corresponding vol### file(s)
                 # note the image_boudary path is missing last "/" compared to other paths
                 if boundarypath+"\\" not in filepathList_m:   #path is also path for the vol###, always at the same level. Note difference by an ending '/'
 
                     logger.info("order " + OrderIDText + ":            ERROR: the boundary file doesn't have a matching vol### file!!! in " + boundarypath)
-                    raise Exception("order " + OrderIDText + ":            ERROR: the boundary file doesn't have a matching vol### file!!! in " + boundarypath)
+                    #raise Exception("order " + OrderIDText + ":            ERROR: the boundary file doesn't have a matching vol### file!!! in " + boundarypath)
 
                 else:
-
-                    print "##### MXD addlayer and exporting #" + str(i) + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+                    print("##### MXD addlayer and exporting #" + str(i) + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
                     # need to consider multi-part images, their boudnaries could overlap. cannot just randomly pick one
                     # if both of the multi-part images are selected, it means both intersect with the buffer, even though the intersection could be blank.
                     # may need to add both to mxd,
@@ -732,8 +799,8 @@ try:
                     for ind,x in enumerate(filepathList_m):
                         if x==boundarypath+"\\":
                             mosaickedimagepathList.append(x)
-                            print "" + x + "" + filenameList_m[ind]
-                            imagefile = getImagefile(x,filenameList_m[ind])
+                            print("" + x + "" + filenameList_m[ind].replace(" ",""))
+                            imagefile = getImagefile(x,filenameList_m[ind].replace(" ",""))
                             mosaickedfilenameList.append(imagefile)
 
                     book = open_workbook(excelfile)              #[vol123, los angeles 1983 vol 2, los angeles@@@CA@los angeles@1983@2, ... ]
@@ -745,6 +812,7 @@ try:
                     state = ' '
                     year = ' '
                     volseq = ' '
+
                     while curr_row < num_rows:
                         curr_row += 1
                         row = sheet.row(curr_row)
@@ -752,9 +820,7 @@ try:
                         duplicate = 0 if str(sheet.cell_value(curr_row,8)).strip() == '' else 1     # 1 if duplicate flag
 
                         if volnum1.lower() == volumeNum.lower(): #volumeNum is always like vol123
-                            volumeName_new = str(sheet.cell_value(curr_row,3)).strip()
-                            if volumeName_new =='Denver 1930 Volume 6@@@Colorado@@@Denver@1930@6':
-                                volumeName_new = 'Denver 1930 Volume 6@@@Colorado@Denver@1930@6' #e.g. Long Beach 1914 - Sep 1963; Volume 3@@@California@Long Beach@1963@3
+                            volumeName_new = str(sheet.cell_value(curr_row,3)).strip()     #e.g. Long Beach 1914 - Sep 1963; Volume 3@@@California@Long Beach@1963@3
                             state = volumeName_new.split('@@@')[1].split('@')[0]          #e.g. California
                             city = volumeName_new.split('@@@')[1].split('@')[1]           #e.g. los angeles
                             year = int(volumeName_new.split('@@@')[1].split('@')[2].split('(')[0].strip())           #e.g. 1980
@@ -792,17 +858,16 @@ try:
     dictSummary = {}
     dictSummary_dedup = {}
     (dictSummary, dictSummary_dedup) = reorgbyyear(summaryList)
-
     yearlookup = {}
+    #years = dictSummary_dedup.keys()
+    #years.sort(reverse = True)
     if is_aei == 'Y':
         years_s.sort(reverse = False)
     else:
         years_s.sort(reverse = True)
     pdflist = []
 
-    Multipage = True
     if OrderType.lower()== 'point':
-        Multipage = False
         orderGeomlyrfile = orderGeomlyrfile_point
     elif OrderType.lower() =='polyline':
         orderGeomlyrfile = orderGeomlyrfile_polyline
@@ -812,30 +877,14 @@ try:
     orderGeomLayer = arcpy.mapping.Layer(orderGeomlyrfile)
     orderGeomLayer.replaceDataSource(scratch,"SHAPEFILE_WORKSPACE","orderGeometry")
 
-    # CREATES GRID
-    if Multipage:
-        Gridlrshp = os.path.join(scratch,"gridlr.shp")
-        arcpy.GridIndexFeatures_cartography(Gridlrshp, outBufferSHP_GCS, "", "", "", gridsize, gridsize)
-        arcpy.MakeFeatureLayer_management(Gridlrshp, "gridlr")
+    firstTime = True
 
     for year in years_s:
-        print(year)
         mxdFIP = arcpy.mapping.MapDocument(FIMmxdfile)
         dfFIP = arcpy.mapping.ListDataFrames(mxdFIP,"main")[0]
         queryLayer = arcpy.mapping.ListLayers(mxdFIP,"Buffer Outline",dfFIP)[0]
         queryLayer.replaceDataSource(scratch, "SHAPEFILE_WORKSPACE", "buffer")  # note buffer.shp won't work
-        
-        # SKIPS BLANK GRIDS
-        if Multipage: 
-            expression = str('"VOLUMENAME" LIKE \'%@' + str(year) + "@%'")
-            boundaryselectedshp = os.path.join(scratch, "boundaryselectedshp.shp")
-            arcpy.SelectLayerByAttribute_management('boundaryselected','NEW_SELECTION', expression)
-            arcpy.SelectLayerByLocation_management('gridlr', 'intersect', 'boundaryselected')
-            Gridlrselectedshp = arcpy.CopyFeatures_management('gridlr', os.path.join(scratch,'gridlrselectedshp' + '_' + str(year) + '.shp'))
-            arcpy.MakeFeatureLayer_management(Gridlrselectedshp, "gridlrselected")
 
-            newgridlr = arcpy.mapping.ListLayers(mxdFIP,"Grid",dfFIP)[0]
-            newgridlr.replaceDataSource(scratch, "SHAPEFILE_WORKSPACE","gridlrselectedshp" + "_" + str(year))
         dfinset = arcpy.mapping.ListDataFrames(mxdFIP,"inset")[0]
 
         #sheetNos= []
@@ -849,30 +898,27 @@ try:
             else:
                 sheetnoText = sheetnoText + 'Volume ' + str(item[4]) + ': '
             for i in range(0,len(item[7])):
-                try:
-                    imageLayer.replaceDataSource(item[7][i], "RASTER_WORKSPACE", item[8][i])      #one folder could have multipe mosaicked images
-                    if year not in yearlookup.keys():
-                        yearlookup[year] = [os.path.join(item[7][i], item[8][i])]
-                    else:
-                        yearlookup[year].append(os.path.join(item[7][i], item[8][i]))
-                    arcpy.mapping.AddLayer(dfFIP,imageLayer,"Bottom")
+                imageLayer.replaceDataSource(item[7][i], "RASTER_WORKSPACE", item[8][i])      #one folder could have multipe mosaicked images
+                if year not in yearlookup.keys():
+                    yearlookup[year] = [os.path.join(item[7][i], item[8][i])]
+                else:
+                    yearlookup[year].append(os.path.join(item[7][i], item[8][i]))
+                arcpy.mapping.AddLayer(dfFIP,imageLayer,"Bottom")
 
-                    #sheetNos.extend(item[6])  #here could use append and more processing to seperate sheets from multiple volumes
-                    sheetnoText = sheetnoText + ','.join(item[6]) + ';' + '\r\n'
-                    volumeNums = volumeNums + item[0]
-                    logger.info("order " + OrderIDText + ":                add to mxd the image: " + imageLayer.dataSource)
-                except ValueError:
-                    continue
+                #sheetNos.extend(item[6])  #here could use append and more processing to seperate sheets from multiple volumes
+                sheetnoText = sheetnoText + ','.join(item[6]) + ';' + '\r\n'
+                volumeNums = volumeNums + item[0]
+                logger.info("order " + OrderIDText + ":                add to mxd the image: " + imageLayer.dataSource)
+
             boundLayer = arcpy.mapping.Layer(boundlyrfile)
             boundLayer.replaceDataSource(item[7][0],"SHAPEFILE_WORKSPACE","IMAGE_BOUNDARY")
             arcpy.mapping.AddLayer(dfinset,boundLayer,"Bottom")
 
         # refresh the view to reflect the updated image
         # center and scale the image
-        spatialRef = out_coordinate_system
+        spatialRef = out_coordinate_system#arcpy.SpatialReference(out_coordinate_system)
         dfFIP.spatialReference = spatialRef
-        ext = newgridlr.getExtent()
-        dfFIP.extent = ext#queryLayer.getSelectedExtent(False)
+        dfFIP.extent = queryLayer.getSelectedExtent(False)
         scale = dfFIP.scale * 1.1
         dfFIP.scale = ((int(scale)/100)+1)*100
 
@@ -894,57 +940,59 @@ try:
         #searchradiusTextE.elementPositionX = 0.5972
         #searchradiusTextE.elementPositionY = 0.2371
 
-##        if OrderType.lower() == "polyline" or OrderType.lower() == "polygon":
-        if yesBoundary.lower() =='yes':
+        # if OrderType.lower() == "polyline" or OrderType.lower() == "polygon":
+        if yesBoundary.lower() == 'fixed':
             arcpy.mapping.AddLayer(dfFIP,orderGeomLayer,"Top")
-        arcpy.RefreshTOC()
 
         if is_newLogofile == 'Y' and emgOrder == 'N':
             logoE = arcpy.mapping.ListLayoutElements(mxdFIP, "PICTURE_ELEMENT", "logo")[0]
             logoE.sourceImage = os.path.join(logopath, newlogofile)
 
+        arcpy.RefreshTOC()
         mxdFIP.saveACopy(os.path.join(scratch, "test_"+volumeNums+"_"+str(year)+".mxd"))
-
-        # note by using "Page_layout", the two document size parameters are not effective
+        # print the map pdf
         FIPpdf = os.path.join(scratch, 'FIPExport_'+volumeNums+"_"+str(year)+'.pdf')
-        FIPjpg = os.path.join(scratch, 'FIPExport_'+volumeNums+"_"+str(year)+'.jpg')
         # note by using "Page_layout", the two document size parameters are not effective
-#cc        arcpy.mapping.ExportToPDF(mxdFIP, FIPpdf, "PAGE_LAYOUT")#, 0, 0, 400, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "LAYERS_AND_ATTRIBUTES", True, 85)
-        arcpy.mapping.ExportToJPEG(mxdFIP, FIPjpg, "PAGE_LAYOUT",resolution = 96)
-        from reportlab.pdfgen import canvas
-        c = canvas.Canvas(FIPpdf,pagesize = portrait(letter))
-        pagesize = portrait(letter)
-        [PAGE_WIDTH,PAGE_HEIGHT]=pagesize[:2]
-        PAGE_WIDTH = int(PAGE_WIDTH)
-        PAGE_HEIGHT = int(PAGE_HEIGHT)
-        c.drawImage(FIPjpg,0,0, PAGE_WIDTH,PAGE_HEIGHT)
-        c.save()
-        del c
+        arcpy.mapping.ExportToPDF(mxdFIP, FIPpdf, "PAGE_LAYOUT", 0, 0,resolution, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "NONE", True, 85)
 
+        # note by using export dataframe (instead of "page_layout") below, the map quality does look better. But the problem is with the size of the page and non-appearing layout elements
+        # arcpy.mapping.ExportToPDF(mxdFIP, FIPpdf, dfFIP, 6800, 8800, 400, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "LAYERS_AND_ATTRIBUTES", True, 90)
+        if ( yesBoundary.lower() == 'yes' and (OrderType.lower() == "polyline" or OrderType.lower() == "polygon")):
+            if firstTime:
+                #remove all other layers
+                scale2use = dfFIP.scale
+                for lyr in arcpy.mapping.ListLayers(mxdFIP, "", dfFIP):
+                    arcpy.mapping.RemoveLayer(dfFIP, lyr)
+                arcpy.mapping.AddLayer(dfFIP,orderGeomLayer,"Top") #the layer is visible
+                dfFIP.scale = scale2use
+                shapePdf = os.path.join(scratch, 'shape.pdf')
+                arcpy.mapping.ExportToPDF(mxdFIP, shapePdf, "PAGE_LAYOUT", 0, 0, 150, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "NONE", True, 85)
+                #create the a pdf with annotation just once
+                myAnnotPdf = createAnnotPdf(OrderType, shapePdf)
+                firstTime = False
+
+            #merge annotation pdf to the map
+            FIPpdf = annotatePdf(FIPpdf, myAnnotPdf)
+            arcpy.AddMessage("FIPpdf is " + FIPpdf)
         pdflist.append(FIPpdf)
-
-        if OrderType.lower() !='point':
-            ddMMDDP = mxdFIP.dataDrivenPages
-            ddMMDDP.refresh()
-            FIPpdfMM = os.path.join(scratch, 'FIPExport_'+volumeNums+"_"+str(year)+'_multipage.pdf')
-            ddMMDDP.exportToPDF(FIPpdfMM, "ALL",resolution=600)
-            pdflist.append(FIPpdfMM)
-
         arcpy.Delete_management("in_memory")
         FIPpdf = None
         del queryLayer
         del imageLayer
         del dfFIP
         del mxdFIP
-
     NRF='N'
     pagesize = portrait(letter)
     [PAGE_WIDTH,PAGE_HEIGHT]=pagesize[:2]
+    PAGE_WIDTH = int(PAGE_WIDTH)
+    PAGE_HEIGHT = int(PAGE_HEIGHT)
     styles = getSampleStyleSheet()
+
     summaryfile=os.path.join(scratch,"summary.pdf")
     coverfile = os.path.join(scratch,"cover.pdf")
+
     if len(years_s) ==0 :
-        logger.info("order " + OrderIDText + ":    search completed. Will print out a NRF letter. ")
+        logger.info("order " + OrderIDText + ":    search completed. Will print(out a NRF letter. ")
         NRF='Y'
         goCoverPage(coverfile)
         os.rename(coverfile,pdfreport)
@@ -956,22 +1004,17 @@ try:
         cover = open(coverfile,'rb')
         output.addPage(PdfFileReader(cover).getPage(0))
         output.addBookmark("Cover Page",0)
+
         summary = open(summaryfile,'rb')
         for j in range(PdfFileReader(summary).getNumPages()):
             output.addPage(PdfFileReader(summary).getPage(j))
             output.addBookmark("Summary Page",j+1)
-        l=j+1
-        for i in range(len(pdflist)):
+
+        for i in range(0, len(years_s)):
             pdf = pdflist[i]
             page = open(pdf,'rb')
-            totalnum = PdfFileReader(page).getNumPages()
-
-            for k in range(totalnum):
-                output.addPage(PdfFileReader(page).getPage(k))
-            l+=len(range(totalnum))
-
-            if i in range(0,len(pdflist),2):
-                output.addBookmark(str(years_s[int(i/2)]), l)
+            output.addPage(PdfFileReader(page).getPage(0))
+            output.addBookmark(str(years_s[i]), i+j+2)
 
         outputStream = open(pdfreport,"wb")
         output.setPageMode('/UseOutlines')
@@ -982,10 +1025,6 @@ try:
         summary.close()
         output = None
         summaryfile = None
-
-    if os.path.exists(os.path.join(reportcheckFolder,"FIM",pdfreport_name)):
-        os.remove(os.path.join(reportcheckFolder,"FIM",pdfreport_name))
-    shutil.copyfile(pdfreport,os.path.join(reportcheckFolder,"FIM",pdfreport_name))
 
     needViewer = 'N'
     try:
@@ -1000,11 +1039,11 @@ try:
     finally:
         cur.close()
         con.close()
-    needViewer= 'Y'
+
     if needViewer == 'Y':
         metadata = []
-        srGoogle = arcpy.SpatialReference(3857)   #web mercator
-        arcpy.AddMessage("Viewer is needed. Need to copy data to obi002")
+        srGoogle = arcpy.SpatialReference(3857)
+        arcpy.AddMessage("Viewer is needed")#, multipage. Need to copy data to obi002")
         viewerdir = os.path.join(scratch,OrderNumText+'_fim')
         if not os.path.exists(viewerdir):
             os.mkdir(viewerdir)
@@ -1014,68 +1053,40 @@ try:
         #need to reorganize deliver directory
 
         arcpy.env.outputCoordinateSystem = srGoogle
-        #arcpy.env.extent = extent
         #to do: get the right year for each FIM
-
         for year in years_s:
             mxdname = glob.glob(os.path.join(scratch,'test*'+str(year)+'.mxd'))[0]
             mxd = arcpy.mapping.MapDocument(mxdname)
             df = arcpy.mapping.ListDataFrames(mxd,"main")[0]    # the spatial reference here is UTM zone #, need to change to WGS84 Web Mercator
             df.spatialReference = srGoogle
 
-            if multisheet_Xplorer =='yes':
-                i = 0
-                for queryLayer in arcpy.mapping.ListLayers(mxd,"image",df)[:1]:
-                    imagename = "%s_%s.jpg"%(year,i)
-                    df.extent = queryLayer.getSelectedExtent(False)
-                    df.scale=df.scale/1.2
-                    #arcpy.mapping.ExportToJPEG(mxd, os.path.join( viewerdir, imagename), df,df_export_width= 14290,df_export_height=16000,resolution=300, color_mode='8-BIT_GRAYSCALE',world_file = True, jpeg_quality=100)
-                    arcpy.mapping.ExportToJPEG(mxd, os.path.join(scratch, viewerdir, imagename), df,df_export_width= 5100,df_export_height=6600, color_mode='8-BIT_GRAYSCALE',world_file = True, jpeg_quality=70)
+            queryLayer = arcpy.mapping.ListLayers(mxd,"Buffer Outline",df)[0]
+            df.extent = queryLayer.getSelectedExtent(False)
 
-                    desc = arcpy.Describe(os.path.join(viewerdir, imagename))
-                    featbound = arcpy.Polygon(arcpy.Array([desc.extent.lowerLeft, desc.extent.lowerRight, desc.extent.upperRight, desc.extent.upperLeft]),srGoogle)
-                    del desc
+            imagename = str(year)+".jpg"
+            #arcpy.mapping.ExportToJPEG(mxd, os.path.join(scratch, viewerdir, imagename), df,df_export_width= 14290,df_export_height=16000, color_mode='8-BIT_GRAYSCALE',world_file = True) #by default, the jpeg quality is 100
+            arcpy.mapping.ExportToJPEG(mxd, os.path.join(scratch, viewerdir, imagename), df,5800,6100, color_mode='8-BIT_GRAYSCALE',world_file = True, jpeg_quality=50)
 
-                    tempfeat = os.path.join(tempdir, "tilebnd_%s_%s.shp"%(year,i))
-                    if not os.path.exists(tempfeat):
-                        arcpy.Project_management(featbound, tempfeat, arcpy.SpatialReference(4326)) #function requires output not be in_memory
-                    del featbound
-                    desc = arcpy.Describe(tempfeat)
-                    desc = arcpy.Describe(tempfeat)
-                    metaitem = {}
-                    metaitem['type'] = 'fim'
-                    metaitem['imagename'] = imagename[:-4]+'.jpg'
-                    metaitem['lat_sw'] = desc.extent.YMin
-                    metaitem['long_sw'] = desc.extent.XMin
-                    metaitem['lat_ne'] = desc.extent.YMax
-                    metaitem['long_ne'] = desc.extent.XMax
-                    metadata.append(metaitem)
-                    i+=1
-            else:
-                queryLayer = arcpy.mapping.ListLayers(mxd,"Buffer Outline",df)[0]
-                df.extent = queryLayer.getSelectedExtent(False)
+            desc = arcpy.Describe(os.path.join(viewerdir, imagename))
+            featbound = arcpy.Polygon(arcpy.Array([desc.extent.lowerLeft, desc.extent.lowerRight, desc.extent.upperRight, desc.extent.upperLeft]),
+                                srGoogle)
+            del desc
 
-                imagename = str(year)+".jpg"
-                #arcpy.mapping.ExportToJPEG(mxd, os.path.join(scratch, viewerdir, imagename), df,df_export_width= 14290,df_export_height=16000,resolution=300, color_mode='8-BIT_GRAYSCALE',world_file = True, jpeg_quality=100)
-                arcpy.mapping.ExportToJPEG(mxd, os.path.join(scratch, viewerdir, imagename),  df,df_export_width= 5100,df_export_height=6600, color_mode='8-BIT_GRAYSCALE',world_file = True, jpeg_quality=50)
+            tempfeat = os.path.join(tempdir, "tilebnd_"+str(year)+ ".shp")
+            arcpy.Project_management(featbound, tempfeat, srWGS84) #function requires output not be in_memory
+            del featbound
+            desc = arcpy.Describe(tempfeat)
 
-                desc = arcpy.Describe(os.path.join(viewerdir, imagename))
-                featbound = arcpy.Polygon(arcpy.Array([desc.extent.lowerLeft, desc.extent.lowerRight, desc.extent.upperRight, desc.extent.upperLeft]),srGoogle)
-                del desc
+            metaitem = {}
+            metaitem['type'] = 'fim'
+            metaitem['imagename'] = imagename[:-4]+'.jpg'
 
-                tempfeat = os.path.join(tempdir, "tilebnd_"+str(year)+ ".shp")
-                arcpy.Project_management(featbound, tempfeat, srWGS84) #function requires output not be in_memory
-                del featbound
+            metaitem['lat_sw'] = desc.extent.YMin
+            metaitem['long_sw'] = desc.extent.XMin
+            metaitem['lat_ne'] = desc.extent.YMax
+            metaitem['long_ne'] = desc.extent.XMax
 
-                desc = arcpy.Describe(tempfeat)
-                metaitem = {}
-                metaitem['type'] = 'fim'
-                metaitem['imagename'] = imagename[:-4]+'.jpg'
-                metaitem['lat_sw'] = desc.extent.YMin
-                metaitem['long_sw'] = desc.extent.XMin
-                metaitem['lat_ne'] = desc.extent.YMax
-                metaitem['long_ne'] = desc.extent.XMax
-                metadata.append(metaitem)
+            metadata.append(metaitem)
             del mxd, df
 
         arcpy.env.outputCoordinateSystem = None
@@ -1108,18 +1119,20 @@ try:
     finally:
         cur.close()
         con.close()
-
-    arcpy.SetParameterAsText(4, pdfreport)
+    
+    if os.path.exists(os.path.join(reportcheckFolder,"FIM", pdfreport_name)):
+        os.remove(os.path.join(reportcheckFolder,"FIM", pdfreport_name))
+    shutil.copyfile(pdfreport,os.path.join(reportcheckFolder,"FIM", pdfreport_name))
+    arcpy.SetParameterAsText(3, pdfreport)
     logger.info("order " + OrderIDText + ": pdf exported, with " + str(nFIP) + " maps"+time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     logger.removeHandler(handler)
     handler.close()
 
 except:
     # Get the traceback object
-    #
     tb = sys.exc_info()[2]
     tbinfo = traceback.format_tb(tb)[0]
-    pymsg = "PYTHON ERRORS:\nTraceback info:\n" + tbinfo + "\nError Info:\n" + str(sys.exc_info()[1])
+    pymsg = "Order ID: %s PYTHON ERRORS:\nTraceback info:\n"%OrderIDText + tbinfo + "\nError Info:\n" + str(sys.exc_info()[1])
 
     try:
         con = cx_Oracle.connect(connectionString)
@@ -1131,4 +1144,4 @@ except:
     raise    #raise the error again
 
 print("Final FIM report directory: " + (str(os.path.join(reportcheckFolder,"FIM", pdfreport_name))))
-print ("__________DONE")
+print("__________DONE")

@@ -29,7 +29,7 @@ from time import strftime
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-handler = logging.FileHandler(r"\\cabcvan1gis006\GISData\FIMS_USA\temp\USFIM_Log.txt")
+handler = logging.FileHandler(r"\\cabcvan1gis005\GISData\FIMS_USA\temp\USFIM_Log.txt")
 handler.setLevel(logging.INFO)
 logger.addHandler(handler)
 
@@ -373,16 +373,16 @@ def centreFromPolygon(polygonSHP,coordinate_system):
 
 #------------------------------------------------------------------------------------------------------------------
 ##deployment variables
-server_environment = 'prod'
-server_config_file = r"\\cabcvan1gis007\gptools\ERISServerConfig.ini"
+server_environment = 'test'
+server_config_file = r"\\cabcvan1gis006\GISData\ERISServerConfig.ini"
 server_config = server_loc_config(server_config_file,server_environment)
-connectionString = 'eris_gis/gis295@cabcvan1ora003.glaciermedia.inc:1521/GMPRODC'
+connectionString = 'eris_gis/gis295@cabcvan1ora006.glaciermedia.inc:1521/GMTESTC'
 reportcheckFolder = server_config["reportcheck"]
 viewerFolder = server_config["viewer"]
-uploadlink =  server_config["viewer_upload"] + r"/ErisInt/BIPublisherPortal_prod/Viewer.svc/FIMUpload?ordernumber="
+uploadlink =  server_config["viewer_upload"] + r"/ErisInt/BIPublisherPortal/Viewer.svc/FIMUpload?ordernumber="
 
 ##global variables
-connectionPath = r"\\cabcvan1gis006\GISData\FIMS_USA"
+connectionPath = r"\\cabcvan1gis005\GISData\FIMS_USA"
 masterlyr = os.path.join(connectionPath,"master\Master.shp")
 shapefilepath = os.path.join(connectionPath,"master","mastershps")#g_ESRI_variable_15
 excelfile = os.path.join(connectionPath,"master\MASTER_ALL_STATES.xlsx")
@@ -407,7 +407,7 @@ secondPic =  os.path.join(connectionPath,"python\coverPic\ERIS_2018_ReportCover_
 try:
     OrderIDText = r""#arcpy.GetParameterAsText(0) #'686635'#730125
     OrderNumText = r"20200727135"
-    gridsize =  "0.3 KiloMeters"#'0.3 KiloMeters'
+    gridsize =  "0.5 KiloMeters"#'0.3 KiloMeters'
     multisheet_Xplorer = 'no' # yes will upload individual fim sheets per year to Xplorer, no will upload one jpg image per year.
 
     BufsizeText ='0.17'#arcpy.GetParameterAsText(1) # '0.17'#
@@ -983,9 +983,9 @@ try:
         output = None
         summaryfile = None
 
-    if os.path.exists(os.path.join(reportcheckFolder,"FIM",pdfreport_name)):
-        os.remove(os.path.join(reportcheckFolder,"FIM",pdfreport_name))
-    shutil.copyfile(pdfreport,os.path.join(reportcheckFolder,"FIM",pdfreport_name))
+    if os.path.exists(os.path.join(reportcheckFolder,"FIM", pdfreport_name)):
+        os.remove(os.path.join(reportcheckFolder, "FIM", pdfreport_name))
+    shutil.copyfile(pdfreport,os.path.join(reportcheckFolder,"FIM", pdfreport_name))
 
     needViewer = 'N'
     try:
