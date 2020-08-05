@@ -11,5 +11,5 @@ connectionPath_test = r"\\cabcvan1gis006\GISData\RiskScore"
 mxd_prod = os.path.join(connectionPath_prod,r"mxd","RiskScore_prod.mxd")
 mxd_test = os.path.join(connectionPath_test,r"mxd","RiskScore_test.mxd")
 ### Report path
-report_path_test = r"\\cabcvan1eap006\ErisData\Reports\test\noninstant_reports"
-report_path_prod = r"\\cabcvan1eap006\ErisData\Reports\prod\noninstant_reports"
+report_path_test = r"\\cabcvan1eap006\ErisData\Reports\test\instant_reports"
+report_path_prod = r"\\cabcvan1eap006\ErisData\Reports\prod\instant_reports"

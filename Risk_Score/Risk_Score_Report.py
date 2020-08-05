@@ -121,7 +121,7 @@ if __name__ == '__main__':
     startTotal = timeit.default_timer()
     ###input RequestId
     # request_Id = 466
-    env = 'test'
+    env = 'prod'
     ws = arcpy.env.scratchFolder
     arcpy.env.overwriteOutput = True   
     arcpy.env.workspace = ws
