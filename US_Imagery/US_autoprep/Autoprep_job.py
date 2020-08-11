@@ -166,8 +166,9 @@ def export_reportimage(imagepath,ordergeometry,auid):
     geo_lyr = arcpy.mapping.Layer(ordergeometry)
     arcpy.mapping.AddLayer(df,image_lyr,'TOP')
     arcpy.mapping.AddLayer(df,geo_lyr,'TOP')
-    geo_lyr.visible = False
+    arcpy.mapping.ListLayers()
     geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
+    geometry_layer.visible = False
     geo_extent = geometry_layer.getExtent(True)
     df.extent = geo_extent
     if df.scale <= MapScale:
