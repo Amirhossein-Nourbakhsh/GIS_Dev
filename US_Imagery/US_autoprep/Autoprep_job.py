@@ -156,55 +156,57 @@ def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef
     return outputSHP
 def export_reportimage(imagepath,ordergeometry,auid):
     ## In memory
-    mxd = arcpy.mapping.MapDocument(mxdexport_template)
-    df = arcpy.mapping.ListDataFrames(mxd,'*')[0]
-    sr = arcpy.SpatialReference(4326)
-    df.SpatialReference = sr
-    lyrpath = os.path.join(scratch,str(auid) + '.lyr')
-    arcpy.MakeRasterLayer_management(imagepath,lyrpath)
-    image_lyr = arcpy.mapping.Layer(lyrpath)
-    geo_lyr = arcpy.mapping.Layer(ordergeometry)
-    arcpy.mapping.AddLayer(df,image_lyr,'TOP')
-    arcpy.mapping.AddLayer(df,geo_lyr,'TOP')
-    arcpy.mapping.ListLayers()
-    geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
-    geometry_layer.visible = False
-    geo_extent = geometry_layer.getExtent(True)
-    df.extent = geo_extent
-    if df.scale <= MapScale:
-        df.scale = MapScale
-        export_width = 5100
-        export_height = 6600
-    elif df.scale > MapScale:
-        df.scale = ((int(df.scale)/100)+1)*100
-        export_width = int(5100*1.4)
-        export_height = int(6600*1.4)
-    arcpy.RefreshActiveView()
-    ###############################
-    ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
-    NW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMax)
-    NE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMax)
-    SW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMin)
-    SE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMin)
-    try:
-        image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : OrderNumText,"AUI_ID":auid,"SWLAT":str(df.extent.YMin),"SWLONG":str(df.extent.XMin),"NELAT":(df.extent.XMax),"NELONG":str(df.extent.XMax)})
-        message_return = Oracle('test').call_erisapi(image_extents)
-        if message_return[3] != 'Y':
-            raise OracleBadReturn
-    except OracleBadReturn:
-        arcpy.AddError('status: '+message_return[3]+' - '+message_return[2])
-    ##############################
-    #arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),df,df_export_width=5100,df_export_height=6600,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
-    #arcpy.DefineProjection_management(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'), 3857)
-    #shutil.copy(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),os.path.join(jpg_image_folder,auid + '.jpg'))
-    arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=False,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
-    mxd.saveACopy(os.path.join(scratch,auid+'_export.mxd'))
-    del mxd
+    if not os.path.exists(imagepath):
+        arcpy.AddWarning(imagepath+' DOES NOT EXIST')
+    else:
+        mxd = arcpy.mapping.MapDocument(mxdexport_template)
+        df = arcpy.mapping.ListDataFrames(mxd,'*')[0]
+        sr = arcpy.SpatialReference(4326)
+        df.SpatialReference = sr
+        lyrpath = os.path.join(scratch,str(auid) + '.lyr')
+        arcpy.MakeRasterLayer_management(imagepath,lyrpath)
+        image_lyr = arcpy.mapping.Layer(lyrpath)
+        geo_lyr = arcpy.mapping.Layer(ordergeometry)
+        arcpy.mapping.AddLayer(df,image_lyr,'TOP')
+        arcpy.mapping.AddLayer(df,geo_lyr,'TOP')
+        geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
+        geometry_layer.visible = False
+        geo_extent = geometry_layer.getExtent(True)
+        df.extent = geo_extent
+        if df.scale <= MapScale:
+            df.scale = MapScale
+            export_width = 5100
+            export_height = 6600
+        elif df.scale > MapScale:
+            df.scale = ((int(df.scale)/100)+1)*100
+            export_width = int(5100*1.4)
+            export_height = int(6600*1.4)
+        arcpy.RefreshActiveView()
+        ###############################
+        ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
+        NW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMax)
+        NE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMax)
+        SW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMin)
+        SE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMin)
+        try:
+            image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : OrderNumText,"AUI_ID":auid,"SWLAT":str(df.extent.YMin),"SWLONG":str(df.extent.XMin),"NELAT":(df.extent.XMax),"NELONG":str(df.extent.XMax)})
+            message_return = Oracle('test').call_erisapi(image_extents)
+            if message_return[3] != 'Y':
+                raise OracleBadReturn
+        except OracleBadReturn:
+            arcpy.AddError('status: '+message_return[3]+' - '+message_return[2])
+        ##############################
+        #arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),df,df_export_width=5100,df_export_height=6600,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
+        #arcpy.DefineProjection_management(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'), 3857)
+        #shutil.copy(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),os.path.join(jpg_image_folder,auid + '.jpg'))
+        arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=False,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
+        mxd.saveACopy(os.path.join(scratch,auid+'_export.mxd'))
+        del mxd
 
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '889844'#arcpy.GetParameterAsText(0)
+    orderID = '850757'#arcpy.GetParameterAsText(0)
     scratch = r'C:\Users\JLoucks\Documents\JL\usaerial'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
@@ -239,37 +241,35 @@ if __name__ == '__main__':
         os.mkdir(job_folder)
         os.mkdir(org_image_folder)
         os.mkdir(jpg_image_folder)
-
-        if len(single_image_candidates) == 0:
-            raise SingleEmptyImage
-
-        for inhouse_image in single_image_candidates:
-            image_auid = str(inhouse_image['AUI_ID'])
-            image_name = inhouse_image['IMAGE_NAME']
-            image_year = str(inhouse_image['AERIAL_YEAR'])
-            image_source = inhouse_image['IMAGE_SOURCE']
-            if image_source == '':
-                image_source = 'UNKWN'
-            export_reportimage(image_name,OrderGeometry,image_auid)
-
-        if len(doqq_image_candidates) == 0:
-            raise DoqqEmptyImage
-
-        for inhouse_image in doqq_image_candidates:
-            image_auid = str(inhouse_image['AUI_ID'])
-            image_name = inhouse_image['IMAGE_NAME']
-            image_year = str(inhouse_image['AERIAL_YEAR'])
-            image_source = inhouse_image['IMAGE_SOURCE']
-            if image_source == '':
-                image_source = 'UNKWN'
-            export_reportimage(image_name,OrderGeometry,image_auid)
-
         if len(doqq_image_candidates) == 0 and len(single_image_candidates) == 0:
             raise NoAvailableImage
-    except SingleEmptyImage:
-        arcpy.AddWarning('No singleframe image candidates')
-    except DoqqEmptyImage:
-        arcpy.AddWarning('No DOQQ image candidates')
+        if len(single_image_candidates) == 0:
+            arcpy.AddWarning('No singleframe image candidates')
+        
+        try:
+            for inhouse_image in single_image_candidates:
+                image_auid = str(inhouse_image['AUI_ID'])
+                image_name = inhouse_image['IMAGE_NAME']
+                image_year = str(inhouse_image['AERIAL_YEAR'])
+                image_source = inhouse_image['IMAGE_SOURCE']
+                if image_source == '':
+                    image_source = 'UNKWN'
+                export_reportimage(image_name,OrderGeometry,image_auid)
+
+
+            if len(doqq_image_candidates) == 0:
+                arcpy.AddWarning('No DOQQ image candidates')
+
+            for inhouse_image in doqq_image_candidates:
+                image_auid = str(inhouse_image['AUI_ID'])
+                image_name = inhouse_image['IMAGE_NAME']
+                image_year = str(inhouse_image['AERIAL_YEAR'])
+                image_source = inhouse_image['IMAGE_SOURCE']
+                if image_source == '':
+                    image_source = 'UNKWN'
+                export_reportimage(image_name,OrderGeometry,image_auid)
+        except KeyError as k:
+            arcpy.AddError('JSON missing key: ' + k.message)
     except NoAvailableImage:
         arcpy.AddError('No available images for location')
         sys.exit()
