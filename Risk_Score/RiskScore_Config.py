@@ -6,8 +6,9 @@ import os
 oracle_test = r"ERIS_GIS/gis295@GMTESTC.glaciermedia.inc"
 oracle_production = r"ERIS_GIS/gis295@GMPRODC.glaciermedia.inc"
 ### mxd file
-connectionPath_prod = r"\\cabcvan1gis007\gptools\RiskScore"
 connectionPath_test = r"\\cabcvan1gis006\GISData\RiskScore"
+connectionPath_prod = r"\\cabcvan1gis007\gptools\RiskScore"
+
 mxd_prod = os.path.join(connectionPath_prod,r"mxd","RiskScore_prod.mxd")
 mxd_test = os.path.join(connectionPath_test,r"mxd","RiskScore_test.mxd")
 ### Report path

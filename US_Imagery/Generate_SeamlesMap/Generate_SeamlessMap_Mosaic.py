@@ -237,7 +237,7 @@ if __name__ == '__main__':
 ]
     rowExist = 0
     for item in list:
-        expressionFC = "Original_FID = '" + str(item) + "'"
+        expressionFC = "TABLE_ = '" + str(item) + "'"
         try:
             Original_FID = arcpy.da.SearchCursor(DQQQ_footprint_FC, ['Original_FID'],expressionFC).next()[0]
             rowExist = 1

@@ -107,7 +107,7 @@ def zoomToRiskGeometry(input_mxd,geometry_lyr ):
     
     extent = geometry_lyr.getExtent()
     df.extent = extent
-    df.scale = 2500
+    df.scale = 3500
     input_mxd.save()
     del input_mxd
     
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     startTotal = timeit.default_timer()
     ###input RequestId
     # request_Id = 636
-    env = 'test'
+    env = 'prod'
     ws = arcpy.env.scratchFolder
     arcpy.env.overwriteOutput = True   
     arcpy.env.workspace = ws
