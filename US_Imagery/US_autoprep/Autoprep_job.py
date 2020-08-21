@@ -155,7 +155,7 @@ def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef
     return outputSHP
 def export_reportimage(imagepath,ordergeometry,auid):
     ## In memory
-    if not os.path.exists(imagepath):
+    if os.path.exists(imagepath) == False:
         arcpy.AddWarning(imagepath+' DOES NOT EXIST')
     else:
         mxd = arcpy.mapping.MapDocument(mxdexport_template)
@@ -189,6 +189,7 @@ def export_reportimage(imagepath,ordergeometry,auid):
         SE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMin)
         try:
             image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : OrderNumText,"AUI_ID":auid,"SWLAT":str(df.extent.YMin),"SWLONG":str(df.extent.XMin),"NELAT":(df.extent.XMax),"NELONG":str(df.extent.XMax)})
+            print image_extents
             message_return = Oracle('test').call_erisapi(image_extents)
             if message_return[3] != 'Y':
                 raise OracleBadReturn
@@ -248,7 +249,7 @@ if __name__ == '__main__':
         try:
             for inhouse_image in single_image_candidates:
                 image_auid = str(inhouse_image['AUI_ID'])
-                image_name = inhouse_image['IMAGE_NAME']
+                image_name = inhouse_image['ORIGINAL_IMAGEPATH']
                 image_year = str(inhouse_image['AERIAL_YEAR'])
                 image_source = inhouse_image['IMAGE_SOURCE']
                 if image_source == '':
@@ -261,7 +262,7 @@ if __name__ == '__main__':
 
             for inhouse_image in doqq_image_candidates:
                 image_auid = str(inhouse_image['AUI_ID'])
-                image_name = inhouse_image['IMAGE_NAME']
+                image_name = inhouse_image['ORIGINAL_IMAGEPATH']
                 image_year = str(inhouse_image['AERIAL_YEAR'])
                 image_source = inhouse_image['IMAGE_SOURCE']
                 if image_source == '':
