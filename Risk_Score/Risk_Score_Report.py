@@ -107,7 +107,7 @@ def zoomToRiskGeometry(input_mxd,geometry_lyr ):
     
     extent = geometry_lyr.getExtent()
     df.extent = extent
-    df.scale = 3500
+    df.scale = 4000
     input_mxd.save()
     del input_mxd
     

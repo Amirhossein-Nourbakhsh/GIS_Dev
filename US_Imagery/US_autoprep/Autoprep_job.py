@@ -39,8 +39,7 @@ class ProdConfig:
         self.MXD=MXD(machine_path)
 class Oracle:
     # static variable: oracle_functions
-    oracle_functions = {'getorderinfo':"eris_gis.getOrderInfo"
-    }
+    oracle_functions = {'getorderinfo':"eris_gis.getOrderInfo"    }
     erisapi_procedures = {'getaeriallist':'flow_autoprep.getAerialImageJson','passclipextent': 'flow_autoprep.setClipImageDetail'}
     def __init__(self,machine_name):
         # initiate connection credential
