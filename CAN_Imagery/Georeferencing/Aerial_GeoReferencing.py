@@ -14,7 +14,7 @@ class Server:
     server_test = r"\\cabcvan1gis006"
     server_prod = r"\\cabcvan1gis007"
 class Credential:
-    oracle_test = r"ERIS_GIS/gis295@GMTESTC.glaciermedia.inc"
+    oracle_test = r"eris_aerials/eris@GMTESTC.glaciermedia.inc"
     oracle_production = r"ERIS_GIS/gis295@GMPRODC.glaciermedia.inc"
 class ResultPath:
     caaerial_prod= r"\\CABCVAN1OBI007\ErisData\prod\aerial_ca"
