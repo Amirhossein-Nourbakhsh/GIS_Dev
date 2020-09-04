@@ -192,6 +192,7 @@ def export_to_jpg(env,imagepath,outputImage_jpg,ordergeometry,auid):
     mxd.saveACopy(os.path.join(arcpy.env.scratchFolder,auid+'_export.mxd'))
     del mxd
 def ExportToOutputs(env,geroref_Image,outputImage_jpg,job_folder,out_img_name):
+    print(geroref_Image)
     arcpy.AddMessage('Start Exporting...')
     ## Copy georefed image to inventory folder
     shutil.copy(geroref_Image, os.path.join(job_folder,out_img_name + '.tif'))
@@ -230,7 +231,6 @@ if __name__ == '__main__':
         if env == 'test':
             inputImagePath = os.path.join('r',ImageBasePath.caaerial_test,str(order_Num),'gc',aerial_georefjson['imgname'])
             job_folder = os.path.join(JobDirectory.job_directory_test,order_Num)
-            
         elif env == 'prod':
             inputImagePath = os.path.join('r',ImageBasePath.caaerial_prod,str(order_Num),'gc',aerial_georefjson['imgname'])
             job_folder = os.path.join(JobDirectory.job_directory_prod,order_Num)
