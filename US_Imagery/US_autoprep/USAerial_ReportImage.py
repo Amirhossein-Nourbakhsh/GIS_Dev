@@ -49,7 +49,8 @@ class Oracle:
     # static variable: oracle_functions
     oracle_functions = {'getorderinfo':"eris_gis.getOrderInfo"
     }
-    erisapi_procedures = {'getaeriallist':'flow_autoprep.getAerialImageJson','passclipextent': 'flow_autoprep.setClipImageDetail'}
+    erisapi_procedures = {'getaeriallist':'flow_autoprep.getAerialImageJson','passclipextent': 'flow_autoprep.setClipImageDetail','getselectedimages':"FLOW_report_gis.getSelectedImages",
+    'passreportextent':"FLOW_report_gis.insertAerialImageInfo"}
     def __init__(self,machine_name):
         # initiate connection credential
         if machine_name.lower() =='test':
@@ -164,52 +165,59 @@ def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef
     return outputSHP
 def export_reportimage(imagedict,ordergeometry):
     ## In memory
-    if os.path.exists(imagepath) == False:
-        arcpy.AddWarning(imagepath+' DOES NOT EXIST')
+    mxd = arcpy.mapping.MapDocument(mxdexport_template)
+    df = arcpy.mapping.ListDataFrames(mxd,'*')[0]
+    sr = arcpy.SpatialReference(4326)
+    df.SpatialReference = sr
+    geo_lyr = arcpy.mapping.Layer(ordergeometry)
+    arcpy.mapping.AddLayer(df,geo_lyr,'TOP')
+    ordered_all_values = imagedict.keys()
+    if len(ordered_all_values) == 1:
+        sorted_order = ordered_all_values
     else:
-        mxd = arcpy.mapping.MapDocument(mxdexport_template)
-        df = arcpy.mapping.ListDataFrames(mxd,'*')[0]
-        sr = arcpy.SpatialReference(4326)
-        df.SpatialReference = sr
-        geo_lyr = arcpy.mapping.Layer(ordergeometry)
-        arcpy.mapping.AddLayer(df,geo_lyr,'TOP')
-        ordered_all_values = imagedict.keys()
         sorted_order = ordered_all_values.sort()
-        for order_value in sorted_order:
-            auid = imagedict[order_value][0]
-            image_source = imagedict[order_value][1]
-            imagepath = imagedict[order_value][2]
-            lyrpath = os.path.join(scratch,str(auid) + '.lyr')
-            arcpy.MakeRasterLayer_management(imagepath,lyrpath)
-            image_lyr = arcpy.mapping.Layer(lyrpath)
-            arcpy.mapping.AddLayer(df,image_lyr,'TOP')
-        geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
-        geometry_layer.visible = False
-        geo_extent = geometry_layer.getExtent(True)
-        df.extent = geo_extent
-        if df.scale <= MapScale:
-            df.scale = MapScale
-            export_width = 5100
-            export_height = 6600
-        elif df.scale > MapScale:
-            df.scale = ((int(df.scale)/100)+1)*100
-            export_width = int(5100*1.4)
-            export_height = int(6600*1.4)
-        arcpy.RefreshActiveView()
-        ###############################
-        ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
-        NW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMax)
-        NE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMax)
-        SW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMin)
-        SE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMin)
-        print NW_corner, NE_corner, SW_corner, SE_corner
-        ##############################
-        #arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),df,df_export_width=5100,df_export_height=6600,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
-        #arcpy.DefineProjection_management(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'), 3857)
-        #shutil.copy(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),os.path.join(jpg_image_folder,auid + '.jpg'))
-        arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=False,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
-        mxd.saveACopy(os.path.join(scratch,auid+'_export.mxd'))
-        del mxd
+    for order_value in sorted_order:
+        auid = imagedict[order_value][0]
+        image_source = imagedict[order_value][1]
+        imagepath = imagedict[order_value][2]
+        lyrpath = os.path.join(scratch,str(auid) + '.lyr')
+        arcpy.MakeRasterLayer_management(imagepath,lyrpath)
+        image_lyr = arcpy.mapping.Layer(lyrpath)
+        arcpy.mapping.AddLayer(df,image_lyr,'TOP')
+    geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
+    geometry_layer.visible = False
+    geo_extent = geometry_layer.getExtent(True)
+    df.extent = geo_extent
+    if df.scale <= MapScale:
+        df.scale = MapScale
+        export_width = 5100
+        export_height = 6600
+    elif df.scale > MapScale:
+        df.scale = ((int(df.scale)/100)+1)*100
+        export_width = int(5100*1.4)
+        export_height = int(6600*1.4)
+    arcpy.RefreshActiveView()
+    ###############################
+    ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
+    NW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMax)
+    NE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMax)
+    SW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMin)
+    SE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMin)
+    print NW_corner, NE_corner, SW_corner, SE_corner
+    ##############################
+    #arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),df,df_export_width=5100,df_export_height=6600,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
+    #arcpy.DefineProjection_management(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'), 3857)
+    #shutil.copy(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),os.path.join(jpg_image_folder,auid + '.jpg'))
+    arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=False,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
+    try:
+        image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passreportextent'], "ORDER_NUM" : OrderNumText,"TYPE":"ae_pdf","SWLAT":str(df.extent.YMin),"SWLONG":str(df.extent.XMin),"NELAT":(df.extent.XMax),"NELONG":str(df.extent.XMax)})
+        message_return = Oracle('test').call_erisapi(image_extents)
+        if message_return[3] != 'Y':
+            raise OracleBadReturn
+    except OracleBadReturn:
+        arcpy.AddError('status: '+message_return[3]+' - '+message_return[2])
+    mxd.saveACopy(os.path.join(scratch,image_year+'_export.mxd'))
+    del mxd
 
 
 if __name__ == '__main__':
@@ -218,9 +226,6 @@ if __name__ == '__main__':
     scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
-    conversion_input = r'\\192.168.136.164\v2_usaerial\input'
-    conversion_output = r'\\192.168.136.164\v2_usaerial\output'
-    Conversion_URL = r'http://erisservice3.ecologeris.com/ErisInt/USAerialAppService_test/USAerial.svc/USAerialImagePromote_temp?inputfile='
     MapScale = 6000
 
     ##get info for order from oracle
@@ -233,59 +238,31 @@ if __name__ == '__main__':
     #aerial_list_json = json.loads(aerial_list_return[1])
 
     OrderGeometry = createGeometry(eval(orderInfo[u'ORDER_GEOMETRY'][u'GEOMETRY'])[0],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'],scratch,'OrderGeometry.shp')
+    shutil.copy(mxdexport_template,os.path.join(scratch,'template.mxd'))
+    mxdexport_template = os.path.join(scratch,'template.mxd')
     ## Get order geometry 
 
-    Oracle_return = {
-    "ORDER_NUM": "20201943849",
-    "RESULTS": {
-        "1990": [
-        [
-            "AUID",
-            "SOURCE",
-            "PATH",
-            "ORDER"
-        ],
-        [
-            "AUID",
-            "SOURCE",
-            "PATH",
-            "ORDER"
-        ]
-        ],
-        "1991": [
-        [
-            "AUID",
-            "SOURCE",
-            "PATH",
-            "ORDER"
-        ],
-        [
-            "AUID",
-            "SOURCE",
-            "PATH",
-            "ORDER"
-        ]
-        ]
-        }
-    }
+    oracle_input = str({"PROCEDURE":Oracle.erisapi_procedures['getselectedimages'],"ORDER_NUM":OrderNumText})
+    selected_list_return = Oracle('test').call_erisapi(oracle_input)
+    selected_list_json = json.loads(selected_list_return[1])
 
     ##create fin directory
     job_fin = os.path.join(job_folder,'fin')
     if os.path.exists(job_fin):
         shutil.rmtree(job_fin)
-    os.mkdir(os.path.join(job_fin)
+    os.mkdir(os.path.join(job_fin))
     ##get image matrix and export
-    for image_year in Oracle_return['RESULTS'].keys():
+    for image_year in selected_list_json['RESULTS'].keys():
         getimage_dict = {}
-        for image in Oracle_return['RESULTS'][image_year]:
-            order_key = image[3]
-            image_auid = image[0]
-            image_source = image[1]
-            image_path = image[2]
+        for image in selected_list_json['RESULTS'][image_year]:
+            order_key = image['REPORT_DISPLAY_ORDER']
+            image_auid = image['AUI_ID']
+            image_source = image['IMAGE_SOURCE']
+            image_path = image['ORIGINAL_IMAGE_PATH']
 
             getimage_dict[order_key] = [image_auid,image_source,image_path]
             
-        export_reportimage(getimage_dict,ordergeometry)
+        export_reportimage(getimage_dict,OrderGeometry)
 
 
 

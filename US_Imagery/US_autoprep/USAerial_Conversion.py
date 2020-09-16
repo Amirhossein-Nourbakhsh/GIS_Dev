@@ -32,7 +32,7 @@ class Oracle:
     # static variable: oracle_functions
     oracle_functions = {'getorderinfo':"eris_gis.getOrderInfo"
     }
-    erisapi_procedures = {'getaeriallist':'flow_autoprep.getAerialImageJson','passclipextent': 'flow_autoprep.setClipImageDetail'}
+    erisapi_procedures = {'getaeriallist':'flow_autoprep.getAerialImageJson','passclipextent': 'flow_autoprep.setClipImageDetail','getgeorefraw':"FLOW_GIS.getImageInventoryInfo"}
     def __init__(self,machine_name):
         # initiate connection credential
         if machine_name.lower() =='test':
@@ -132,6 +132,7 @@ if __name__ == '__main__':
     job_folder = os.path.join(job_directory,OrderNumText)
 
     ### Get image path info ###
+    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getgeorefraw'],"ORDER_NUM":OrderNumText})
     raster_input = _
 
 ### Convert file
