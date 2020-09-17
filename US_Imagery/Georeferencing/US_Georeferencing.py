@@ -48,7 +48,7 @@ class NoAvailableImage(Exception):
 class Oracle:
     #static variable: oracle_functions
     oracle_functions = {'getorderinfo':"eris_gis.getOrderInfo"}
-    erisapi_procedures = {'getGeoreferencingInfo':'flow_gis.getGeoreferencingInfo','passclipextent': 'flow_autoprep.setClipImageDetail'}
+    erisapi_procedures = {'getGeoreferencingInfo':'flow_gis.getGeoreferencingInfo','passclipextent': 'flow_autoprep.setClipImageDetail','getImageInventoryInfo':'flow_gis.getImageInventoryInfo'}
     def __init__(self,machine_name):
         # initiate connection credential
         if machine_name.lower() =='test':
@@ -199,8 +199,8 @@ def ExportToOutputs(env,geroref_Image,outputImage_jpg,job_folder,out_img_name):
     ## Copy georefed image tfw file to inventory folder
     shutil.copy(os.path.join(os.path.dirname(geroref_Image),'image_gc.tfw'), os.path.join(job_folder,out_img_name +'.tfw'))
     ## Export georefed image as jpg file to jpg folder for US Aerial UI app
-    outputImage_jpg = os.path.join(jpg_image_folder,out_img_name + '.jpg')
-    export_to_jpg(env,geroref_Image,outputImage_jpg,OrderGeometry,auid)
+    outputImage_jpg = os.path.join(outputImage_jpg,out_img_name + '.jpg')
+    export_to_jpg(env,geroref_Image,outputImage_jpg,ordergeometry,auid)
     arcpy.AddMessage('--Exporting Done.')
 if __name__ == '__main__':
     ### set input parameters
@@ -208,7 +208,7 @@ if __name__ == '__main__':
     # auiID = arcpy.GetParameterAsText(1)
     # year = arcpy.GetParameterAsText(2)
     orderID = '902921'#arcpy.GetParameterAsText(0)
-    auid = '29683567'
+    auid = '29633756'
     year = '1999'
     env = 'test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
@@ -219,20 +219,27 @@ if __name__ == '__main__':
         ##get info for order from oracle
         orderInfo = Oracle(env).call_function('getorderinfo',orderID)
         order_Num = str(orderInfo['ORDER_NUM'])
-        order_Num = '20282100006'
+        order_Num = '20190219036'
+        # order_Num = '20180622251'
+        # auid = '29584054'
         ## get georeferencing info from oracle
-        oracle_georef = str({"PROCEDURE":Oracle.erisapi_procedures["getGeoreferencingInfo"],"ORDER_NUM": order_Num,"AUI_ID":auid})
+        oracle_georef = str({"PROCEDURE":Oracle.erisapi_procedures["getGeoreferencingInfo"],"ORDER_NUM": order_Num, "AUI_ID": auid})
         aerial_us_georef = Oracle(env).call_erisapi(oracle_georef)
         aerial_georefjson = json.loads(aerial_us_georef[1])
         ### generate image custom name year_DOQQ_AUI_ID
         out_img_name = '%s_DOQQ_%s'%(year,auid)
-        
-        ## Setup input and output paths
+        ### get input image from inventory
+        aerial_inventory = str({"PROCEDURE":Oracle.erisapi_procedures["getImageInventoryInfo"],"ORDER_NUM":"20282100006"})
+        aerial_us_inventory = Oracle(env).call_erisapi(aerial_inventory)
+        aerial_inventoryjson = json.loads(aerial_us_inventory[1])
+        inputImagePath = aerial_inventoryjson[0]['Image_path']
+        print(aerial_inventoryjson)
+        # Setup input and output paths
         if env == 'test':
-            inputImagePath = os.path.join('r',ImageBasePath.caaerial_test,str(order_Num),'gc',aerial_georefjson['imgname'])
+            # inputImagePath = os.path.join('r',ImageBasePath.caaerial_test,str(order_Num),'gc',aerial_georefjson['imgname'])
             job_folder = os.path.join(JobDirectory.job_directory_test,order_Num)
         elif env == 'prod':
-            inputImagePath = os.path.join('r',ImageBasePath.caaerial_prod,str(order_Num),'gc',aerial_georefjson['imgname'])
+            # inputImagePath = os.path.join('r',ImageBasePath.caaerial_prod,str(order_Num),'gc',aerial_georefjson['imgname'])
             job_folder = os.path.join(JobDirectory.job_directory_prod,order_Num)
         org_image_folder = os.path.join(job_folder,'org')
         jpg_image_folder = os.path.join(job_folder,'jpg')
@@ -256,7 +263,7 @@ if __name__ == '__main__':
                 arcpy.CreateFileGDB_management(scratchFolder,r"temp.gdb")
                 
             ## Get order geometry 
-            OrderGeometry = createGeometry(eval(orderInfo[u'ORDER_GEOMETRY'][u'GEOMETRY'])[0],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'],tempGDB,'OrderGeometry')
+            orderGeometry = createGeometry(eval(orderInfo[u'ORDER_GEOMETRY'][u'GEOMETRY'])[0],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'],tempGDB,'OrderGeometry')
         
             # img_baseName = (os.path.splitext(img_Name)[0]).replace('_g','') ## get image name without extention and remove _g from image name if availabe
             gcpPoints = CoordToString(aerial_georefjson['envelope'])
@@ -268,7 +275,6 @@ if __name__ == '__main__':
             BOTTOM = str(arcpy.GetRasterProperties_management(inputImagePath,"BOTTOM").getOutput(0))
             srcPoints = "'" + LEFT + " " + BOTTOM + "';" + "'" + RIGHT + " " + BOTTOM + "';" + "'" + RIGHT + " " + TOP + "';" + "'" + LEFT + " " + TOP + "'"
             
-            ### Apply Georefrencing upon gcp points on input raw image
             img_Georeferenced = ApplyGeoref(scratchFolder,inputImagePath, srcPoints, gcpPoints, TransformationType.POLYORDER1, ResamplingType.BILINEAR)
             ## ExportToOutputs
             ExportToOutputs(env,img_Georeferenced, jpg_image_folder, job_folder,out_img_name)
