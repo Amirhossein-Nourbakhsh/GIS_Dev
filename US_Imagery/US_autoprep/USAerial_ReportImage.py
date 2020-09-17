@@ -210,7 +210,9 @@ def export_reportimage(imagedict,ordergeometry):
     #shutil.copy(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),os.path.join(jpg_image_folder,auid + '.jpg'))
     arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=False,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
     try:
-        image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passreportextent'], "ORDER_NUM" : OrderNumText,"TYPE":"ae_pdf","SWLAT":str(df.extent.YMin),"SWLONG":str(df.extent.XMin),"NELAT":(df.extent.XMax),"NELONG":str(df.extent.XMax)})
+        image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passreportextent'], "ORDER_NUM" : OrderNumText,"TYPE":"ae_pdf",
+        "SWLAT":str(df.extent.YMin),"SWLONG":str(df.extent.XMin),"NELAT":(df.extent.XMax),"NELONG":str(df.extent.XMax),
+        "CENTERLAT" : "", "CENTERLONG":"", "IMAGE_WIDTH":"","IMAGE_HEIGHT":""})
         message_return = Oracle('test').call_erisapi(image_extents)
         if message_return[3] != 'Y':
             raise OracleBadReturn
@@ -222,7 +224,7 @@ def export_reportimage(imagedict,ordergeometry):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '909421'#arcpy.GetParameterAsText(0)
+    orderID = '908897'#arcpy.GetParameterAsText(0)
     scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
