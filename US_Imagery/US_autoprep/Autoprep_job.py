@@ -1,3 +1,13 @@
+#-------------------------------------------------------------------------------
+# Name:        GIS US Aerial Autoprep
+# Purpose:
+#
+# Author:      jloucks
+#
+# Created:     07/20/2020
+# Copyright:   (c) jloucks 2020
+#-------------------------------------------------------------------------------
+
 ## Create job folder, pull images from nas, copy images to job folder/clip doqq images for process
 ## may need to pass back json to FE or DB
 import sys
@@ -39,7 +49,8 @@ class ProdConfig:
         self.MXD=MXD(machine_path)
 class Oracle:
     # static variable: oracle_functions
-    oracle_functions = {'getorderinfo':"eris_gis.getOrderInfo"    }
+    oracle_functions = {'getorderinfo':"eris_gis.getOrderInfo"
+    }
     erisapi_procedures = {'getaeriallist':'flow_autoprep.getAerialImageJson','passclipextent': 'flow_autoprep.setClipImageDetail'}
     def __init__(self,machine_name):
         # initiate connection credential
@@ -155,7 +166,7 @@ def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef
     return outputSHP
 def export_reportimage(imagepath,ordergeometry,auid):
     ## In memory
-    if not os.path.exists(imagepath):
+    if os.path.exists(imagepath) == False:
         arcpy.AddWarning(imagepath+' DOES NOT EXIST')
     else:
         mxd = arcpy.mapping.MapDocument(mxdexport_template)
@@ -166,8 +177,8 @@ def export_reportimage(imagepath,ordergeometry,auid):
         arcpy.MakeRasterLayer_management(imagepath,lyrpath)
         image_lyr = arcpy.mapping.Layer(lyrpath)
         geo_lyr = arcpy.mapping.Layer(ordergeometry)
-        arcpy.mapping.AddLayer(df,image_lyr,'TOP')
         arcpy.mapping.AddLayer(df,geo_lyr,'TOP')
+        arcpy.mapping.AddLayer(df,image_lyr,'TOP')
         geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
         geometry_layer.visible = False
         geo_extent = geometry_layer.getExtent(True)
@@ -187,6 +198,7 @@ def export_reportimage(imagepath,ordergeometry,auid):
         NE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMax)
         SW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMin)
         SE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMin)
+        print NW_corner, NE_corner, SW_corner, SE_corner
         try:
             image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : OrderNumText,"AUI_ID":auid,"SWLAT":str(df.extent.YMin),"SWLONG":str(df.extent.XMin),"NELAT":(df.extent.XMax),"NELONG":str(df.extent.XMax)})
             message_return = Oracle('test').call_erisapi(image_extents)
@@ -206,7 +218,8 @@ def export_reportimage(imagepath,ordergeometry,auid):
 if __name__ == '__main__':
     start = timeit.default_timer()
     orderID = '850757'#arcpy.GetParameterAsText(0)
-    scratch = r'C:\Users\JLoucks\Documents\JL\usaerial'#arcpy.env.scratchFolder
+    AUI_ID = '29776430'#arcpy.GetParameterAsText(1)
+    scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
     conversion_input = r'\\192.168.136.164\v2_usaerial\input'
@@ -218,57 +231,101 @@ if __name__ == '__main__':
     orderInfo = Oracle('test').call_function('getorderinfo',orderID)
     OrderNumText = str(orderInfo['ORDER_NUM'])
 
-    ## Return aerial list from oracle
-    oracle_autoprep = str({"PROCEDURE":Oracle.erisapi_procedures['getaeriallist'],"ORDER_NUM":OrderNumText})
-    aerial_list_return = Oracle('test').call_erisapi(oracle_autoprep)
-    aerial_list_json = json.loads(aerial_list_return[1])
-
-    ## Get order geometry 
+    ## Get order geometry & mxd
     OrderGeometry = createGeometry(eval(orderInfo[u'ORDER_GEOMETRY'][u'GEOMETRY'])[0],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'],scratch,'OrderGeometry.shp')
+    shutil.copy(mxdexport_template,os.path.join(scratch,'template.mxd'))
+    mxdexport_template = os.path.join(scratch,'template.mxd')
 
-    ## Seperate processes for singleframe and DOQQ
-    single_image_candidates = aerial_list_json['INHOUSE_IMAGE']
-    doqq_image_candidates = aerial_list_json['DOQQ_IMAGE']
+    job_folder = os.path.join(job_directory,OrderNumText)
+    if AUI_ID == '':
+        ## Return aerial list from oracle
+        oracle_autoprep = str({"PROCEDURE":Oracle.erisapi_procedures['getaeriallist'],"ORDER_NUM":OrderNumText})
+        aerial_list_return = Oracle('test').call_erisapi(oracle_autoprep)
+        aerial_list_json = json.loads(aerial_list_return[1])
 
-    ##Create job folder and copy images
-    try:
-        job_folder = os.path.join(job_directory,OrderNumText)
+        ## Seperate processes for singleframe and DOQQ
+        single_image_candidates = aerial_list_json['INHOUSE_IMAGE']
+        doqq_image_candidates = aerial_list_json['DOQQ_IMAGE']
+
+        ##Create job folder and copy images
+        try:
+            org_image_folder = os.path.join(job_folder,'org')
+            jpg_image_folder = os.path.join(job_folder,'jpg')
+            if os.path.exists(job_folder):
+                shutil.rmtree(job_folder)
+            os.mkdir(job_folder)
+            os.mkdir(org_image_folder)
+            os.mkdir(jpg_image_folder)
+            if len(doqq_image_candidates) == 0 and len(single_image_candidates) == 0:
+                raise NoAvailableImage
+            if len(single_image_candidates) == 0:
+                arcpy.AddWarning('No singleframe image candidates')
+            
+            try:
+                for inhouse_image in single_image_candidates:
+                    image_auid = str(inhouse_image['AUI_ID'])
+                    image_name = inhouse_image['ORIGINAL_IMAGEPATH']
+                    image_year = str(inhouse_image['AERIAL_YEAR'])
+                    image_source = inhouse_image['IMAGE_SOURCE']
+                    selected_flag = inhouse_image['SELECTED_FLAG']
+                    if image_source == '':
+                        image_source = 'UNKWN'
+                    if selected_flag == 'Y':
+                        export_reportimage(image_name,OrderGeometry,image_auid)
+
+
+                if len(doqq_image_candidates) == 0:
+                    arcpy.AddWarning('No DOQQ image candidates')
+
+                for inhouse_image in doqq_image_candidates:
+                    image_auid = str(inhouse_image['AUI_ID'])
+                    image_name = inhouse_image['ORIGINAL_IMAGEPATH']
+                    image_year = str(inhouse_image['AERIAL_YEAR'])
+                    image_source = inhouse_image['IMAGE_SOURCE']
+                    selected_flag = inhouse_image['SELECTED_FLAG']
+                    if image_source == '':
+                        image_source = 'UNKWN'
+                    if selected_flag == 'Y':
+                        export_reportimage(image_name,OrderGeometry,image_auid)
+            except KeyError as k:
+                arcpy.AddError('JSON missing key: ' + k.message)
+        except NoAvailableImage:
+            arcpy.AddError('No available images for location')
+            sys.exit()
+    else:
+        oracle_singleprep = str({"PROCEDURE":Oracle.erisapi_procedures['getaeriallist'],"ORDER_NUM":OrderNumText,'AUI_ID': AUI_ID})
+        aerial_list_return = Oracle('test').call_erisapi(oracle_singleprep)
+        aerial_list_json = json.loads(aerial_list_return[1])
+
+        single_image_candidates = aerial_list_json['INHOUSE_IMAGE']
+        doqq_image_candidates = aerial_list_json['DOQQ_IMAGE']
+
+        if os.path.exists(job_folder) == False:
+            arcpy.AddError('Job Folder does not exist - Reinitialize order')
+            sys.exit()
+
         org_image_folder = os.path.join(job_folder,'org')
         jpg_image_folder = os.path.join(job_folder,'jpg')
-        if os.path.exists(job_folder):
-            shutil.rmtree(job_folder)
-        os.mkdir(job_folder)
-        os.mkdir(org_image_folder)
-        os.mkdir(jpg_image_folder)
-        if len(doqq_image_candidates) == 0 and len(single_image_candidates) == 0:
-            raise NoAvailableImage
-        if len(single_image_candidates) == 0:
-            arcpy.AddWarning('No singleframe image candidates')
-        
-        try:
+
+        if len(single_image_candidates) == 1:
             for inhouse_image in single_image_candidates:
                 image_auid = str(inhouse_image['AUI_ID'])
-                image_name = inhouse_image['IMAGE_NAME']
+                image_name = inhouse_image['ORIGINAL_IMAGEPATH']
                 image_year = str(inhouse_image['AERIAL_YEAR'])
                 image_source = inhouse_image['IMAGE_SOURCE']
+                selected_flag = inhouse_image['SELECTED_FLAG']
                 if image_source == '':
                     image_source = 'UNKWN'
                 export_reportimage(image_name,OrderGeometry,image_auid)
-
-
-            if len(doqq_image_candidates) == 0:
-                arcpy.AddWarning('No DOQQ image candidates')
-
-            for inhouse_image in doqq_image_candidates:
+        elif len(doqq_image_candidates) == 1:
+            for inhouse_image in single_image_candidates:
                 image_auid = str(inhouse_image['AUI_ID'])
-                image_name = inhouse_image['IMAGE_NAME']
+                image_name = inhouse_image['ORIGINAL_IMAGEPATH']
                 image_year = str(inhouse_image['AERIAL_YEAR'])
                 image_source = inhouse_image['IMAGE_SOURCE']
+                selected_flag = inhouse_image['SELECTED_FLAG']
                 if image_source == '':
                     image_source = 'UNKWN'
                 export_reportimage(image_name,OrderGeometry,image_auid)
-        except KeyError as k:
-            arcpy.AddError('JSON missing key: ' + k.message)
-    except NoAvailableImage:
-        arcpy.AddError('No available images for location')
-        sys.exit()
+        else:
+            arcpy.AddError('No Available Image for that AUI ID')
