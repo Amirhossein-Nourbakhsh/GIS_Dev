@@ -205,8 +205,8 @@ if __name__ == '__main__':
     ### set input parameters
     orderID = arcpy.GetParameterAsText(0)
     auiID = arcpy.GetParameterAsText(1)
-    orderID = '909305'
-    auid = '22721227'
+    # orderID = '909305'
+    # auid = '22721227'
     env = 'test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
     MapScale = 6000
