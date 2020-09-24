@@ -205,8 +205,8 @@ if __name__ == '__main__':
     ### set input parameters
     orderID = arcpy.GetParameterAsText(0)
     auiID = arcpy.GetParameterAsText(1)
-    # orderID = '909305'
-    # auid = '22721227'
+    orderID = '909305'
+    auid = '22721227'
     env = 'test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
     MapScale = 6000
@@ -215,43 +215,51 @@ if __name__ == '__main__':
         ##get info for order from oracle
         orderInfo = Oracle(env).call_function('getorderinfo',orderID)
         order_Num = str(orderInfo['ORDER_NUM'])
+        if env == 'test':
+            job_folder = os.path.join(OutputDirectory.job_directory_test,order_Num)
+        elif env == 'prod':
+            job_folder = os.path.join(OutputDirectory.job_directory_prod,order_Num)
         # get georeferencing info from oracle
         oracle_georef = str({"PROCEDURE":Oracle.erisapi_procedures["getGeoreferencingInfo"],"ORDER_NUM": order_Num, "AUI_ID": auid})
         aerial_us_georef = Oracle(env).call_erisapi(oracle_georef)
         aerial_georefjson = json.loads(aerial_us_georef[1])
+        
         if  (len(aerial_georefjson)) == 0:
             arcpy.AddWarning('The  georeferencing information is not availabe!')
             arcpy.AddWarning(aerial_georefjson[2])
-        else:    
+        else:  
+            org_image_folder = os.path.join(job_folder,'org')
+            jpg_image_folder = os.path.join(job_folder,'jpg')
+            if os.path.exists(job_folder):
+                shutil.rmtree(job_folder)
+            os.mkdir(job_folder)
+            os.mkdir(org_image_folder)
+            os.mkdir(jpg_image_folder)  
             ### get input image from inventory
             aerial_inventory = str({"PROCEDURE":Oracle.erisapi_procedures["getImageInventoryInfo"],"ORDER_NUM":order_Num , "AUI_ID": auid})
             aerial_us_inventory = Oracle(env).call_erisapi(aerial_inventory)
             aerial_inventoryjson = json.loads(aerial_us_inventory[1])
+            print(aerial_inventoryjson)
+            
             if  (len(aerial_inventoryjson)) == 0:
                 arcpy.AddWarning('There is no data for Image in inventory!')
                 arcpy.AddWarning(aerial_us_inventory[2])
             else:
-                image_inventory_path = aerial_inventoryjson[0]['ORIGINAL_IMAGEPATH']
-                
-                ## setup image custom name year_DOQQ_AUI_ID
-                year = aerial_inventoryjson[0]['AERIAL_YEAR'] 
-                out_img_name = '%s_DOQQ_%s'%(year,auid)
-                ## Setup input and output paths
-                if env == 'test':
-                    job_folder = os.path.join(OutputDirectory.job_directory_test,order_Num)
-                    print(job_folder)
-                elif env == 'prod':
-                    job_folder = os.path.join(OutputDirectory.job_directory_prod,order_Num)
-                org_image_folder = os.path.join(job_folder,'org')
-                jpg_image_folder = os.path.join(job_folder,'jpg')
-                if os.path.exists(job_folder):
-                    shutil.rmtree(job_folder)
-                os.mkdir(job_folder)
-                os.mkdir(org_image_folder)
-                os.mkdir(jpg_image_folder)
-                if not os.path.exists(image_inventory_path):
-                    arcpy.AddWarning(image_inventory_path +' DOES NOT EXIST')
+                image_input_path_inv = aerial_inventoryjson[0]['ORIGINAL_IMAGEPATH'] # image path from inventory
+                image_input_path_job = os.path.join(job_folder,aerial_georefjson['imgname'])
+               
+                if  len(image_input_path_inv) == 0: # image is not in house
+                    image_input_path = image_input_path_job 
                 else:
+                    image_input_path = image_input_path_inv
+                    
+                if len(image_input_path) == 0 or not os.path.exists(image_input_path):
+                    arcpy.AddWarning(image_input_path +' DOES NOT EXIST')
+                else:
+                    year = aerial_inventoryjson[0]['AERIAL_YEAR'] 
+                    img_source = aerial_inventoryjson[0]['IMAGE_SOURCE']
+                    ## setup image custom name year_DOQQ_AUI_ID
+                    out_img_name = '%s_%s_%s'%(year,img_source,auid)
                     ## set scratch folder
                     scratchFolder = arcpy.env.scratchFolder
                     arcpy.env.workspace = scratchFolder
@@ -264,13 +272,13 @@ if __name__ == '__main__':
                     orderGeometry = createGeometry(eval(orderInfo[u'ORDER_GEOMETRY'][u'GEOMETRY'])[0],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'],tempGDB,'OrderGeometry')
                     gcpPoints = CoordToString(aerial_georefjson['envelope'][0])
                     ## Source point from input extent
-                    TOP = str(arcpy.GetRasterProperties_management(image_inventory_path,"TOP").getOutput(0))
-                    LEFT = str(arcpy.GetRasterProperties_management(image_inventory_path,"LEFT").getOutput(0))
-                    RIGHT = str(arcpy.GetRasterProperties_management(image_inventory_path,"RIGHT").getOutput(0))
-                    BOTTOM = str(arcpy.GetRasterProperties_management(image_inventory_path,"BOTTOM").getOutput(0))
+                    TOP = str(arcpy.GetRasterProperties_management(image_input_path,"TOP").getOutput(0))
+                    LEFT = str(arcpy.GetRasterProperties_management(image_input_path,"LEFT").getOutput(0))
+                    RIGHT = str(arcpy.GetRasterProperties_management(image_input_path,"RIGHT").getOutput(0))
+                    BOTTOM = str(arcpy.GetRasterProperties_management(image_input_path,"BOTTOM").getOutput(0))
                     srcPoints = "'" + LEFT + " " + BOTTOM + "';" + "'" + RIGHT + " " + BOTTOM + "';" + "'" + RIGHT + " " + TOP + "';" + "'" + LEFT + " " + TOP + "'"
                      ## Georeferencing
-                    img_Georeferenced = ApplyGeoref(scratchFolder,image_inventory_path, srcPoints, gcpPoints, TransformationType.POLYORDER1, ResamplingType.BILINEAR)
+                    img_Georeferenced = ApplyGeoref(scratchFolder,image_input_path, srcPoints, gcpPoints, TransformationType.POLYORDER1, ResamplingType.BILINEAR)
                     ## ExportToOutputs
                     ExportToOutputs(env,img_Georeferenced, jpg_image_folder, OutputDirectory.georef_images ,out_img_name)
         end = timeit.default_timer()
