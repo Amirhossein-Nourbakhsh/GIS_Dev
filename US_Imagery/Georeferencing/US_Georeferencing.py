@@ -181,7 +181,7 @@ def export_to_jpg(env,imagepath,outputImage_jpg,ordergeometry,auid):
     SW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMin)
     SE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMin)
     try:
-        image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : order_Num,"AUI_ID":auid,"SWLAT":str(df.extent.YMin),"SWLONG":str(df.extent.XMin),"NELAT":(df.extent.XMax),"NELONG":str(df.extent.XMax)})
+        image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : order_num,"AUI_ID":auid,"SWLAT":str(df.extent.YMin),"SWLONG":str(df.extent.XMin),"NELAT":(df.extent.XMax),"NELONG":str(df.extent.XMax)})
         message_return = Oracle(env).call_erisapi(image_extents)
         if message_return[3] != 'Y':
             raise OracleBadReturn
@@ -191,15 +191,15 @@ def export_to_jpg(env,imagepath,outputImage_jpg,ordergeometry,auid):
     arcpy.mapping.ExportToJPEG(mxd,outputImage_jpg,df,df_export_width=export_width,df_export_height=export_height,world_file=False,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
     mxd.saveACopy(os.path.join(arcpy.env.scratchFolder,auid+'_export.mxd'))
     del mxd
-def ExportToOutputs(env,geroref_Image,outputImage_jpg,inv_folder,out_img_name):
+def ExportToOutputs(env,geroref_Image,outputImage_jpg,org_folder,out_img_name,orderGeometry):
     arcpy.AddMessage('Start Exporting...')
     ## Copy georefed image to inventory folder
-    shutil.copy(geroref_Image, os.path.join(inv_folder,out_img_name + '.tif'))
+    shutil.copy(geroref_Image, os.path.join(org_folder,out_img_name + '.tif'))
     ## Copy georefed image tfw file to inventory folder
-    shutil.copy(os.path.join(os.path.dirname(geroref_Image),'image_gc.tfw'), os.path.join(inv_folder,out_img_name +'.tfw'))
+    shutil.copy(os.path.join(os.path.dirname(geroref_Image),'image_gc.tfw'), os.path.join(org_folder,out_img_name +'.tfw'))
     # ## Export georefed image as jpg file to jpg folder for US Aerial UI app
     outputImage_jpg = os.path.join(outputImage_jpg,out_img_name + '.jpg')
-    export_to_jpg(env,geroref_Image,outputImage_jpg,ordergeometry,auid)
+    export_to_jpg(env,geroref_Image,outputImage_jpg,orderGeometry,auid)
     arcpy.AddMessage('--Exporting Done.')
 if __name__ == '__main__':
     ### set input parameters
@@ -214,13 +214,14 @@ if __name__ == '__main__':
         start = timeit.default_timer()
         ##get info for order from oracle
         orderInfo = Oracle(env).call_function('getorderinfo',orderID)
-        order_Num = str(orderInfo['ORDER_NUM'])
+        order_num = str(orderInfo['ORDER_NUM'])
+        order_num = '20282100005'
         if env == 'test':
-            job_folder = os.path.join(OutputDirectory.job_directory_test,order_Num)
+            job_folder = os.path.join(OutputDirectory.job_directory_test,order_num)
         elif env == 'prod':
-            job_folder = os.path.join(OutputDirectory.job_directory_prod,order_Num)
+            job_folder = os.path.join(OutputDirectory.job_directory_prod,order_num)
         # get georeferencing info from oracle
-        oracle_georef = str({"PROCEDURE":Oracle.erisapi_procedures["getGeoreferencingInfo"],"ORDER_NUM": order_Num, "AUI_ID": auid})
+        oracle_georef = str({"PROCEDURE":Oracle.erisapi_procedures["getGeoreferencingInfo"],"ORDER_NUM": order_num, "AUI_ID": auid})
         aerial_us_georef = Oracle(env).call_erisapi(oracle_georef)
         aerial_georefjson = json.loads(aerial_us_georef[1])
         
@@ -236,10 +237,9 @@ if __name__ == '__main__':
             os.mkdir(org_image_folder)
             os.mkdir(jpg_image_folder)  
             ### get input image from inventory
-            aerial_inventory = str({"PROCEDURE":Oracle.erisapi_procedures["getImageInventoryInfo"],"ORDER_NUM":order_Num , "AUI_ID": auid})
+            aerial_inventory = str({"PROCEDURE":Oracle.erisapi_procedures["getImageInventoryInfo"],"ORDER_NUM":order_num , "AUI_ID": auid})
             aerial_us_inventory = Oracle(env).call_erisapi(aerial_inventory)
             aerial_inventoryjson = json.loads(aerial_us_inventory[1])
-            print(aerial_inventoryjson)
             
             if  (len(aerial_inventoryjson)) == 0:
                 arcpy.AddWarning('There is no data for Image in inventory!')
@@ -280,7 +280,7 @@ if __name__ == '__main__':
                      ## Georeferencing
                     img_Georeferenced = ApplyGeoref(scratchFolder,image_input_path, srcPoints, gcpPoints, TransformationType.POLYORDER1, ResamplingType.BILINEAR)
                     ## ExportToOutputs
-                    ExportToOutputs(env,img_Georeferenced, jpg_image_folder, OutputDirectory.georef_images ,out_img_name)
+                    ExportToOutputs(env,img_Georeferenced, jpg_image_folder, os.path.dirname(image_input_path) ,out_img_name,orderGeometry)
         end = timeit.default_timer()
         arcpy.AddMessage(('Duration:', round(end -start,4)))
     except:
