@@ -10,39 +10,13 @@
 #-------------------------------------------------------------------------------
 
 import arcpy,os
-import ConfigParser
 
-def server_loc_config(configpath,environment):
-    configParser = ConfigParser.RawConfigParser()
-    configParser.read(configpath)
-    if environment == 'test':
-        reportcheck_test = configParser.get('server-config','reportcheck_test')
-        reportviewer_test = configParser.get('server-config','reportviewer_test')
-        reportinstant_test = configParser.get('server-config','instant_test')
-        reportnoninstant_test = configParser.get('server-config','noninstant_test')
-        upload_viewer = configParser.get('url-config','uploadviewer')
-        server_config = {'reportcheck':reportcheck_test,'viewer':reportviewer_test,'instant':reportinstant_test,'noninstant':reportnoninstant_test,'viewer_upload':upload_viewer}
-        return server_config
-    elif environment == 'prod':
-        reportcheck_prod = configParser.get('server-config','reportcheck_prod')
-        reportviewer_prod = configParser.get('server-config','reportviewer_prod')
-        reportinstant_prod = configParser.get('server-config','instant_prod')
-        reportnoninstant_prod = configParser.get('server-config','noninstant_prod')
-        upload_viewer = configParser.get('url-config','uploadviewer_prod')
-        server_config = {'reportcheck':reportcheck_prod,'viewer':reportviewer_prod,'instant':reportinstant_prod,'noninstant':reportnoninstant_prod,'viewer_upload':upload_viewer}
-        return server_config
-    else:
-        return 'invalid server configuration'
-
-server_environment = 'prod'
-server_config_file = r'\\cabcvan1gis006\GISData\ERISServerConfig.ini'
-server_config = server_loc_config(server_config_file,server_environment)
-connectionString = r'ERIS_GIS/gis295@GMPRODC.glaciermedia.inc'
-report_path = server_config['noninstant']
-viewer_path = server_config['viewer']
-upload_link = server_config['viewer_upload']+r"/ErisInt/BIPublisherPortal_prod/Viewer.svc/"
+connectionString = 'ERIS_GIS/gis295@GMPRODC.glaciermedia.inc'
+report_path = r"\\cabcvan1obi002\ErisData\Reports\prod\noninstant_reports"
+viewer_path = r"\\CABCVAN1OBI002\ErisData\Reports\prod\viewer"
+upload_link = r"http://CABCVAN1OBI002/ErisInt/BIPublisherPortal_prod/Viewer.svc/"
 #production: upload_link = r"http://CABCVAN1OBI002/ErisInt/BIPublisherPortal_prod/Viewer.svc/"
-reportcheck_path = server_config['reportcheck']
+reportcheck_path = r'\\cabcvan1obi002\ErisData\Reports\prod\reportcheck'
 connectionPath = r"\\cabcvan1gis006\GISData\PSR\python"
 
 orderGeomlyrfile_point = r"\\cabcvan1gis006\GISData\PSR\python\mxd\SiteMaker.lyr"
@@ -56,15 +30,15 @@ relieflyrfile = r"\\cabcvan1gis006\GISData\PSR\python\mxd\relief.lyr"
 masterlyr_topo = r"\\cabcvan1gis006\GISData\Topo_USA\masterfile\CellGrid_7_5_Minute.shp"
 data_topo = r"\\cabcvan1gis006\GISData\Topo_USA\masterfile\Cell_PolygonAll.shp"
 csvfile_topo = r"\\cabcvan1gis006\GISData\Topo_USA\masterfile\All_USTopo_T_7.5_gda_results.csv"
-tifdir_topo = r"\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff"
+tifdir_topo = r"\\cabcvan1gis001\USGS_Topo\USGS_currentTopo_Geotiff"
 
-data_shadedrelief = r"\\cabcvan1fpr009\US_DEM\CellGrid_1X1Degree_NW.shp"
+data_shadedrelief = r"\\cabcvan1gis001\US_DEM\CellGrid_1X1Degree_NW.shp"
 data_geol = r'\\cabcvan1gis006\GISData\Data\PSR\PSR.gdb\GEOL_DD_MERGE'
 data_flood = r'\\cabcvan1gis006\GISData\Data\PSR\PSR.gdb\S_Fld_haz_Ar_merged2018'
 data_floodpanel = r'\\cabcvan1gis006\GISData\Data\PSR\PSR.gdb\S_FIRM_PAN_MERGED2018'
 data_wetland = r'\\cabcvan1gis006\GISData\Data\PSR\PSR.gdb\Merged_wetland_Final'
 eris_wells = r"\\cabcvan1gis006\GISData\PSR\python\mxd\ErisWellSites.lyr"   #which contains water, oil/gas wells etc.
-path_shadedrelief = r"\\cabcvan1fpr009\US_DEM\hillshade13"
+path_shadedrelief = r"\\cabcvan1gis001\US_DEM\hillshade13"
 datalyr_wetland = r"\\cabcvan1gis006\GISData\PSR\python\mxd\wetland_kml.lyr"
 ##datalyr_wetlandNY = r"E:\GISData\PSR\python\mxd\wetlandNY.lyr"
 datalyr_wetlandNYkml = r"\\cabcvan1gis006\GISData\PSR\python\mxd\wetlandNY_kml.lyr"
@@ -74,10 +48,10 @@ datalyr_geology = r"\\cabcvan1gis006\GISData\PSR\python\mxd\geology.lyr"
 datalyr_contour = r"\\cabcvan1gis006\GISData\PSR\python\mxd\contours_largescale.lyr"
 datalyr_plumetacoma = r"\\cabcvan1gis006\GISData\PSR\python\mxd\Plume.lyr"
 
-imgdir_demCA = r"\\Cabcvan1fpr009\US_DEM\DEM1"
-masterlyr_demCA = r"\\Cabcvan1fpr009\US_DEM\Canada_DEM_edited.shp"
-imgdir_dem = r"\\Cabcvan1fpr009\US_DEM\DEM13"
-masterlyr_dem = r"\\Cabcvan1fpr009\US_DEM\CellGrid_1X1Degree_NW_imagename_update.shp"
+imgdir_demCA = r"\\Cabcvan1gis001\US_DEM\DEM1"
+masterlyr_demCA = r"\\Cabcvan1gis001\US_DEM\Canada_DEM_edited.shp"
+imgdir_dem = r"\\Cabcvan1gis001\US_DEM\DEM13"
+masterlyr_dem = r"\\Cabcvan1gis001\US_DEM\CellGrid_1X1Degree_NW_imagename_update.shp"
 masterlyr_states = r"\\cabcvan1gis006\GISData\PSR\python\mxd\USStates.lyr"
 masterlyr_counties = r"\\cabcvan1gis006\GISData\PSR\python\mxd\USCounties.lyr"
 masterlyr_cities = r"\\cabcvan1gis006\GISData\PSR\python\mxd\USCities.lyr"
@@ -103,11 +77,12 @@ mxdMMfile_soil = r"\\cabcvan1gis006\GISData\PSR\python\mxd\soilMM.mxd"
 mxdfile_wells = r"\\cabcvan1gis006\GISData\PSR\python\mxd\wells.mxd"
 mxdMMfile_wells = r"\\cabcvan1gis006\GISData\PSR\python\mxd\wellsMM.mxd"
 
+
 srGCS83 = arcpy.SpatialReference(os.path.join(connectionPath, r"projections\GCSNorthAmerican1983.prj"))
 
-datapath_soil_HI =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_HI.gdb'
-datapath_soil_AK =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_AK.gdb'
-datapath_soil_CONUS =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_CONUS_10m.gdb'
+datapath_soil_HI =r'\\cabcvan1gis001\DATA_GIS\SSURGO\CONUS_2015\gSSURGO_HI.gdb'
+datapath_soil_AK =r'\\cabcvan1gis001\DATA_GIS\SSURGO\CONUS_2015\gSSURGO_AK.gdb'
+datapath_soil_CONUS =r'\\cabcvan1gis001\DATA_GIS\SSURGO\CONUS_2015\gSSURGO_CONUS_10m.gdb'
 
 hydrologic_dict = {
         "A":'Soils in this group have low runoff potential when thoroughly wet. Water is transmitted freely through the soil.',
@@ -132,7 +107,49 @@ fc_soils_whereClause_queryTable = "muaggatt.mukey = component.mukey and componen
 
 tbx = r"\\cabcvan1gis006\GISData\PSR\python\ERIS.tbx"
 
+
 # Explorer
 datalyr_wetland = r"\\cabcvan1gis006\GISData\PSR\python\mxd\wetland_kml.lyr"
 datalyr_flood = r"\\cabcvan1gis006\GISData\PSR\python\mxd\flood.lyr"
 datalyr_geology = r"\\cabcvan1gis006\GISData\PSR\python\mxd\geology.lyr"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

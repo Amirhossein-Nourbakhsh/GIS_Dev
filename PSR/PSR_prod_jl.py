@@ -178,22 +178,21 @@ try:
     # gc.collect()g
 
 # LOCAL #########################################################################
-    OrderIDText = ''
-    OrderNumText = r"20200810053"
-    scratchfolder = os.path.join(r"C:\Users\awong\Downloads\PSR_SCRATCHY", OrderNumText)
-    scratch = arcpy.CreateFileGDB_management(scratchfolder,r"scratch.gdb")   # for tables to make Querytable
+    OrderIDText = '904080'
+    scratchfolder = r'C:\Users\JLoucks\Documents\JL\topo1'
+    #scratch = arcpy.CreateFileGDB_management(scratchfolder,r"scratch.gdb")   # for tables to make Querytable
     scratch = os.path.join(scratchfolder,r"scratch.gdb")
 #################################################################################
     try:
         con = cx_Oracle.connect(connectionString)
         cur = con.cursor()
 
-        # GET ORDER_ID FROM ORDER_NUM
-        if OrderIDText == "":
-            cur.execute("SELECT * FROM ERIS.PSR_AUDIT WHERE ORDER_ID IN (select order_id from orders where order_num = '" + str(OrderNumText) + "')")
-            result = cur.fetchall()
-            OrderIDText = str(result[0][0]).strip()
-            print("Order ID: " + OrderIDText)
+##        # GET ORDER_ID FROM ORDER_NUM
+##        if OrderIDText == "":
+##            cur.execute("SELECT * FROM ERIS.PSR_AUDIT WHERE ORDER_ID IN (select order_id from orders where order_num = '" + str(OrderNumText) + "')")
+##            result = cur.fetchall()
+##            OrderIDText = str(result[0][0]).strip()
+##            print("Order ID: " + OrderIDText)
 
         cur.execute("select order_num, address1, city, provstate from orders where order_id =" + OrderIDText)
         t = cur.fetchone()
@@ -535,7 +534,7 @@ try:
         cellsizes = []
         # loop through the relevant records, locate the selected cell IDs
         rows = arcpy.SearchCursor(masterLayer_topo)    # loop through the selected records
-        
+
         for row in rows:
             cellid = str(int(row.getValue("CELL_ID")))
             cellids_selected.append(cellid)
@@ -572,7 +571,7 @@ try:
 
         topofile = topowhitelyrfile
         quadrangles =""
-        
+
         for item in infomatrix:
             pdfname = item[2]
             tifname = pdfname[0:-4]   # note without .tif part
@@ -822,7 +821,7 @@ try:
 
         mxd_relief.saveACopy(os.path.join(scratchfolder, "mxd_relief.mxd"))
         arcpy.mapping.ExportToJPEG(mxd_relief, outputjpg_relief, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-        
+
         if not os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText)):
             os.mkdir(os.path.join(report_path, 'PSRmaps', OrderNumText))
         shutil.copy(outputjpg_relief, os.path.join(report_path, 'PSRmaps', OrderNumText))
@@ -893,14 +892,14 @@ try:
     print ("Starting Wetland Section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     bufferSHP_wetland = os.path.join(scratchfolder,"buffer_wetland.shp")
     arcpy.Buffer_analysis(orderGeometryPR, bufferSHP_wetland, bufferDist_wetland)
-
+    print 'buffer'
     mxd_wetland = arcpy.mapping.MapDocument(mxdfile_wetland)
     df_wetland = arcpy.mapping.ListDataFrames(mxd_wetland,"big")[0]
     df_wetland.spatialReference = spatialRef
     df_wetlandsmall = arcpy.mapping.ListDataFrames(mxd_wetland,"small")[0]
     df_wetlandsmall.spatialReference = spatialRef
     del df_wetlandsmall
-
+    print 'set sr'
     addBuffertoMxd("buffer_wetland",df_wetland)
     addOrdergeomtoMxd("ordergeoNamePR", df_wetland)
 
@@ -913,6 +912,7 @@ try:
         shutil.copy(outputjpg_wetland, os.path.join(report_path, 'PSRmaps', OrderNumText))
         del mxd_wetland
         del df_wetland
+        print 'wetland stuff'
     else:                           # multipage
         gridlr = "gridlr_wetland"   # gdb feature class doesn't work, could be a bug. So use .shp
         gridlrshp = os.path.join(scratch, gridlr)
@@ -968,13 +968,17 @@ try:
             shutil.copy(outputjpg_wetland[0:-4]+str(i)+".jpg", os.path.join(report_path, 'PSRmaps', OrderNumText))
         del mxdMM_wetland
         del dfMM_wetland
-
+    print 'oracle'
     try:
         con = cx_Oracle.connect(connectionString)
         cur = con.cursor()
+        print 'connected'
 
-        # cur.callproc('eris_psr.ClearOrder', (OrderIDText,))
+        cur.callproc('eris_psr.ClearOrder', (OrderIDText,))
+        print 'order cleared from oracle'
+
         query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'WETLAND', OrderNumText+'_US_WETL.jpg', 1))
+        print 'insert map'
         if multipage_wetland == True:
             for i in range(1,page):
                 query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'WETLAND', OrderNumText+'_US_WETL'+str(i)+'.jpg', i+1))
@@ -983,7 +987,7 @@ try:
         con.close()
 
 #########################################################################################################
-# NY Wetland Map only, no attributes ---------------------------------------------------------------------------------    
+# NY Wetland Map only, no attributes ---------------------------------------------------------------------------------
     if ProvStateText =='NY':
         print ("========================================")
         print ("Starting NY Wetland Section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
@@ -1085,7 +1089,7 @@ try:
     print (data_flood)
     print (bufferSHP_flood)
     print (flood_clip)
-    arcpy.Clip_analysis(data_flood, bufferSHP_flood, flood_clip)
+    #arcpy.Clip_analysis(data_flood, bufferSHP_flood, flood_clip)
     del data_flood
 
     floodpanel_clip =os.path.join(scratch,'floodpanel')   # better keep in file geodatabase due to content length in certain columns
@@ -1226,7 +1230,7 @@ try:
             erisid = erisid + 1
             cur.callproc('eris_psr.InsertOrderDetail', (OrderIDText, erisid,'10683'))
             query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '10683', 2, 'N', 1, 'Available FIRM Panels in area: ', availPanels))
-            
+
             for in_row in in_rows:
                 # note the column changed in summary dbf
                 print (": " + in_row.ERIS_CLASS)    # eris label
@@ -1248,7 +1252,7 @@ try:
             del in_rows
 
             query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'FLOOD', OrderNumText+'_US_FLOOD.jpg', 1))
-            
+
             if multipage_flood == True:
                 for i in range(1,page):
                     query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'FLOOD', OrderNumText+'_US_FLOOD'+str(i)+'.jpg', i+1))
@@ -1285,7 +1289,7 @@ try:
         # df.scale = 5000
         mxd_geol.saveACopy(os.path.join(scratchfolder, "mxd_geol.mxd"))
         arcpy.mapping.ExportToJPEG(mxd_geol, outputjpg_geol, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-        
+
         if not os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText)):
             os.mkdir(os.path.join(report_path, 'PSRmaps', OrderNumText))
         shutil.copy(outputjpg_geol, os.path.join(report_path, 'PSRmaps', OrderNumText))
@@ -1307,7 +1311,7 @@ try:
 
         mxd_geol.saveACopy(os.path.join(scratchfolder, "mxd_geol.mxd"))
         arcpy.mapping.ExportToJPEG(mxd_geol, outputjpg_geol, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-        
+
         if not os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText)):
             os.mkdir(os.path.join(report_path, 'PSRmaps', OrderNumText))
         shutil.copy(outputjpg_geol, os.path.join(report_path, 'PSRmaps', OrderNumText))
@@ -1399,7 +1403,7 @@ try:
                 print ("UNIT NAME: " + in_row.UNIT_NAME)                    # unit name
                 print ("UNIT AGE: " + in_row.UNIT_AGE)                      # unit age
                 print ("ROCK TYPE1: " + in_row.ROCKTYPE1)                   # rocktype 1
-                print ("ROCK TYPE2: " + str(in_row.ROCKTYPE2))              # rocktype2        
+                print ("ROCK TYPE2: " + str(in_row.ROCKTYPE2))              # rocktype2
                 print ("UNIT DESC: " + str(in_row.UNITDESC))#.encode("utf-8")))     # unit description
                 print ("ERIS_KEY: " + in_row.ERIS_KEY_1)                    # eris key created from upper(unit_link)
                 erisid = erisid + 1
@@ -1736,7 +1740,7 @@ try:
                 cur.callproc('eris_psr.InsertOrderDetail', (OrderIDText, erisid,'9334'))
                 query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '9334', 2, 'S1', 1, 'Map Unit ' + mapunit['Musym'] + " (%s)"%mapunit["Soil_Percent"], ''))
                 query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '9334', 2, 'N', 2, 'Map Unit Name:', mapunit['Map Unit Name']))
-                
+
                 if (len(mapunit) < 6):      # for Water, Urbanland and Gravel Pits
                     query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '9334', 2, 'N', 3, 'No more attributes available for this map unit',''))
                 else:                       # not do for Water or urban land
@@ -1763,7 +1767,7 @@ try:
 
             # old: query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'SOIL'))
             query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'SOIL', OrderNumText+'_US_SOIL.jpg', 1))
-            
+
             if multipage_soil == True:
                 for i in range(1,page):
                     query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'SOIL', OrderNumText+'_US_SOIL'+str(i)+'.jpg', i+1))
@@ -1975,7 +1979,7 @@ try:
         df_wells.scale = df_wells.scale * 1.1
         mxd_wells.saveACopy(os.path.join(scratchfolder, "mxd_wells.mxd"))
         arcpy.mapping.ExportToJPEG(mxd_wells, outputjpg_wells, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-        
+
         if not os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText)):
             os.mkdir(os.path.join(report_path, 'PSRmaps', OrderNumText))
         shutil.copy(outputjpg_wells, os.path.join(report_path, 'PSRmaps', OrderNumText))
@@ -1988,7 +1992,7 @@ try:
         mxdMM_wells = arcpy.mapping.MapDocument(mxdMMfile_wells)
         dfMM_wells = arcpy.mapping.ListDataFrames(mxdMM_wells)[0]
         dfMM_wells.spatialReference = spatialRef
-        
+
         for item in dsoid_wells:
             addBuffertoMxd("buffer_"+item, dfMM_wells)
 
@@ -2034,7 +2038,7 @@ try:
 
             in_rows = arcpy.SearchCursor(wells_sja)
             for in_row in in_rows:
-                erisid = erisid + 1 #str(int(in_row.ID)) 
+                erisid = erisid + 1 #str(int(in_row.ID))
                 DS_OID=str(int(in_row.DS_OID))
                 Distance = str(float(in_row.Distance))
                 Direction = str(in_row.Direction)
@@ -2043,7 +2047,7 @@ try:
                 MapKeyLoc = str(int(in_row.MapKeyLoc))
                 MapKeyNo = str(int(in_row.MapKeyNo))
                 cur.callproc('eris_psr.InsertOrderDetail', (OrderIDText, erisid,DS_OID,Distance,Direction,Elevation,Elevatio_1,MapKeyLoc,MapKeyNo))
-            
+
             del in_row
             del in_rows
 
@@ -2634,7 +2638,7 @@ try:
                 arcpy.AddField_management(soilclip, "component", "TEXT", "", "", "2500", "", "NULLABLE", "NON_REQUIRED", "")
                 arcpy.AddField_management(soilclip,"ERISBIID", "TEXT", "", "", "15", "", "NULLABLE", "NON_REQUIRED", "")
                 rows = arcpy.UpdateCursor(soilclip)
-                
+
                 for row in rows:
                     for mapunit in reportdata:
                         if row.musym == mapunit["Musym"]:
@@ -2900,7 +2904,7 @@ try:
     arcpy.SetParameterAsText(1, os.path.join(scratchfolder, OrderNumText+'_US_PSR.pdf'))
 
 except:
-    # Get the traceback object    
+    # Get the traceback object
     tb = sys.exc_info()[2]
     tbinfo = traceback.format_tb(tb)[0]
 
