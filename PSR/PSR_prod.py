@@ -1,14 +1,3 @@
-#-------------------------------------------------------------------------------
-# Name:        Physical Setting Report
-# Purpose:
-#
-# Author:      jliu
-#
-# Created:     06/10/2015
-# Copyright:   (c) jliu 2015
-# Licence:     <your licence>
-#-------------------------------------------------------------------------------
-
 import shutil, csv
 import cx_Oracle,urllib, glob
 import arcpy, os, numpy
