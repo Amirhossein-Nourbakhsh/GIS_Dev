@@ -194,13 +194,16 @@ def export_reportimage(imagepath,ordergeometry,auid):
         arcpy.RefreshActiveView()
         ###############################
         ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
-        NW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMax)
-        NE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMax)
-        SW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMin)
-        SE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMin)
+
+        arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
+        extent =arcpy.Describe(os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg')).extent
+        NW_corner= str(extent.XMin) + ',' +str(extent.YMin)
+        NE_corner= str(extent.XMax) + ',' +str(extent.YMax)
+        SW_corner= str(extent.XMin) + ',' +str(extent.YMin)
+        SE_corner= str(extent.XMax) + ',' +str(extent.YMin)
         print NW_corner, NE_corner, SW_corner, SE_corner
         try:
-            image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : OrderNumText,"AUI_ID":auid,"SWLAT":str(df.extent.YMin),"SWLONG":str(df.extent.XMin),"NELAT":(df.extent.XMax),"NELONG":str(df.extent.XMax)})
+            image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : OrderNumText,"AUI_ID":auid,"SWLAT":str(extent.YMin),"SWLONG":str(extent.XMin),"NELAT":(extent.YMax),"NELONG":str(extent.XMax)})
             message_return = Oracle('test').call_erisapi(image_extents)
             if message_return[3] != 'Y':
                 raise OracleBadReturn
@@ -210,7 +213,6 @@ def export_reportimage(imagepath,ordergeometry,auid):
         #arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),df,df_export_width=5100,df_export_height=6600,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
         #arcpy.DefineProjection_management(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'), 3857)
         #shutil.copy(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),os.path.join(jpg_image_folder,auid + '.jpg'))
-        arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=False,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
         mxd.saveACopy(os.path.join(scratch,auid+'_export.mxd'))
         del mxd
 
@@ -287,18 +289,29 @@ if __name__ == '__main__':
                         image_source = 'UNKWN'
                     if selected_flag == 'Y':
                         export_reportimage(image_name,OrderGeometry,image_auid)
-            except KeyError as k:
-                arcpy.AddError('JSON missing key: ' + k.message)
-        except NoAvailableImage:
-            arcpy.AddError('No available images for location')
-            sys.exit()
+                
+                if len(index_image_candidates) == 0:
+                    arcpy.AddWarning('No INDEX image candidates')
+
+                for inhouse_image in index_image_candidates:
+                    image_auid = str(inhouse_image['AUI_ID'])
+                    image_name = inhouse_image['ORIGINAL_IMAGEPATH']
+                    image_year = str(inhouse_image['AERIAL_YEAR'])
+                    image_source = inhouse_image['IMAGE_SOURCE']
+                    selected_flag = inhouse_image['SELECTED_FLAG']
+                    if image_source == '':
+                        image_source = 'UNKWN'
+                    if selected_flag == 'Y':
+                        export_reportimage(image_name,OrderGeometry,image_auid)
     else:
-        oracle_singleprep = str({"PROCEDURE":Oracle.erisapi_procedures['getaeriallist'],"ORDER_NUM":OrderNumText,'AUI_ID': AUI_ID})
+        AUI_IDtext = str(AUI_ID)
+        oracle_singleprep = str({"PROCEDURE":Oracle.erisapi_procedures['getaeriallist'],"ORDER_NUM":OrderNumText,"AUI_ID":AUI_IDtext})
         aerial_list_return = Oracle('test').call_erisapi(oracle_singleprep)
         aerial_list_json = json.loads(aerial_list_return[1])
 
         single_image_candidates = aerial_list_json['INHOUSE_IMAGE']
         doqq_image_candidates = aerial_list_json['DOQQ_IMAGE']
+        index_image_candidates = aerial_list_json['INDEX_IMAGES']
 
         if os.path.exists(job_folder) == False:
             arcpy.AddError('Job Folder does not exist - Reinitialize order')
@@ -318,7 +331,17 @@ if __name__ == '__main__':
                     image_source = 'UNKWN'
                 export_reportimage(image_name,OrderGeometry,image_auid)
         elif len(doqq_image_candidates) == 1:
-            for inhouse_image in single_image_candidates:
+            for inhouse_image in doqq_image_candidates:
+                image_auid = str(inhouse_image['AUI_ID'])
+                image_name = inhouse_image['ORIGINAL_IMAGEPATH']
+                image_year = str(inhouse_image['AERIAL_YEAR'])
+                image_source = inhouse_image['IMAGE_SOURCE']
+                selected_flag = inhouse_image['SELECTED_FLAG']
+                if image_source == '':
+                    image_source = 'UNKWN'
+                export_reportimage(image_name,OrderGeometry,image_auid)
+        elif len(index_image_candidates) == 1:
+            for inhouse_image in index_image_candidates:
                 image_auid = str(inhouse_image['AUI_ID'])
                 image_name = inhouse_image['ORIGINAL_IMAGEPATH']
                 image_year = str(inhouse_image['AERIAL_YEAR'])
