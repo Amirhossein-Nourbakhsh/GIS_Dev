@@ -132,7 +132,7 @@ if __name__ == '__main__':
     job_folder = os.path.join(job_directory,OrderNumText)
 
     ### Get image path info ###
-    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getgeorefraw'],"ORDER_NUM":OrderNumText})
+    inv_infocall = str({"PROCEDURE":eris_api_procedures['getgeorefraw'],"ORDER_NUM":OrderNumText})
     raster_input = _
 
 ### Convert file

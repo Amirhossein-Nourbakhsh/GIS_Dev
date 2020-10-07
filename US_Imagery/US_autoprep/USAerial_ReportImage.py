@@ -199,19 +199,22 @@ def export_reportimage(imagedict,ordergeometry):
     arcpy.RefreshActiveView()
     ###############################
     ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
-    NW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMax)
-    NE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMax)
-    SW_corner= str(df.extent.XMin) + ',' +str(df.extent.YMin)
-    SE_corner= str(df.extent.XMax) + ',' +str(df.extent.YMin)
-    print NW_corner, NE_corner, SW_corner, SE_corner
+
+
     ##############################
     #arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),df,df_export_width=5100,df_export_height=6600,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
     #arcpy.DefineProjection_management(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'), 3857)
     #shutil.copy(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),os.path.join(jpg_image_folder,auid + '.jpg'))
-    arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=False,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
+    arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
+    extent =arcpy.Describe(os.path.join(job_fin,image_year + '_' + image_source  + '.jpg')).extent
+    NW_corner= str(extent.XMin) + ',' +str(extent.YMax)
+    NE_corner= str(extent.XMax) + ',' +str(extent.YMax)
+    SW_corner= str(extent.XMin) + ',' +str(extent.YMin)
+    SE_corner= str(extent.XMax) + ',' +str(extent.YMin)
+    print NW_corner, NE_corner, SW_corner, SE_corner
     try:
         image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passreportextent'], "ORDER_NUM" : OrderNumText,"TYPE":"ae_pdf",
-        "SWLAT":str(df.extent.YMin),"SWLONG":str(df.extent.XMin),"NELAT":(df.extent.XMax),"NELONG":str(df.extent.XMax),
+        "SWLAT":str(extent.YMin),"SWLONG":str(extent.XMin),"NELAT":(extent.YMax),"NELONG":str(extent.XMax),"FILENAME":str(image_year + '_' + image_source  + '.jpg'),
         "CENTERLAT" : "", "CENTERLONG":"", "IMAGE_WIDTH":"","IMAGE_HEIGHT":""})
         message_return = Oracle('test').call_erisapi(image_extents)
         if message_return[3] != 'Y':
