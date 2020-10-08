@@ -31,7 +31,7 @@ class Oracle:
     # static variable: oracle_functions
     oracle_functions = {'getorderinfo':"eris_gis.getOrderInfo"
     }
-    erisapi_procedures = {'getreworkaerials':"FLOW_GEOREFERENCE.GetAerialreworkPNG"}
+    erisapi_procedures = {'getnewaerials':"FLOW_GEOREFERENCE.GetAerialnewPNG","setimagename":"Flow_inventory.setImageName"}
     def __init__(self,machine_name):
         # initiate connection credential
         if machine_name.lower() =='test':
@@ -129,9 +129,10 @@ if __name__ == '__main__':
     orderInfo = Oracle('test').call_function('getorderinfo',OrderID)
     OrderNumText = str(orderInfo['ORDER_NUM'])
     job_folder = os.path.join(job_directory,OrderNumText)
+    uploaded_dir = os.path.join(job_folder,"OrderImages")
 
     ### Get image path info ###
-    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getreworkaerials'],"ORDER_NUM":OrderNumText,"PARENT_EE_OID":ee_oid})
+    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getnewaerials'],"ORDER_NUM":OrderNumText,"PARENT_EE_OID":ee_oid})
     rework_return = Oracle('test').call_erisapi(inv_infocall)
     rework_list_json = json.loads(rework_return[1])
     print rework_list_json
@@ -147,18 +148,27 @@ if __name__ == '__main__':
             aerialyear = image['AERIAL_YEAR']
             imagesource = image['IMAGE_SOURCE']
             originalpath = image['ORIGINAL_IMAGE_PATH']
+            imageuploadpath = os.path.join(uploaded_dir,originalpath.split('\\')[-1])
             if imagesource == 'DOQQ':
                 arcpy.AddWarning('Cannot convert DOQQ image '+originalpath)
             else:
-                if os.path.exists(originalpath):
+                if os.path.exists(imageuploadpath):
                     job_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.png'
-                    """Two copies are performed, 1 to convert the raster into a PNG for the application.
-                    the other to only copy the image without spatial information to the job folder"""
-                    arcpy.CopyRaster_management(originalpath,os.path.join(scratch,job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='PNG',transform='NONE')
-                    if os.path.exists(os.path.join(job_folder,'gc',job_image_name)):
-                        os.remove(os.path.join(job_folder,'gc',job_image_name))
-                    shutil.copy(os.path.join(scratch,job_image_name),os.path.join(job_folder,'gc',job_image_name))
-                elif not os.path.exists(originalpath):
-                    arcpy.AddError('cannot find image in inventory to convert, PLEASE CHECK PATH: '+originalpath)
+                    """PNG is copied to gc folder for FE with new naming convention"""
+                    arcpy.CopyRaster_management(imageuploadpath,os.path.join(job_folder,'gc',job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='PNG',transform='NONE')
+
+                    """Rename original uploaded file with new naming convention
+                    BUT ORIGINAL EXTENSION!!! And call oracle to update the name. Path to the image
+                    will be updated once georeferencing in complete in that gp service"""
+                    new_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.'+imagename.split('.')[1]
+                    if imageuploadpath == os.path.join(uploaded_dir,new_image_name):
+                        arcpy.AddMessage('Image name already matches naming convention rules')
+                    else:
+                        os.rename(imageuploadpath,os.path.join(uploaded_dir,new_image_name))
+                        rename_call = str({"PROCEDURE":Oracle.erisapi_procedures['setimagename'],"ORDER_NUM":OrderNumText,"AUI_ID":auid,"IMAGE_NAME":str(new_image_name)})
+                        rename_return = Oracle('test').call_erisapi(rename_call)
+                        print json.loads(rework_return[1])
+                elif not os.path.exists(imageuploadpath):
+                    arcpy.AddError('cannot find image in OrderImages folder to convert, PLEASE CHECK PATH: '+imageuploadpath)
     except Exception as e:
-        arcpy.AddError('Issue converting image: '+e.message)
+        arcpy.AddError('Issue converting image: '+str(e.message))
