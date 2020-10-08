@@ -219,8 +219,8 @@ def export_reportimage(imagepath,ordergeometry,auid):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '850757'#arcpy.GetParameterAsText(0)
-    AUI_ID = '29776430'#arcpy.GetParameterAsText(1)
+    orderID = '934322'#arcpy.GetParameterAsText(0)
+    AUI_ID = ''#arcpy.GetParameterAsText(1)
     scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
@@ -248,6 +248,7 @@ if __name__ == '__main__':
         ## Seperate processes for singleframe and DOQQ
         single_image_candidates = aerial_list_json['INHOUSE_IMAGE']
         doqq_image_candidates = aerial_list_json['DOQQ_IMAGE']
+        index_image_candidates = aerial_list_json['INDEX_IMAGES']
 
         ##Create job folder and copy images
         try:
@@ -303,6 +304,11 @@ if __name__ == '__main__':
                         image_source = 'UNKWN'
                     if selected_flag == 'Y':
                         export_reportimage(image_name,OrderGeometry,image_auid)
+            except KeyError as k:
+                arcpy.AddError('JSON missing key: ' + k.message)
+        except NoAvailableImage:
+            arcpy.AddError('No available images for location')
+            sys.exit()
     else:
         AUI_IDtext = str(AUI_ID)
         oracle_singleprep = str({"PROCEDURE":Oracle.erisapi_procedures['getaeriallist'],"ORDER_NUM":OrderNumText,"AUI_ID":AUI_IDtext})

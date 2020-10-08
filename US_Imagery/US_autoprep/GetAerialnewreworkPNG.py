@@ -1,6 +1,5 @@
 import os, arcpy, shutil
 import cx_Oracle
-import json
 
 class Machine:
     machine_test = r"\\cabcvan1gis006"
@@ -31,7 +30,7 @@ class Oracle:
     # static variable: oracle_functions
     oracle_functions = {'getorderinfo':"eris_gis.getOrderInfo"
     }
-    erisapi_procedures = {'getreworkaerials':"FLOW_GEOREFERENCE.GetAerialreworkPNG"}
+    erisapi_procedures = {'getaeriallist':'flow_autoprep.getAerialImageJson','passclipextent': 'flow_autoprep.setClipImageDetail','getgeorefraw':"FLOW_GIS.getImageInventoryInfo"}
     def __init__(self,machine_name):
         # initiate connection credential
         if machine_name.lower() =='test':
@@ -118,47 +117,21 @@ class Oracle:
         except NameError as e:
             raise Exception("Bad Function")
         finally:
-            self.close_connection()
+            self.close_connection()+
 
 if __name__ == '__main__':
     OrderID = arcpy.GetParameterAsText(0)
-    ee_oid = arcpy.GetParameterAsText(1)
-    scratch = arcpy.env.scratchFolder
+    scratch = r'C:\Users\JLoucks\Documents\JL\conversion_scratch'
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
 
-    orderInfo = Oracle('test').call_function('getorderinfo',OrderID)
+    orderInfo = Oracle('test').call_function('getorderinfo',orderID)
     OrderNumText = str(orderInfo['ORDER_NUM'])
     job_folder = os.path.join(job_directory,OrderNumText)
 
     ### Get image path info ###
-    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getreworkaerials'],"ORDER_NUM":OrderNumText,"PARENT_EE_OID":ee_oid})
-    rework_return = Oracle('test').call_erisapi(inv_infocall)
-    rework_list_json = json.loads(rework_return[1])
-    print rework_list_json
-    if rework_list_json == []:
-        arcpy.AddError('Image list is empty')
+    inv_infocall = str({"PROCEDURE":eris_api_procedures['getgeorefraw'],"ORDER_NUM":OrderNumText})
+    raster_input = _
+    ##OrderImages
 
-    try:
-        if not os.path.exists(os.path.join(job_folder,'gc')):
-            os.mkdir(os.path.join(job_folder,'gc'))
-        for image in rework_list_json:
-            auid = image['AUI_ID']
-            imagename = image['IMAGE_NAME']
-            aerialyear = image['AERIAL_YEAR']
-            imagesource = image['IMAGE_SOURCE']
-            originalpath = image['ORIGINAL_IMAGE_PATH']
-            if imagesource == 'DOQQ':
-                arcpy.AddWarning('Cannot convert DOQQ image '+originalpath)
-            else:
-                if os.path.exists(originalpath):
-                    job_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.png'
-                    """Two copies are performed, 1 to convert the raster into a PNG for the application.
-                    the other to only copy the image without spatial information to the job folder"""
-                    arcpy.CopyRaster_management(originalpath,os.path.join(scratch,job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='PNG',transform='NONE')
-                    if os.path.exists(os.path.join(job_folder,'gc',job_image_name)):
-                        os.remove(os.path.join(job_folder,'gc',job_image_name))
-                    shutil.copy(os.path.join(scratch,job_image_name),os.path.join(job_folder,'gc',job_image_name))
-                elif not os.path.exists(originalpath):
-                    arcpy.AddError('cannot find image in inventory to convert, PLEASE CHECK PATH: '+originalpath)
-    except Exception as e:
-        arcpy.AddError('Issue converting image: '+e.message)
+### Convert file
+    arcpy.CopyRaster_management(raster_input,os.path.join(job_folder,'gc','year_source_auid.png'),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='PNG',transform='NONE')
