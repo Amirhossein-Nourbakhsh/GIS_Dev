@@ -234,13 +234,13 @@ if __name__ == '__main__':
     OrderNumText = str(orderInfo['ORDER_NUM'])
 
     ## Get order geometry & mxd
-    OrderGeometry = createGeometry(eval(orderInfo[u'ORDER_GEOMETRY'][u'GEOMETRY'])[0],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'],scratch,'OrderGeometry.shp')
     shutil.copy(mxdexport_template,os.path.join(scratch,'template.mxd'))
     mxdexport_template = os.path.join(scratch,'template.mxd')
 
     job_folder = os.path.join(job_directory,OrderNumText)
     if AUI_ID == '':
         ## Return aerial list from oracle
+        OrderGeometry = createGeometry(eval(orderInfo[u'ORDER_GEOMETRY'][u'GEOMETRY'])[0],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'],job_folder,'OrderGeometry.shp')
         oracle_autoprep = str({"PROCEDURE":Oracle.erisapi_procedures['getaeriallist'],"ORDER_NUM":OrderNumText})
         aerial_list_return = Oracle('test').call_erisapi(oracle_autoprep)
         aerial_list_json = json.loads(aerial_list_return[1])
@@ -325,6 +325,7 @@ if __name__ == '__main__':
 
         org_image_folder = os.path.join(job_folder,'org')
         jpg_image_folder = os.path.join(job_folder,'jpg')
+        OrderGeometry = os.path.join(job_folder,'OrderGeometry.shp')
 
         if len(single_image_candidates) == 1:
             for inhouse_image in single_image_candidates:
