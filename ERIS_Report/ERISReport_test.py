@@ -46,8 +46,8 @@ def server_loc_config(configpath,environment):
     else:
         return 'invalid server configuration'
 
-server_environment = 'prod'
-server_config_file = r'\\cabcvan1gis007\gptools\ERISServerConfig.ini'
+server_environment = 'test'
+server_config_file = r'\\cabcvan1gis006\gptools\ERISServerConfig.ini'
 server_config = server_loc_config(server_config_file,server_environment)
 eris_report_path = r"gptools\ERISReport"
 us_topo_path = r"gptools\Topo_USA"
@@ -320,7 +320,7 @@ def addERISpoint(pointInfo,mxd,output_folder,out_points=r'points.shp'):
     erisPointsLayer = config.LAYER.erisPoints
     erisIDs_4points = dict((_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID'),[('m%sc'%(_.get("MAP_KEY_LOC"))) if _.get("MAP_KEY_NO_TOT")==1 else ('m%sc(%s)'%(_.get("MAP_KEY_LOC"), _.get("MAP_KEY_NO_TOT"))) ,float('%s'%(1 if round(_.get("ELEVATION_DIFF"),2)>0.0 else 0 if round(_.get("ELEVATION_DIFF"),2)==0.0 else -1 if round(_.get("ELEVATION_DIFF"),2)<0.0 else 100))]) for _ in pointInfo)
     erispoints = dict((int(_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID')),(_.get("X"),_.get("Y"))) for _ in pointInfo)
-
+    
     if erisIDs_4points != {}:
         arcpy.CreateFeatureclass_management(output_folder, out_points, "MULTIPOINT", "", "DISABLED", "DISABLED", arcpy.SpatialReference(4269))
         check_field = arcpy.ListFields(out_pointsSHP,"ERISID")
@@ -416,7 +416,7 @@ def exportTopo(mxd,output_folder,geometry_name,geometry_type, output_pdf,unit_co
     mxd.df.spatialReference = arcpy.SpatialReference('WGS 1984 UTM Zone %sN'%UTMzone)
     topoYear = '2020'
     if unit_code == 9093:
-        topoLayer = config.LAYER.topowhite
+        topoLayer = config.LAYER.topowhite    
         topolist = getCurrentTopo(config.DATA.data_topo,bufferSHP,output_folder)
         topoYear = getTopoQuadnYear(topolist)[1]
         mxd.addTextoMap("Year", "Year: %s"%topoYear)
@@ -451,8 +451,8 @@ def getCurrentTopo(masterfile_topo,inputSHP,output_folder): # copy current topo 
             cellids_selected.append(cellid)
         del row
         del rows
-        masterLayer_topo = None
-
+        masterLayer_topo = None        
+        
         for cellid in cellids_selected:
             try:
                 exec("info =  topo_image_path.topo_%s"%(cellid))
@@ -464,7 +464,7 @@ def getCurrentTopo(masterfile_topo,inputSHP,output_folder): # copy current topo 
                 print("ERROR RAISED IN getCurrentTopo:")
                 print(e)
 
-                newmastertopo = r'\\cabcvan1gis006\GISData\Topo_USA\masterfile\Cell_PolygonAll.shp'
+                newmastertopo = r'\\cabcvan1gis006\GISData\Topo_USA\masterfile\Cell_PolygonAll.shp'                
                 csvfile_h = r'\\cabcvan1gis006\GISData\Topo_USA\masterfile\All_HTMC_all_all_gda_results.csv'
                 global tifdir_topo
                 tifdir_topo = r'\\cabcvan1fpr009\USGS_Topo\USGS_HTMC_Geotiff'
@@ -489,7 +489,7 @@ def getCurrentTopo(masterfile_topo,inputSHP,output_folder): # copy current topo 
                     del row
                     del rows
                     masterLayer = None
-
+                    
                     with open(csvfile_h, "rb") as f:
                         print("___All USGS HTMC Topo List.")
                         reader = csv.reader(f)
@@ -539,15 +539,15 @@ def getCurrentTopo(masterfile_topo,inputSHP,output_folder): # copy current topo 
                                 print(year2use)
                                 if year2use == "":
                                     print ("################### cannot determine the year of the map!!")
-
+                                
                                 # ONLY GET 7.5 OR 15 MINUTE MAP SERIES
                                 if row[5] == "7.5X7.5 GRID" or row[5] == "15X15 GRID":
                                     infomatrix.append([row[15],year2use])  # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963]
                     # print(infomatrix)
                     # GET MAX YEAR ONLY
-                    infomatrix = [item for item in infomatrix if item[1] == max(item[1] for item in infomatrix)]
+                    infomatrix = [item for item in infomatrix if item[1] == max(item[1] for item in infomatrix)]             
                     print("--------------------------------")
-# END --------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# END --------------------------------------------------------------------------------------------------------------------------------------------------------------------        
 
         # print(infomatrix)
         # print(tifdir_topo)
@@ -566,7 +566,7 @@ def getCurrentTopo(masterfile_topo,inputSHP,output_folder): # copy current topo 
                 shutil.copyfile(topofile,os.path.join(output_folder,newtopo))
                 _.append(newtopo)
         return _
-
+        
 def getTopoYear(name):
     for year in range(1900,2030):
         if str(year) in name:
@@ -658,12 +658,12 @@ def exportViewerTable(ImagePath,FileName):
 if __name__ == '__main__':
     try:
         # INPUT #####################################
-        OrderIDText = '936083'#arcpy.GetParameterAsText(0).strip()#'736799'#
+        OrderIDText = '909805'#arcpy.GetParameterAsText(0).strip()#'736799'#
         multipage = False #True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
-        gridsize = '0'#arcpy.GetParameterAsText(2).strip()#0#
+        gridsize = '5'#arcpy.GetParameterAsText(2).strip()#0#
         code = 'usa'#arcpy.GetParameterAsText(3).strip()#'usa'#
         isInstant = False #True if arcpy.GetParameterAsText(4).strip().lower()=='yes'else False
-        scratch = r"C:\Users\JLoucks\Documents\JL\test1"
+        scratch = r"W:\Data Analysts\Alison\_GIS\DB_SCRATCHY\20282100307"
 
         # Server Setting ############################
         code = 9093 if code.strip().lower()=='usa' else 9036 if code.strip().lower()=='can' else 9049 if code.strip().lower()=='mex' else ValueError
@@ -796,7 +796,7 @@ if __name__ == '__main__':
             start=end
             maptopo.addTextoMap('Address',"Address: %s, %s"%(orderInfo['ADDRESS'],orderInfo['PROVSTATE']))
             maptopo.addTextoMap("OrderNum","Order Number: %s"%orderInfo['ORDER_NUM'])
-
+            
             exportTopo(maptopo,scratch,orderGeometry,orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'],topo_pdf,code,bufferMax,zoneUTM)
             del maptopo,orderGeometry
             end = timeit.default_timer()
