@@ -212,10 +212,18 @@ def export_reportimage(imagedict,ordergeometry):
     SW_corner= str(extent.XMin) + ',' +str(extent.YMin)
     SE_corner= str(extent.XMax) + ',' +str(extent.YMin)
     print NW_corner, NE_corner, SW_corner, SE_corner
+    centerlat = round(((extent.YMax - extent.YMin)/2) + extent.YMin, 7)
+    centerlong = round((((extent.XMin*-1) - (extent.XMax*-1))/2) + extent.XMin, 7)
+    print "centerlat: "+ str(centerlat)
+    print "centerlong: "+ str(centerlong)
+    if scale == 6000:
+        scaletxt = '1":' + str(scale/12)+"'"
+    else:
+        scaletxt = '1":' + str(round(scale/12,-2))+"'"
     try:
         image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passreportextent'], "ORDER_NUM" : OrderNumText,"TYPE":"ae_pdf",
         "SWLAT":str(extent.YMin),"SWLONG":str(extent.XMin),"NELAT":(extent.YMax),"NELONG":str(extent.XMax),"FILENAME":str(image_year + '_' + image_source  + '.jpg'),
-        "CENTERLAT" : "", "CENTERLONG":"", "IMAGE_WIDTH":"","IMAGE_HEIGHT":""})
+        "CENTERLAT" : str(centerlat), "CENTERLONG":str(centerlong), "IMAGE_WIDTH":"","IMAGE_HEIGHT":""})
         message_return = Oracle('test').call_erisapi(image_extents)
         if message_return[3] != 'Y':
             raise OracleBadReturn
@@ -227,7 +235,7 @@ def export_reportimage(imagedict,ordergeometry):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '908897'#arcpy.GetParameterAsText(0)
+    orderID = '934292'#arcpy.GetParameterAsText(0)
     scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'

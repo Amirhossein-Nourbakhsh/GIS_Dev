@@ -181,21 +181,27 @@ def export_reportimage(imagepath,ordergeometry,auid):
         arcpy.mapping.AddLayer(df,image_lyr,'TOP')
         geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
         geometry_layer.visible = False
-        geo_extent = geometry_layer.getExtent(True)
+        #geo_extent = geometry_layer.getExtent(True)
+        geo_extent = geometry_layer.getExtent()
         df.extent = geo_extent
-        if df.scale <= MapScale:
+        print df.scale
+        print MapScale
+        if df.scale <= 7500:
             df.scale = MapScale
             export_width = 5100
             export_height = 6600
-        elif df.scale > MapScale:
+        elif df.scale <= 30000:
             df.scale = ((int(df.scale)/100)+1)*100
             export_width = int(5100*1.4)
             export_height = int(6600*1.4)
+        elif df.scale > 30000:
+            df.scale = ((int(df.scale)/100)+1)*100
+            export_width = int(5100*1.8)
+            export_height = int(6600*1.8)
         arcpy.RefreshActiveView()
         ###############################
         ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
-
-        arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
+        arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 70)
         extent =arcpy.Describe(os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg')).extent
         NW_corner= str(extent.XMin) + ',' +str(extent.YMin)
         NE_corner= str(extent.XMax) + ',' +str(extent.YMax)
@@ -219,7 +225,7 @@ def export_reportimage(imagepath,ordergeometry,auid):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '934322'#arcpy.GetParameterAsText(0)
+    orderID = '934394'#arcpy.GetParameterAsText(0)
     AUI_ID = ''#arcpy.GetParameterAsText(1)
     scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
@@ -240,7 +246,6 @@ if __name__ == '__main__':
     job_folder = os.path.join(job_directory,OrderNumText)
     if AUI_ID == '':
         ## Return aerial list from oracle
-        OrderGeometry = createGeometry(eval(orderInfo[u'ORDER_GEOMETRY'][u'GEOMETRY'])[0],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'],job_folder,'OrderGeometry.shp')
         oracle_autoprep = str({"PROCEDURE":Oracle.erisapi_procedures['getaeriallist'],"ORDER_NUM":OrderNumText})
         aerial_list_return = Oracle('test').call_erisapi(oracle_autoprep)
         aerial_list_json = json.loads(aerial_list_return[1])
@@ -259,6 +264,7 @@ if __name__ == '__main__':
             os.mkdir(job_folder)
             os.mkdir(org_image_folder)
             os.mkdir(jpg_image_folder)
+            OrderGeometry = createGeometry(eval(orderInfo[u'ORDER_GEOMETRY'][u'GEOMETRY'])[0],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'],job_folder,'OrderGeometry.shp')
             if len(doqq_image_candidates) == 0 and len(single_image_candidates) == 0:
                 raise NoAvailableImage
             if len(single_image_candidates) == 0:
