@@ -340,9 +340,9 @@ yesBoundary = arcpy.GetParameterAsText(1)
 scratch = arcpy.env.scratchWorkspace
 custom_profile = False
 
-OrderIDText = '934292'
-scratch = r"C:\Users\JLoucks\Documents\JL\test1"
-yesBoundary = 'no'
+#OrderIDText = '934292'
+#scratch = r"C:\Users\JLoucks\Documents\JL\test1"
+#yesBoundary = 'no'
 
 if yesBoundary == 'arrow':
     yesBoundary = 'yes'
