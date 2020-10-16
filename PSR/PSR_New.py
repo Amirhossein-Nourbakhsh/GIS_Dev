@@ -14,10 +14,14 @@ sys.path.insert(1,os.path.join(os.getcwd(),'DB_Framework'))
 import models
 reload(sys)
 sys.setdefaultencoding('utf8')
-
+psr_list = []
 if __name__ == "__main__":
-   order = models.order().getbyId(932499)
-#    order2 = models.order().getbyNumber(20293000254)
-   print(order.order_num) 
-  
+   scratchfolder = arcpy.env.scratchFolder
+   arcpy.env.overWriteOutput = True
+   outputjpg_wetland = os.path.join(scratchfolder, OrderNumText+'_US_WETL.jpg')
+   # Fetch data from database using GIS framework
+   orderObj =models. Order().getbyId(932499)
+   order_geo = models.OrderGeometry().getbyId(932499)
+   psr_list = orderObj.getPSR()
    
+   ### Wetland Map , no attributes
