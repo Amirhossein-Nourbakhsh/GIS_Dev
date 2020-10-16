@@ -157,7 +157,7 @@ def export_reportimage(imagepath,auid):
         del mxd
 
 if __name__ == '__main__':
-    OrderID = '934292'#arcpy.GetParameterAsText(0)
+    OrderID = '934404'#arcpy.GetParameterAsText(0)
     ee_oid = ''#arcpy.GetParameterAsText(1)
     scratch = r'C:\Users\JLoucks\Documents\JL\test2' #arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
@@ -175,7 +175,7 @@ if __name__ == '__main__':
     rework_return = Oracle('test').call_erisapi(inv_infocall)
     rework_list_json = json.loads(rework_return[1])
     print rework_list_json
-    rework_list_json = [{'AUI_ID':'1111','IMAGE_NAME':'1984_USGS_1111.jpg','AERIAL_YEAR':'1984','IMAGE_SOURCE':'USGS','ORIGINAL_IMAGE_PATH':'\\\\cabcvan1nas\\1984_USGS_1111.jpg'},{'AUI_ID':'1116','IMAGE_NAME':'1977_DOQQ_1116.sid','AERIAL_YEAR':'1977','IMAGE_SOURCE':'DOQQ','ORIGINAL_IMAGE_PATH':'\\\\cabcvan1nas\\1977_DOQQ_1116.sid'}]
+    #rework_list_json = [{'AUI_ID':'1111','IMAGE_NAME':'1984_USGS_1111.jpg','AERIAL_YEAR':'1984','IMAGE_SOURCE':'USGS','ORIGINAL_IMAGE_PATH':'\\\\cabcvan1nas\\1984_USGS_1111.jpg'},{'AUI_ID':'1116','IMAGE_NAME':'1977_DOQQ_1116.sid','AERIAL_YEAR':'1977','IMAGE_SOURCE':'DOQQ','ORIGINAL_IMAGE_PATH':'\\\\cabcvan1nas\\1977_DOQQ_1116.sid'}]
     if rework_list_json == []:
         arcpy.AddError('Image list is empty')
 
@@ -186,44 +186,50 @@ if __name__ == '__main__':
             aerialyear = image['AERIAL_YEAR']
             imagesource = image['IMAGE_SOURCE']
             originalpath = image['ORIGINAL_IMAGE_PATH']
-            imageuploadpath = os.path.join(uploaded_dir,originalpath.split('\\')[-1])
+
+            imageuploadpath = originalpath
+            TAB_upload_path = imageuploadpath.split('.')[0]+'.TAB'
             job_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.'+str(imagename.split('.')[-1])
-            if imagesource == 'DOQQ':
-                #arcpy.Copy_management(imageuploadpath,os.path.join(georeferenced_doqq,job_image_name))
+            TAB_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.TAB'
+
+            if imagesource == 'DOQQ':                
                 cellsizeX = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEX')
                 cellsizeY = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEY')
                 if cellsizeY > cellsizeX:
                     spatial_res = cellsizeY
                 else:
                     spatial_res = cellsizeX
-                #print '{:.20f}'.format(spatial_res)
-                #arcpy.DefineProjection_management(imageuploadpath,4326)
-                #arcpy.RasterToPolygon_conversion(imageuploadpath,os.path.join(scratch,auid+'.shp'),max_vertices_per_feature='5')
                 extent = export_reportimage(imageuploadpath,auid)
                 result_top = extent.YMax
                 result_bot = extent.YMin
                 result_left = extent.XMin  
                 result_right = extent.XMax
-                os.rename(imageuploadpath,os.path.join(uploaded_dir,job_image_name))
+                #Rename image and TAB
+                arcpy.Rename_management(imageuploadpath,os.path.join(uploaded_dir,job_image_name))
+                if os.path.exists(TAB_upload_path):
+                    os.rename(TAB_upload_path,os.path.join(uploaded_dir,TAB_image_name))
+                    shutil.copy(os.path.join(uploaded_dir,TAB_image_name),os.path.join(georeferenced_doqq,TAB_image_name)) #copy TAB if exists
+                #Copy image to inventory folder
+                arcpy.Copy_management(imageuploadpath,os.path.join(georeferenced_doqq,job_image_name))
                 image_inv_path = os.path.join(georeferenced_doqq,job_image_name)
             else:
-                #arcpy.Copy_management(imageuploadpath,os.path.join(georeferenced_historical,job_image_name))
                 cellsizeX = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEX')
                 cellsizeY = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEY')
                 if cellsizeY > cellsizeX:
                     spatial_res = cellsizeY
                 else:
                     spatial_res = cellsizeX
-                #print '{:.20f}'.format(spatial_res)
-                #arcpy.DefineProjection_management(imageuploadpath,4326)
-                #arcpy.RasterToPolygon_conversion(imageuploadpath,os.path.join(scratch,auid+'.shp'),max_vertices_per_feature='5')
-                desc = arcpy.Describe(imageuploadpath)
-                sr = arcpy.SpatialReference(4326)
                 result_top = arcpy.GetRasterProperties_management(imageuploadpath, "TOP")  
                 result_bot = arcpy.GetRasterProperties_management(imageuploadpath, "BOTTOM")  
                 result_left = arcpy.GetRasterProperties_management(imageuploadpath, "LEFT")  
                 result_right = arcpy.GetRasterProperties_management(imageuploadpath, "RIGHT")
-                os.rename(imageuploadpath,os.path.join(uploaded_dir,job_image_name))
+                #Rename image and TAB
+                arcpy.Rename_management(imageuploadpath,os.path.join(uploaded_dir,job_image_name))
+                if os.path.exists(TAB_upload_path):
+                    os.rename(TAB_upload_path,os.path.join(uploaded_dir,TAB_image_name))
+                    shutil.copy(os.path.join(uploaded_dir,TAB_image_name),os.path.join(georeferenced_historical,TAB_image_name)) #copy TAB if exists
+                #Copy image to inventory folder
+                arcpy.Copy_management(imageuploadpath,os.path.join(georeferenced_historical,job_image_name))
                 image_inv_path = os.path.join(georeferenced_historical,job_image_name)
             
             image_metadata = str({"PROCEDURE":Oracle.erisapi_procedures['passimagedetail'],"ORDER_NUM":OrderNumText,"AUI_ID":str(auid),"SWLAT":str(result_bot),"SWLONG":str(result_left),"NELAT":str(result_top),"NELONG":str(result_right),"SPATIAL_RESOLUTION":str(spatial_res),"ORIGINAL_IMAGE_PATH":str(image_inv_path)})
