@@ -121,9 +121,9 @@ class Oracle:
             self.close_connection()
 
 if __name__ == '__main__':
-    OrderID = arcpy.GetParameterAsText(0)
-    ee_oid = arcpy.GetParameterAsText(1)
-    scratch = arcpy.env.scratchFolder
+    OrderID = '934404'#arcpy.GetParameterAsText(0)
+    ee_oid = ''#arcpy.GetParameterAsText(1)
+    scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
 
     orderInfo = Oracle('test').call_function('getorderinfo',OrderID)
@@ -148,7 +148,7 @@ if __name__ == '__main__':
             aerialyear = image['AERIAL_YEAR']
             imagesource = image['IMAGE_SOURCE']
             originalpath = image['ORIGINAL_IMAGE_PATH']
-            imageuploadpath = os.path.join(uploaded_dir,originalpath.split('\\')[-1])
+            imageuploadpath = originalpath
             if imagesource == 'DOQQ':
                 arcpy.AddWarning('Cannot convert DOQQ image '+originalpath)
             else:
