@@ -7,6 +7,7 @@ class Order(object):
     order_Id = ''
     order_num = ''
     address = ''
+    geometry = arcpy.Geometry()
     def getbyId(self,order_Id):
         try:
             connectionString = db_connections.connectionString
@@ -18,6 +19,7 @@ class Order(object):
             orderObj.order_Id = order_Id
             orderObj.order_num = str(row[0])
             orderObj.address = str(row[1])+","+str(row[2])+","+str(row[3])
+            orderObj.geometry = orderObj.getGeometry()
             return orderObj
         finally:
             cur.close()
@@ -33,10 +35,16 @@ class Order(object):
             orderObj.order_Id = str(row[0])
             orderObj.order_num = order_num
             orderObj.address = str(row[1])+","+str(row[2])+","+str(row[3])
+            orderObj.geometry = orderObj.getGeometry()
             return orderObj
         finally:
             cur.close()
             con.close()   
+    @classmethod
+    def getGeometry(self):
+        orderFC = db_connections.orderFC
+        orderGeom = arcpy.da.SearchCursor(orderFC,("SHAPE@"),"order_id = " + str(self.order_Id) ).next()[0]
+        return orderGeom
     @classmethod
     def getPSR(self):
         try:
@@ -52,8 +60,19 @@ class Order(object):
                 psrObj.order_Id = self.order_Id
                 psrObj.omi_Id = item[0]
                 psrObj.ds_oId = item[1]
+                if str(psrObj.ds_oId) == '10683':
+                    psrObj.type = 'flood'
+                elif str(psrObj.ds_oId) == '10684':
+                    psrObj.type = 'wetland'
+                elif str(psrObj.ds_oId) == '10685':
+                    psrObj.type = 'geol'
+                elif str(psrObj.ds_oId) == '9334':
+                    psrObj.type = 'soil'
+                elif str(psrObj.ds_oId) == '10689':
+                    psrObj.type = 'radon'
                 psrObj.search_radius = item[2]
                 psrObj.report_source = item[3]
+
                 PSR_list.append(psrObj)
                 # print('%s. DS_Id = %s, radius= %s, reportsource = %s' %(i, psrObj.dsoid,psrObj.radius, psrObj.reportsource))
                 i += 1
@@ -62,36 +81,11 @@ class Order(object):
             cur.close()
             con.close()
             
-class OrderGeometry(object):
-    order_Id = ''
-    geometry_type = ''
-    coordinates = ''
-    radius_type = ''
-    geometry = arcpy.Geometry()
-    # def __init__(self): 
-    #      self.order_Id = order_Id 
-    def getbyId(self,order_Id):
-       
-        try:
-            connectionString = db_connections.connectionString
-            con = cx_Oracle.connect(connectionString)
-            cur = con.cursor()
-            cur.execute("select geometry_type, geometry, radius_type,GEO_SPATIAL  from eris_order_geometry where order_id =" + str(order_Id))
-            row = cur.fetchone()
-            orderGeoObj = OrderGeometry
-            orderGeoObj.order_Id = order_Id
-            orderGeoObj.geometry_type = str(row[0])
-            orderGeoObj.coordinates = eval(str(row[1]))
-            orderGeoObj.radius_type = str(row[2])
-            orderGeoObj.geometry = row[3]
-            return orderGeoObj
-        finally:
-            cur.close()
-            con.close()
        
 class PSR(object):
     order_Id = ''
     omi_Id = ''
     ds_oId = ''
+    type = ''
     search_radius = ''
     report_source = ''
