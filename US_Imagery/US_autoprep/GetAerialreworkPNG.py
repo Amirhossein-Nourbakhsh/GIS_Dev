@@ -121,9 +121,9 @@ class Oracle:
             self.close_connection()
 
 if __name__ == '__main__':
-    OrderID = arcpy.GetParameterAsText(0)
-    ee_oid = arcpy.GetParameterAsText(1)
-    scratch = arcpy.env.scratchFolder
+    OrderID = arcpy.GetParameterAsText(0)#'934409'#arcpy.GetParameterAsText(0)
+    ee_oid = arcpy.GetParameterAsText(1)#'408212'#arcpy.GetParameterAsText(1)
+    scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
 
     orderInfo = Oracle('test').call_function('getorderinfo',OrderID)
@@ -131,7 +131,7 @@ if __name__ == '__main__':
     job_folder = os.path.join(job_directory,OrderNumText)
 
     ### Get image path info ###
-    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getreworkaerials'],"ORDER_NUM":OrderNumText,"PARENT_EE_OID":ee_oid})
+    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getreworkaerials'],"ORDER_NUM":str(OrderNumText),"PARENT_EE_OID":str(ee_oid)})
     rework_return = Oracle('test').call_erisapi(inv_infocall)
     rework_list_json = json.loads(rework_return[1])
     print rework_list_json
