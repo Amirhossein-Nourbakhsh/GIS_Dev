@@ -2,9 +2,9 @@
 import arcpy,os
 import ConfigParser
 
-server_environment = 'prod'
-server_config_file = r'\\cabcvan1gis006\GISData\ERISServerConfig.ini'
-connectionString = r'ERIS_GIS/gis295@GMPRODC.glaciermedia.inc'
+server_environment = 'Dev'
+server_config_file = r'\\cabcvan1gis005\GISData\ERISServerConfig.ini'
+connectionString = r'ERIS_GIS/gis295@GMTESTC.glaciermedia.inc'
 orderFC = "//cabcvan1gis006/GISData/GIS_Prod.sde/ERIS.ERIS_ORDER_GEOMETRY"
 # report_path = server_config['noninstant']
 # viewer_path = server_config['viewer']
