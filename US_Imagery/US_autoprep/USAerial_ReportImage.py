@@ -176,6 +176,7 @@ def export_reportimage(imagedict,ordergeometry):
         sorted_order = ordered_all_values
     else:
         sorted_order = ordered_all_values.sort()
+    print sorted_order
     for order_value in sorted_order:
         auid = imagedict[order_value][0]
         image_source = imagedict[order_value][1]
@@ -184,10 +185,12 @@ def export_reportimage(imagedict,ordergeometry):
         arcpy.MakeRasterLayer_management(imagepath,lyrpath)
         image_lyr = arcpy.mapping.Layer(lyrpath)
         arcpy.mapping.AddLayer(df,image_lyr,'TOP')
+    mxd.save()
     geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
     geometry_layer.visible = False
     geo_extent = geometry_layer.getExtent(True)
     df.extent = geo_extent
+    print df.scale
     if df.scale <= MapScale:
         df.scale = MapScale
         export_width = 5100
@@ -197,6 +200,22 @@ def export_reportimage(imagedict,ordergeometry):
         export_width = int(5100*1.4)
         export_height = int(6600*1.4)
     arcpy.RefreshActiveView()
+            #if image_extent.width < 0 and image_extent.height < 0:
+                #w_res=int((image_extent.width*1000)*3)
+                #h_res=int((image_extent.height*1000)*3)
+            #elif image_extent.width > 1000 and image_extent.height > 1000:
+                #w_res=int((image_extent.width/1000)*3)
+                #h_res=int((image_extent.height/1000)*3)
+            #else:
+                #w_res = 5100
+                #h_res = 5100
+        ###############################
+        ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
+        #sr = arcpy.SpatialReference(3857)
+        #df.SpatialReference = sr
+        #mxd.save()
+    arcpy.overwriteOutput = True
+    sr2 = arcpy.SpatialReference(3857)
     ###############################
     ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
 
@@ -206,7 +225,13 @@ def export_reportimage(imagedict,ordergeometry):
     #arcpy.DefineProjection_management(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'), 3857)
     #shutil.copy(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),os.path.join(jpg_image_folder,auid + '.jpg'))
     arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
-    extent =arcpy.Describe(os.path.join(job_fin,image_year + '_' + image_source  + '.jpg')).extent
+    arcpy.DefineProjection_management(os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),sr2)
+    arcpy.env.compression = "JPEG 1"
+    arcpy.env.pyramid = "NONE"
+    print "projecting"
+    arcpy.ProjectRaster_management(os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),os.path.join(scratch,image_year + '_' + image_source + '_2.jpg'),sr)
+    extent =arcpy.Describe(os.path.join(scratch,image_year + '_' + image_source  + '_2.jpg')).extent
+    print "done projecting" 
     NW_corner= str(extent.XMin) + ',' +str(extent.YMax)
     NE_corner= str(extent.XMax) + ',' +str(extent.YMax)
     SW_corner= str(extent.XMin) + ',' +str(extent.YMin)
@@ -216,6 +241,7 @@ def export_reportimage(imagedict,ordergeometry):
     centerlong = round((((extent.XMin*-1) - (extent.XMax*-1))/2) + extent.XMin, 7)
     print "centerlat: "+ str(centerlat)
     print "centerlong: "+ str(centerlong)
+    scale = df.scale
     if scale == 6000:
         scaletxt = '1":' + str(scale/12)+"'"
     else:
@@ -235,10 +261,10 @@ def export_reportimage(imagedict,ordergeometry):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '934292'#arcpy.GetParameterAsText(0)
+    orderID = '934489'#arcpy.GetParameterAsText(0)
     scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
-    mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
+    mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export_rev.mxd'
     MapScale = 6000
 
     ##get info for order from oracle
@@ -258,6 +284,7 @@ if __name__ == '__main__':
     oracle_input = str({"PROCEDURE":Oracle.erisapi_procedures['getselectedimages'],"ORDER_NUM":OrderNumText})
     selected_list_return = Oracle('test').call_erisapi(oracle_input)
     selected_list_json = json.loads(selected_list_return[1])
+    print selected_list_json
 
     ##create fin directory
     job_fin = os.path.join(job_folder,'fin')

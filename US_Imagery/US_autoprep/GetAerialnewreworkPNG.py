@@ -121,9 +121,9 @@ class Oracle:
             self.close_connection()
 
 if __name__ == '__main__':
-    OrderID = '934404'#arcpy.GetParameterAsText(0)
-    ee_oid = ''#arcpy.GetParameterAsText(1)
-    scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
+    OrderID = arcpy.GetParameterAsText(0)#'934404'#arcpy.GetParameterAsText(0)
+    ee_oid = arcpy.GetParameterAsText(1)#''#arcpy.GetParameterAsText(1)
+    scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
 
     orderInfo = Oracle('test').call_function('getorderinfo',OrderID)

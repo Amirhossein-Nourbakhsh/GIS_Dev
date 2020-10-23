@@ -123,7 +123,7 @@ class Oracle:
 if __name__ == '__main__':
     OrderID = arcpy.GetParameterAsText(0)#'934409'#arcpy.GetParameterAsText(0)
     ee_oid = arcpy.GetParameterAsText(1)#'408212'#arcpy.GetParameterAsText(1)
-    scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
+    scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
 
     orderInfo = Oracle('test').call_function('getorderinfo',OrderID)
