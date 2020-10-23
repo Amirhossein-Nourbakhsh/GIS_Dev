@@ -153,10 +153,11 @@ if __name__ == '__main__':
                 arcpy.AddWarning('Cannot convert DOQQ image '+originalpath)
             else:
                 if os.path.exists(imageuploadpath):
-                    job_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.png'
+                    job_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.jpg'
                     """PNG is copied to gc folder for FE with new naming convention"""
-                    arcpy.CopyRaster_management(imageuploadpath,os.path.join(job_folder,'gc',job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='PNG',transform='NONE')
-
+                    #arcpy.CopyRaster_management(imageuploadpath,os.path.join(job_folder,'gc',job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='PNG',transform='NONE')
+                    arcpy.env.compression = "JPEG 50"
+                    arcpy.CopyRaster_management(imageuploadpath,os.path.join(job_folder,'gc',job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='JPEG',transform='NONE')
                     """Rename original uploaded file with new naming convention
                     BUT ORIGINAL EXTENSION!!! And call oracle to update the name. Path to the image
                     will be updated once georeferencing in complete in that gp service"""
