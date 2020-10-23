@@ -171,7 +171,7 @@ if __name__ == '__main__':
     uploaded_dir = os.path.join(job_folder,"OrderImages")
 
     ### Get image path info ###
-    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getreworkaerials'],"ORDER_NUM":OrderNumText,"PARENT_EE_OID":ee_oid})
+    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getreworkaerials'],"ORDER_NUM":str(OrderNumText),"PARENT_EE_OID":str(ee_oid)})
     rework_return = Oracle('test').call_erisapi(inv_infocall)
     rework_list_json = json.loads(rework_return[1])
     print rework_list_json
