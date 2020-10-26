@@ -167,7 +167,7 @@ def export_reportimage(imagedict,ordergeometry):
     ## In memory
     mxd = arcpy.mapping.MapDocument(mxdexport_template)
     df = arcpy.mapping.ListDataFrames(mxd,'*')[0]
-    sr = arcpy.SpatialReference(4326)
+    sr = arcpy.SpatialReference(3857)
     df.SpatialReference = sr
     geo_lyr = arcpy.mapping.Layer(ordergeometry)
     arcpy.mapping.AddLayer(df,geo_lyr,'TOP')
@@ -215,7 +215,7 @@ def export_reportimage(imagedict,ordergeometry):
         #df.SpatialReference = sr
         #mxd.save()
     arcpy.overwriteOutput = True
-    sr2 = arcpy.SpatialReference(3857)
+    sr2 = arcpy.SpatialReference(4326)
     ###############################
     ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
 
@@ -225,11 +225,11 @@ def export_reportimage(imagedict,ordergeometry):
     #arcpy.DefineProjection_management(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'), 3857)
     #shutil.copy(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),os.path.join(jpg_image_folder,auid + '.jpg'))
     arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
-    arcpy.DefineProjection_management(os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),sr2)
+    arcpy.DefineProjection_management(os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),sr)
     arcpy.env.compression = "JPEG 1"
     arcpy.env.pyramid = "NONE"
     print "projecting"
-    arcpy.ProjectRaster_management(os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),os.path.join(scratch,image_year + '_' + image_source + '_2.jpg'),sr)
+    arcpy.ProjectRaster_management(os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),os.path.join(scratch,image_year + '_' + image_source + '_2.jpg'),sr2)
     extent =arcpy.Describe(os.path.join(scratch,image_year + '_' + image_source  + '_2.jpg')).extent
     print "done projecting" 
     NW_corner= str(extent.XMin) + ',' +str(extent.YMax)
