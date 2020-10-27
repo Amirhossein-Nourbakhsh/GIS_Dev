@@ -121,9 +121,9 @@ class Oracle:
             self.close_connection()
 
 if __name__ == '__main__':
-    OrderID = '934404'#arcpy.GetParameterAsText(0)
-    ee_oid = ''#arcpy.GetParameterAsText(1)
-    scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
+    OrderID = arcpy.GetParameterAsText(0)#'934404'#arcpy.GetParameterAsText(0)
+    ee_oid = arcpy.GetParameterAsText(1)#''#arcpy.GetParameterAsText(1)
+    scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
 
     orderInfo = Oracle('test').call_function('getorderinfo',OrderID)
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     uploaded_dir = os.path.join(job_folder,"OrderImages")
 
     ### Get image path info ###
-    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getreworkaerials'],"ORDER_NUM":OrderNumText,"PARENT_EE_OID":ee_oid})
+    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getreworkaerials'],"ORDER_NUM":str(OrderNumText),"PARENT_EE_OID":str(ee_oid)})
     rework_return = Oracle('test').call_erisapi(inv_infocall)
     rework_list_json = json.loads(rework_return[1])
     print rework_list_json
@@ -153,10 +153,12 @@ if __name__ == '__main__':
                 arcpy.AddWarning('Cannot convert DOQQ image '+originalpath)
             else:
                 if os.path.exists(originalpath):
-                    job_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.png'
+                    job_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.jpg'
                     """Two copies are performed, 1 to convert the raster into a PNG for the application.
                     the other to only copy the image without spatial information to the job folder"""
-                    arcpy.CopyRaster_management(imageuploadpath,os.path.join(scratch,job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='PNG',transform='NONE')
+                    #arcpy.CopyRaster_management(imageuploadpath,os.path.join(scratch,job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='PNG',transform='NONE')
+                    arcpy.env.compression = "JPEG 50"
+                    arcpy.CopyRaster_management(originalpath,os.path.join(scratch,job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='JPEG',transform='NONE')
                     if os.path.exists(os.path.join(job_folder,'gc',job_image_name)):
                         os.remove(os.path.join(job_folder,'gc',job_image_name))
                     shutil.copy(os.path.join(scratch,job_image_name),os.path.join(job_folder,'gc',job_image_name))

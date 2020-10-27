@@ -171,7 +171,7 @@ if __name__ == '__main__':
     uploaded_dir = os.path.join(job_folder,"OrderImages")
 
     ### Get image path info ###
-    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getreworkaerials'],"ORDER_NUM":OrderNumText,"PARENT_EE_OID":ee_oid})
+    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getreworkaerials'],"ORDER_NUM":str(OrderNumText),"PARENT_EE_OID":str(ee_oid)})
     rework_return = Oracle('test').call_erisapi(inv_infocall)
     rework_list_json = json.loads(rework_return[1])
     print rework_list_json
@@ -208,9 +208,11 @@ if __name__ == '__main__':
                 arcpy.Rename_management(imageuploadpath,os.path.join(uploaded_dir,job_image_name))
                 if os.path.exists(TAB_upload_path):
                     os.rename(TAB_upload_path,os.path.join(uploaded_dir,TAB_image_name))
-                    #shutil.copy(os.path.join(uploaded_dir,TAB_image_name),os.path.join(georeferenced_doqq,TAB_image_name)) #copy TAB if exists
+                    shutil.copy(os.path.join(uploaded_dir,TAB_image_name),os.path.join(georeferenced_doqq,TAB_image_name)) #copy TAB if exists
                 #Copy image to inventory folder
-                #arcpy.Copy_management(imageuploadpath,os.path.join(georeferenced_doqq,job_image_name))
+                if os.path.exists(georeferenced_historical,job_image_name):
+                    arcpy.Delete_management(os.path.exists(georeferenced_doqq,job_image_name))
+                arcpy.Copy_management(imageuploadpath,os.path.join(georeferenced_doqq,job_image_name))
                 image_inv_path = os.path.join(georeferenced_doqq,job_image_name)
             else:
                 cellsizeX = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEX')
@@ -227,9 +229,11 @@ if __name__ == '__main__':
                 arcpy.Rename_management(imageuploadpath,os.path.join(uploaded_dir,job_image_name))
                 if os.path.exists(TAB_upload_path):
                     os.rename(TAB_upload_path,os.path.join(uploaded_dir,TAB_image_name))
-                    #shutil.copy(os.path.join(uploaded_dir,TAB_image_name),os.path.join(georeferenced_historical,TAB_image_name)) #copy TAB if exists
+                    shutil.copy(os.path.join(uploaded_dir,TAB_image_name),os.path.join(georeferenced_historical,TAB_image_name)) #copy TAB if exists
                 #Copy image to inventory folder
-                #arcpy.Copy_management(imageuploadpath,os.path.join(georeferenced_historical,job_image_name))
+                if os.path.exists(georeferenced_historical,job_image_name):
+                    arcpy.Delete_management(os.path.exists(georeferenced_historical,job_image_name))
+                arcpy.Copy_management(imageuploadpath,os.path.join(georeferenced_historical,job_image_name))
                 image_inv_path = os.path.join(georeferenced_historical,job_image_name)
             
             image_metadata = str({"PROCEDURE":Oracle.erisapi_procedures['passimagedetail'],"ORDER_NUM":OrderNumText,"AUI_ID":str(auid),"SWLAT":str(result_bot),"SWLONG":str(result_left),"NELAT":str(result_top),"NELONG":str(result_right),"SPATIAL_RESOLUTION":str(spatial_res),"ORIGINAL_IMAGE_PATH":str(image_inv_path)})

@@ -123,7 +123,7 @@ class Oracle:
 if __name__ == '__main__':
     OrderID = arcpy.GetParameterAsText(0)#'934409'#arcpy.GetParameterAsText(0)
     ee_oid = arcpy.GetParameterAsText(1)#'408212'#arcpy.GetParameterAsText(1)
-    scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
+    scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
 
     orderInfo = Oracle('test').call_function('getorderinfo',OrderID)
@@ -151,10 +151,12 @@ if __name__ == '__main__':
                 arcpy.AddWarning('Cannot convert DOQQ image '+originalpath)
             else:
                 if os.path.exists(originalpath):
-                    job_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.png'
+                    job_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.jpg'
                     """Two copies are performed, 1 to convert the raster into a PNG for the application.
                     the other to only copy the image without spatial information to the job folder"""
-                    arcpy.CopyRaster_management(originalpath,os.path.join(scratch,job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='PNG',transform='NONE')
+                    #arcpy.CopyRaster_management(originalpath,os.path.join(scratch,job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='PNG',transform='NONE')
+                    arcpy.env.compression = "JPEG 50"
+                    arcpy.CopyRaster_management(originalpath,os.path.join(scratch,job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='JPEG',transform='NONE')
                     if os.path.exists(os.path.join(job_folder,'gc',job_image_name)):
                         os.remove(os.path.join(job_folder,'gc',job_image_name))
                     shutil.copy(os.path.join(scratch,job_image_name),os.path.join(job_folder,'gc',job_image_name))

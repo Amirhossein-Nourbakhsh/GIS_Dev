@@ -132,7 +132,7 @@ if __name__ == '__main__':
     uploaded_dir = os.path.join(job_folder,"OrderImages")
 
     ### Get image path info ###
-    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getnewaerials'],"ORDER_NUM":OrderNumText,"PARENT_EE_OID":ee_oid})
+    inv_infocall = str({"PROCEDURE":Oracle.erisapi_procedures['getnewaerials'],"ORDER_NUM":str(OrderNumText),"PARENT_EE_OID":str(ee_oid)})
     rework_return = Oracle('test').call_erisapi(inv_infocall)
     rework_list_json = json.loads(rework_return[1])
     print rework_list_json
@@ -153,10 +153,11 @@ if __name__ == '__main__':
                 arcpy.AddWarning('Cannot convert DOQQ image '+originalpath)
             else:
                 if os.path.exists(imageuploadpath):
-                    job_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.png'
+                    job_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.jpg'
                     """PNG is copied to gc folder for FE with new naming convention"""
-                    arcpy.CopyRaster_management(imageuploadpath,os.path.join(job_folder,'gc',job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='PNG',transform='NONE')
-
+                    #arcpy.CopyRaster_management(imageuploadpath,os.path.join(job_folder,'gc',job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='PNG',transform='NONE')
+                    arcpy.env.compression = "JPEG 50"
+                    arcpy.CopyRaster_management(imageuploadpath,os.path.join(job_folder,'gc',job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='JPEG',transform='NONE')
                     """Rename original uploaded file with new naming convention
                     BUT ORIGINAL EXTENSION!!! And call oracle to update the name. Path to the image
                     will be updated once georeferencing in complete in that gp service"""

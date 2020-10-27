@@ -179,30 +179,57 @@ def export_reportimage(imagepath,ordergeometry,auid):
         geo_lyr = arcpy.mapping.Layer(ordergeometry)
         arcpy.mapping.AddLayer(df,geo_lyr,'TOP')
         arcpy.mapping.AddLayer(df,image_lyr,'TOP')
+        image_layer = arcpy.mapping.ListLayers(mxd,"",df)[0]
         geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
         geometry_layer.visible = False
-        #geo_extent = geometry_layer.getExtent(True)
+        image_extent = image_layer.getExtent()
         geo_extent = geometry_layer.getExtent()
         df.extent = geo_extent
         print df.scale
-        print MapScale
-        if df.scale <= 7500:
-            df.scale = MapScale
-            export_width = 5100
-            export_height = 6600
-        elif df.scale <= 30000:
-            df.scale = ((int(df.scale)/100)+1)*100
-            export_width = int(5100*1.4)
-            export_height = int(6600*1.4)
-        elif df.scale > 30000:
-            df.scale = ((int(df.scale)/100)+1)*100
-            export_width = int(5100*1.8)
-            export_height = int(6600*1.8)
-        arcpy.RefreshActiveView()
+        if df.scale <= 7500 or image_source == 'DOQQ':
+            if df.scale <= 7500 or image_source != 'DOQQ':
+                df.extent = geo_extent
+                df.scale = MapScale
+                w_res = 2550
+                h_res = 3300
+            elif image_source == 'DOQQ' and df.scale > 7500:
+                df.extent = geo_extent
+                df.scale = ((df.scale/100)+1)*100
+                w_res = 2550
+                h_res = 3300
+        elif df.scale > 7500 and image_source != 'DOQQ':
+            df.extent = image_extent
+            df.scale = df.scale*0.89 #very important setting as it defines how much of the image will be displayed to FE
+            w_res=2550
+            h_res= int((image_extent.height/image_extent.width)*w_res)
+            #if image_extent.width < 0 and image_extent.height < 0:
+                #w_res=int((image_extent.width*1000)*3)
+                #h_res=int((image_extent.height*1000)*3)
+            #elif image_extent.width > 1000 and image_extent.height > 1000:
+                #w_res=int((image_extent.width/1000)*3)
+                #h_res=int((image_extent.height/1000)*3)
+            #else:
+                #w_res = 5100
+                #h_res = 5100
         ###############################
         ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
-        arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 70)
+        #sr = arcpy.SpatialReference(3857)
+        #df.SpatialReference = sr
+        #mxd.save()
+        print image_extent.width, image_extent.height
+        print w_res, h_res
+        arcpy.RefreshActiveView()
+        arcpy.overwriteOutput = True
+        sr2 = arcpy.SpatialReference(4326)
+        arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),df,df_export_width=w_res,df_export_height=h_res,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 70)
+        arcpy.DefineProjection_management(os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),sr2)
+        #arcpy.env.compression = "JPEG 1"
+        #arcpy.env.pyramid = "NONE"
+        #print "projecting"
+        #arcpy.ProjectRaster_management(os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),os.path.join(scratch,image_year + '_' + image_source + '_' +auid + '_2.jpg'),sr)
+        #extent =arcpy.Describe(os.path.join(scratch,image_year + '_' + image_source + '_' +auid + '_2.jpg')).extent
         extent =arcpy.Describe(os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg')).extent
+        print "done projecting"
         NW_corner= str(extent.XMin) + ',' +str(extent.YMin)
         NE_corner= str(extent.XMax) + ',' +str(extent.YMax)
         SW_corner= str(extent.XMin) + ',' +str(extent.YMin)
@@ -225,11 +252,11 @@ def export_reportimage(imagepath,ordergeometry,auid):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '934394'#arcpy.GetParameterAsText(0)
-    AUI_ID = ''#arcpy.GetParameterAsText(1)
-    scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
+    orderID = arcpy.GetParameterAsText(0)#'934465'#arcpy.GetParameterAsText(0)
+    AUI_ID = arcpy.GetParameterAsText(1)#''#arcpy.GetParameterAsText(1)
+    scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
-    mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
+    mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export_rev.mxd'
     conversion_input = r'\\192.168.136.164\v2_usaerial\input'
     conversion_output = r'\\192.168.136.164\v2_usaerial\output'
     Conversion_URL = r'http://erisservice3.ecologeris.com/ErisInt/USAerialAppService_test/USAerial.svc/USAerialImagePromote_temp?inputfile='
