@@ -41,10 +41,11 @@ class Order(object):
             cur.close()
             con.close()   
     @classmethod
-    def getGeometry(self):
+    def getGeometry(self): # return geometry in WGS84 (GCS)
+        srWGS84 = arcpy.SpatialReference('WGS 1984')
         orderFC = db_connections.orderFC
         orderGeom = arcpy.da.SearchCursor(orderFC,("SHAPE@"),"order_id = " + str(self.order_Id) ).next()[0]
-        return orderGeom
+        return orderGeom.projectAs(srWGS84)
     @classmethod
     def getPSR(self):
         try:
