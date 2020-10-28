@@ -165,6 +165,7 @@ def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef
     return outputSHP
 def export_reportimage(imagedict,ordergeometry):
     ## In memory
+    print imagedict
     mxd = arcpy.mapping.MapDocument(mxdexport_template)
     df = arcpy.mapping.ListDataFrames(mxd,'*')[0]
     sr = arcpy.SpatialReference(3857)
@@ -172,15 +173,15 @@ def export_reportimage(imagedict,ordergeometry):
     geo_lyr = arcpy.mapping.Layer(ordergeometry)
     arcpy.mapping.AddLayer(df,geo_lyr,'TOP')
     ordered_all_values = imagedict.keys()
-    if len(ordered_all_values) == 1:
-        sorted_order = ordered_all_values
-    else:
-        sorted_order = ordered_all_values.sort()
-    print sorted_order
-    for order_value in sorted_order:
+    ordered_all_values.sort()
+    print ordered_all_values
+    for order_value in ordered_all_values:
         auid = imagedict[order_value][0]
         image_source = imagedict[order_value][1]
         imagepath = imagedict[order_value][2]
+        img_sr = arcpy.Describe(imagepath).spatialReference
+        if img_sr == 'Unknown':
+            arcpy.DefineProjection_management(imagepath,4326)
         lyrpath = os.path.join(scratch,str(auid) + '.lyr')
         arcpy.MakeRasterLayer_management(imagepath,lyrpath)
         image_lyr = arcpy.mapping.Layer(lyrpath)
@@ -284,7 +285,7 @@ if __name__ == '__main__':
     oracle_input = str({"PROCEDURE":Oracle.erisapi_procedures['getselectedimages'],"ORDER_NUM":OrderNumText})
     selected_list_return = Oracle('test').call_erisapi(oracle_input)
     selected_list_json = json.loads(selected_list_return[1])
-    print selected_list_json
+    #print selected_list_json
 
     ##create fin directory
     job_fin = os.path.join(job_folder,'fin')
@@ -295,6 +296,8 @@ if __name__ == '__main__':
     for image_year in selected_list_json['RESULTS'].keys():
         getimage_dict = {}
         for image in selected_list_json['RESULTS'][image_year]:
+            print image
+            print '------------'
             order_key = image['REPORT_DISPLAY_ORDER']
             image_auid = image['AUI_ID']
             image_source = image['IMAGE_SOURCE']
