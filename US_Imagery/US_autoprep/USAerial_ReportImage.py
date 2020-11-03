@@ -163,9 +163,9 @@ def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef
         cursor.insertRow([arcpy.Polygon(arcpy.Array([arcpy.Point(*coords) for coords in pntCoords]),spatialRef)])
     del cursor
     return outputSHP
-def export_reportimage(imagedict,ordergeometry):
+def export_reportimage(imagedict,ordergeometry,image_comment):
     ## In memory
-    arcpy.AddMessage("Adding to template: "+imagedict)
+    arcpy.AddMessage("Adding to template: "+str(imagedict))
     mxd = arcpy.mapping.MapDocument(mxdexport_template)
     df = arcpy.mapping.ListDataFrames(mxd,'*')[0]
     sr = arcpy.SpatialReference(3857)
@@ -186,12 +186,10 @@ def export_reportimage(imagedict,ordergeometry):
         arcpy.MakeRasterLayer_management(imagepath,lyrpath)
         image_lyr = arcpy.mapping.Layer(lyrpath)
         arcpy.mapping.AddLayer(df,image_lyr,'TOP')
-    mxd.save()
     geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
     geometry_layer.visible = False
     geo_extent = geometry_layer.getExtent(True)
     df.extent = geo_extent
-    arcpy.AddMessage("Exporting: "+image_year + '_' + image_source  + '.jpg')
     print df.scale
     if df.scale <= MapScale:
         df.scale = MapScale
@@ -199,8 +197,8 @@ def export_reportimage(imagedict,ordergeometry):
         export_height = 6600
     elif df.scale > MapScale:
         df.scale = ((int(df.scale)/100)+1)*100
-        export_width = int(5100*1.4)
-        export_height = int(6600*1.4)
+        export_width = 5100
+        export_height = 6600
     arcpy.RefreshActiveView()
             #if image_extent.width < 0 and image_extent.height < 0:
                 #w_res=int((image_extent.width*1000)*3)
@@ -220,19 +218,33 @@ def export_reportimage(imagedict,ordergeometry):
     sr2 = arcpy.SpatialReference(4326)
     ###############################
     ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
-
-
+    scale = df.scale
+    if scale == 6000:
+        scaletxt = '1":' + str(int(scale/12))+"'"
+        filescale = str(int(scale/12))
+    else:
+        scaletxt = '1":' + str(int(round(scale/12,-2)))+"'"
+        filescale = str(int(round(scale/12,-2)))
+    if image_comment != "":
+        report_image_name = image_year + '_' + image_source  + '_'+filescale +'_'+image_comment+'.jpg'
+    else:
+        report_image_name = image_year + '_' + image_source  + '_'+filescale +'.jpg'
+    arcpy.AddMessage("Exporting: "+report_image_name)
     ##############################
     #arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),df,df_export_width=5100,df_export_height=6600,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
     #arcpy.DefineProjection_management(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'), 3857)
     #shutil.copy(os.path.join(job_folder,'year'+'_source'+auid + '.jpg'),os.path.join(jpg_image_folder,auid + '.jpg'))
-    arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),df,df_export_width=export_width,df_export_height=export_height,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
-    arcpy.DefineProjection_management(os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),sr)
-    arcpy.env.compression = "JPEG 1"
     arcpy.env.pyramid = "NONE"
+    arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_fin,report_image_name),df,df_export_width=export_width,df_export_height=export_height,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
+    arcpy.DefineProjection_management(os.path.join(job_fin,report_image_name),sr)
     print "projecting"
-    arcpy.ProjectRaster_management(os.path.join(job_fin,image_year + '_' + image_source  + '.jpg'),os.path.join(scratch,image_year + '_' + image_source + '_2.jpg'),sr2)
-    extent =arcpy.Describe(os.path.join(scratch,image_year + '_' + image_source  + '_2.jpg')).extent
+    df.SpatialReference = sr2
+    wgs84mxd = arcpy.mapping.MapDocument(wgs84_template)
+    image_report = arcpy.mapping.Layer(os.path.join(job_fin,report_image_name))
+    df = arcpy.mapping.ListDataFrames(wgs84mxd,'*')[0]
+    arcpy.mapping.AddLayer(df,image_report,'TOP')
+    imagetodesc = arcpy.mapping.ListLayers(wgs84mxd,'*',df)[0]
+    extent =arcpy.Describe(imagetodesc).extent
     print "done projecting" 
     NW_corner= str(extent.XMin) + ',' +str(extent.YMax)
     NE_corner= str(extent.XMax) + ',' +str(extent.YMax)
@@ -243,31 +255,29 @@ def export_reportimage(imagedict,ordergeometry):
     centerlong = round((((extent.XMin*-1) - (extent.XMax*-1))/2) + extent.XMin, 7)
     print "centerlat: "+ str(centerlat)
     print "centerlong: "+ str(centerlong)
-    scale = df.scale
-    if scale == 6000:
-        scaletxt = '1":' + str(scale/12)+"'"
-    else:
-        scaletxt = '1":' + str(round(scale/12,-2))+"'"
     try:
         image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passreportextent'], "ORDER_NUM" : OrderNumText,"TYPE":"ae_pdf",
-        "SWLAT":str(extent.YMin),"SWLONG":str(extent.XMin),"NELAT":(extent.YMax),"NELONG":str(extent.XMax),"FILENAME":str(image_year + '_' + image_source  + '.jpg'),
+        "SWLAT":str(extent.YMin),"SWLONG":str(extent.XMin),"NELAT":(extent.YMax),"NELONG":str(extent.XMax),"FILENAME":str(image_year + '_' + image_source  + '_'+filescale +'.jpg'),
         "CENTERLAT" : str(centerlat), "CENTERLONG":str(centerlong), "IMAGE_WIDTH":"","IMAGE_HEIGHT":""})
         message_return = Oracle('test').call_erisapi(image_extents)
         if message_return[3] != 'Y':
             raise OracleBadReturn
     except OracleBadReturn:
         arcpy.AddError('status: '+message_return[3]+' - '+message_return[2])
-    mxd.saveACopy(os.path.join(scratch,image_year+'_export.mxd'))
+    for lyr in arcpy.mapping.ListLayers(mxd, "", df):
+        arcpy.mapping.RemoveLayer(df,lyr)
     del mxd
 
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = arcpy.GetParameterAsText(0)#'934489'#arcpy.GetParameterAsText(0)
-    scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
+    orderID = '934578'#arcpy.GetParameterAsText(0)
+    scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export_rev.mxd'
+    wgs84_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\wgs84_template.mxd'
     MapScale = 6000
+    arcpy.env.overwriteOutput=True
 
     ##get info for order from oracle
     orderInfo = Oracle('test').call_function('getorderinfo',orderID)
@@ -280,7 +290,9 @@ if __name__ == '__main__':
 
     OrderGeometry = createGeometry(eval(orderInfo[u'ORDER_GEOMETRY'][u'GEOMETRY'])[0],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'],scratch,'OrderGeometry.shp')
     shutil.copy(mxdexport_template,os.path.join(scratch,'template.mxd'))
+    shutil.copy(wgs84_template,os.path.join(scratch,'wgs84.mxd'))
     mxdexport_template = os.path.join(scratch,'template.mxd')
+    wgs84_template = os.path.join(scratch,'wgs84.mxd')
     ## Get order geometry 
 
     oracle_input = str({"PROCEDURE":Oracle.erisapi_procedures['getselectedimages'],"ORDER_NUM":OrderNumText})
@@ -296,6 +308,7 @@ if __name__ == '__main__':
     ##get image matrix and export
     for image_year in selected_list_json['RESULTS'].keys():
         getimage_dict = {}
+        image_comment = None
         for image in selected_list_json['RESULTS'][image_year]:
             print image
             print '------------'
@@ -303,10 +316,13 @@ if __name__ == '__main__':
             image_auid = image['AUI_ID']
             image_source = image['IMAGE_SOURCE']
             image_path = image['ORIGINAL_IMAGE_PATH']
-
+            if image['COMMENTS'] != "":
+                image_comment = image['COMMENTS']
             getimage_dict[order_key] = [image_auid,image_source,image_path]
-            
-        export_reportimage(getimage_dict,OrderGeometry)
+        if image_comment == None:
+            image_comment = ""
+        print image_comment
+        export_reportimage(getimage_dict,OrderGeometry,image_comment)
 
 
 
