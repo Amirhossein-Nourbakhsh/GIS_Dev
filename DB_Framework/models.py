@@ -81,12 +81,3 @@ class Order(object):
         finally:
             cur.close()
             con.close()
-            
-       
-class PSR(object):
-    order_Id = ''
-    omi_Id = ''
-    ds_oId = ''
-    type = ''
-    search_radius = ''
-    report_source = ''
