@@ -25,6 +25,6 @@ if __name__ == "__main__":
    # orderObj = models.Order().getbyId(932499)
    orderObj = models.Order().getbyNumber(20292800115)
    # Generate Wetland report
-   PSR_Wetland.Generate_WetlandReport(orderObj)
+   # PSR_Wetland.Generate_WetlandReport(orderObj)
    end = timeit.default_timer()
    arcpy.AddMessage(('End PSR report process. Duration:', round(end -start,4)))

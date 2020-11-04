@@ -19,7 +19,7 @@ class Order(object):
             orderObj.order_Id = order_Id
             orderObj.order_num = str(row[0])
             orderObj.address = str(row[1])+","+str(row[2])+","+str(row[3])
-            orderObj.geometry = orderObj.getGeometry()
+            orderObj.geometry = orderObj.__getGeometry()
             return orderObj
         finally:
             cur.close()
@@ -35,13 +35,13 @@ class Order(object):
             orderObj.order_Id = str(row[0])
             orderObj.order_num = order_num
             orderObj.address = str(row[1])+","+str(row[2])+","+str(row[3])
-            orderObj.geometry = orderObj.getGeometry()
+            orderObj.geometry = orderObj.__getGeometry()
             return orderObj
         finally:
             cur.close()
             con.close()   
     @classmethod
-    def getGeometry(self): # return geometry in WGS84 (GCS)
+    def __getGeometry(self): # return geometry in WGS84 (GCS)/it is a private function which is used inside the class
         srWGS84 = arcpy.SpatialReference('WGS 1984')
         orderFC = db_connections.orderFC
         orderGeom = arcpy.da.SearchCursor(orderFC,("SHAPE@"),"order_id = " + str(self.order_Id) ).next()[0]
