@@ -238,5 +238,5 @@ if __name__ == '__main__':
             
             image_metadata = str({"PROCEDURE":Oracle.erisapi_procedures['passimagedetail'],"ORDER_NUM":OrderNumText,"AUI_ID":str(auid),"SWLAT":str(result_bot),"SWLONG":str(result_left),"NELAT":str(result_top),"NELONG":str(result_right),"SPATIAL_RESOLUTION":str(spatial_res),"ORIGINAL_IMAGE_PATH":str(image_inv_path)})
             Oracle('test').call_erisapi(image_metadata)
-    except ImportError as e:
+    except Exception as e:
         arcpy.AddError('Issue converting image: '+e.message)
