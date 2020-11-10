@@ -121,11 +121,12 @@ class Oracle:
             self.close_connection()
 
 if __name__ == '__main__':
-    OrderID = arcpy.GetParameterAsText(0)
-    AUI_ID = ''#arcpy.GetParameterAsText(1)
+    OrderID = '934647'#arcpy.GetParameterAsText(0)
+    AUI_ID = ''#arcpy.GetParameterAsText(1)#''#arcpy.GetParameterAsText(1)
     ee_oid = ''#arcpy.GetParameterAsText(2)#'408212'#arcpy.GetParameterAsText(2)
-    scratch = arcpy.env.scratchFolder
+    scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
+    arcpy.env.OverwriteOutput = True
 
     orderInfo = Oracle('test').call_function('getorderinfo',OrderID)
     OrderNumText = str(orderInfo['ORDER_NUM'])
@@ -156,6 +157,8 @@ if __name__ == '__main__':
                 if os.path.exists(imageuploadpath):
                     job_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.jpg'
                     """PNG is copied to gc folder for FE with new naming convention"""
+                    if os.path.exists(os.path.join(job_folder,'gc',job_image_name)):
+                        os.remove(os.path.join(job_folder,'gc',job_image_name))
                     #arcpy.CopyRaster_management(imageuploadpath,os.path.join(job_folder,'gc',job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='PNG',transform='NONE')
                     arcpy.env.compression = "JPEG 50"
                     arcpy.CopyRaster_management(imageuploadpath,os.path.join(job_folder,'gc',job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='JPEG',transform='NONE')
@@ -163,13 +166,13 @@ if __name__ == '__main__':
                     BUT ORIGINAL EXTENSION!!! And call oracle to update the name. Path to the image
                     will be updated once georeferencing in complete in that gp service"""
                     new_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.'+imagename.split('.')[1]
-                    if imageuploadpath == os.path.join(uploaded_dir,new_image_name):
-                        arcpy.AddMessage('Image name already matches naming convention rules')
-                    else:
-                        os.rename(imageuploadpath,os.path.join(uploaded_dir,new_image_name))
-                        rename_call = str({"PROCEDURE":Oracle.erisapi_procedures['setimagename'],"ORDER_NUM":OrderNumText,"AUI_ID":auid,"IMAGE_NAME":str(new_image_name)})
-                        rename_return = Oracle('test').call_erisapi(rename_call)
-                        print json.loads(rework_return[1])
+#                    if imageuploadpath == os.path.join(uploaded_dir,new_image_name):
+#                        arcpy.AddMessage('Image name already matches naming convention rules')
+#                    else:
+#                        os.rename(imageuploadpath,os.path.join(uploaded_dir,new_image_name))
+                    rename_call = str({"PROCEDURE":Oracle.erisapi_procedures['setimagename'],"ORDER_NUM":OrderNumText,"AUI_ID":auid,"IMAGE_NAME":str(new_image_name)})
+                    rename_return = Oracle('test').call_erisapi(rename_call)
+                    print json.loads(rework_return[1])
                 elif not os.path.exists(imageuploadpath):
                     arcpy.AddError('cannot find image in OrderImages folder to convert, PLEASE CHECK PATH: '+imageuploadpath)
     except Exception as e:

@@ -31,7 +31,7 @@ class Oracle:
     # static variable: oracle_functions
     oracle_functions = {'getorderinfo':"eris_gis.getOrderInfo"
     }
-    erisapi_procedures = {'getreworkaerials':"FLOW_GEOREFERENCE.GetAerialnewAdd","passimagedetail":"flow_inventory.setImageDetail"}
+    erisapi_procedures = {'getreworkaerials':"FLOW_GEOREFERENCE.GetAerialnewAdd","passimagedetail":"flow_inventory.setImageDetail","setimagename":"Flow_inventory.setImageName"}
     def __init__(self,machine_name):
         # initiate connection credential
         if machine_name.lower() =='test':
@@ -157,14 +157,15 @@ def export_reportimage(imagepath,auid):
         del mxd
 
 if __name__ == '__main__':
-    OrderID = '933781'#arcpy.GetParameterAsText(0)#'934404'#arcpy.GetParameterAsText(0)
+    OrderID = '934647'#arcpy.GetParameterAsText(0)#'934404'#arcpy.GetParameterAsText(0)
     AUI_ID = ''#arcpy.GetParameterAsText(1)
     ee_oid = ''#arcpy.GetParameterAsText(2)#'408212'#arcpy.GetParameterAsText(2)
-    scratch = r'C:\Users\JLoucks\Documents\JL\test2' #arcpy.env.scratchFolder
+    scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     georeferenced_historical = r'\\cabcvan1nas003\historical\Georeferenced_Aerial'
     georeferenced_doqq = r'\\cabcvan1nas003\historical\Georeferenced_DOQQ'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
+    arcpy.env.OverwriteOutput = True
 
     orderInfo = Oracle('test').call_function('getorderinfo',OrderID)
     OrderNumText = str(orderInfo['ORDER_NUM'])
@@ -176,10 +177,9 @@ if __name__ == '__main__':
     rework_return = Oracle('test').call_erisapi(inv_infocall)
     rework_list_json = json.loads(rework_return[1])
     print rework_list_json
-    #rework_list_json = [{'AUI_ID':'1111','IMAGE_NAME':'1984_USGS_1111.jpg','AERIAL_YEAR':'1984','IMAGE_SOURCE':'USGS','ORIGINAL_IMAGE_PATH':'\\\\cabcvan1nas\\1984_USGS_1111.jpg'},{'AUI_ID':'1116','IMAGE_NAME':'1977_DOQQ_1116.sid','AERIAL_YEAR':'1977','IMAGE_SOURCE':'DOQQ','ORIGINAL_IMAGE_PATH':'\\\\cabcvan1nas\\1977_DOQQ_1116.sid'}]
+
     if rework_list_json == []:
         arcpy.AddError('Image list is empty')
-
     try:
         for image in rework_list_json:
             auid = image['AUI_ID']
@@ -206,14 +206,13 @@ if __name__ == '__main__':
                 result_left = extent.XMin  
                 result_right = extent.XMax
                 #Rename image and TAB
-                arcpy.Rename_management(imageuploadpath,os.path.join(uploaded_dir,job_image_name))
                 if os.path.exists(TAB_upload_path):
-                    os.rename(TAB_upload_path,os.path.join(uploaded_dir,TAB_image_name))
                     shutil.copy(os.path.join(uploaded_dir,TAB_image_name),os.path.join(georeferenced_doqq,TAB_image_name)) #copy TAB if exists
-                #Copy image to inventory folder
-                if os.path.exists(os.path.join(georeferenced_historical,job_image_name)):
-                    arcpy.Delete_management(os.path.exists(georeferenced_doqq,job_image_name))
-                arcpy.Copy_management(os.path.join(uploaded_dir,job_image_name),os.path.join(georeferenced_doqq,job_image_name))
+                #Copy image to inventory folder/
+                arcpy.Copy_management(originalpath,os.path.join(scratch,job_image_name))
+                if os.path.exists(os.path.join(georeferenced_doqq,job_image_name)):
+                    arcpy.Delete_management(os.path.join(georeferenced_doqq,job_image_name))
+                arcpy.Copy_management(os.path.join(scratch,job_image_name),os.path.join(georeferenced_doqq,job_image_name))
                 image_inv_path = os.path.join(georeferenced_doqq,job_image_name)
             else:
                 cellsizeX = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEX')
@@ -227,17 +226,19 @@ if __name__ == '__main__':
                 result_left = arcpy.GetRasterProperties_management(imageuploadpath, "LEFT")  
                 result_right = arcpy.GetRasterProperties_management(imageuploadpath, "RIGHT")
                 #Rename image and TAB
-                arcpy.Rename_management(imageuploadpath,os.path.join(uploaded_dir,job_image_name))
                 if os.path.exists(TAB_upload_path):
-                    os.rename(TAB_upload_path,os.path.join(uploaded_dir,TAB_image_name))
                     shutil.copy(os.path.join(uploaded_dir,TAB_image_name),os.path.join(georeferenced_historical,TAB_image_name)) #copy TAB if exists
                 #Copy image to inventory folder/
+                arcpy.Copy_management(originalpath,os.path.join(scratch,job_image_name))
                 if os.path.exists(os.path.join(georeferenced_historical,job_image_name)):
-                    arcpy.Delete_management(os.path.exists(georeferenced_historical,job_image_name))
-                arcpy.Copy_management(os.path.join(uploaded_dir,job_image_name),os.path.join(georeferenced_historical,job_image_name))
-                image_inv_path = os.path.join(georeferenced_historical,job_image_name)
-            
+                    arcpy.Delete_management(os.path.join(georeferenced_historical,job_image_name))
+                arcpy.Copy_management(os.path.join(scratch,job_image_name),os.path.join(georeferenced_historical,job_image_name))
+                image_inv_path = os.path.join(georeferenced_historical,job_image_name)                
             image_metadata = str({"PROCEDURE":Oracle.erisapi_procedures['passimagedetail'],"ORDER_NUM":OrderNumText,"AUI_ID":str(auid),"SWLAT":str(result_bot),"SWLONG":str(result_left),"NELAT":str(result_top),"NELONG":str(result_right),"SPATIAL_RESOLUTION":str(spatial_res),"ORIGINAL_IMAGE_PATH":str(image_inv_path)})
             Oracle('test').call_erisapi(image_metadata)
+            new_image_name = str(aerialyear)+'_'+imagesource+'_'+str(auid)+'.'+imagename.split('.')[1]
+            rename_call = str({"PROCEDURE":Oracle.erisapi_procedures['setimagename'],"ORDER_NUM":OrderNumText,"AUI_ID":auid,"IMAGE_NAME":str(new_image_name)})
+            rename_return = Oracle('test').call_erisapi(rename_call)
+            print json.loads(rework_return[1])
     except IOError as e:
         arcpy.AddError('Issue converting image: '+e.message)
