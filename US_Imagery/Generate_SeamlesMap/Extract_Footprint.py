@@ -98,8 +98,17 @@ def get_Footprint(inputRaster):
         polygon_with_holes= os.path.join(tmpGDB,'polygon_with_holes')
         footprint_FC = os.path.join(tmpGDB,'footprint_FC')
         
+        input_raster_desc = arcpy.Describe(inputRaster)
+        input_sr = input_raster_desc.spatialReference
+        multi_band = 0
+        if input_raster_desc.bandCount > 1:
+            multi_band = 1
+            Band1 = Raster(inputRaster + "/Band_1")
+            #Save the raster
+            arcpy.AddMessage("saving one band of input image")
+            Band1.save(os.path.join(ws,"band_01.tif"))
+            arcpy.AddMessage("saved.")
         ### create featureclass from input image extent
-        input_sr = arcpy.Describe(inputRaster).spatialReference
         image_extent_FC = create_image_extent_FC(inputRaster,input_sr,tmpGDB)
         ### resampling the input image beacuse of increasing performance
         arcpy.AddMessage('Start resampling the input raster...')
@@ -124,7 +133,7 @@ def get_Footprint(inputRaster):
         end2 = timeit.default_timer()
         arcpy.AddMessage(('End creating binary raster. Duration:', round(end2 -start2,4)))
 
-        # Convert binary raster to polygon
+        ### Convert binary raster to polygon
         arcpy.AddMessage('Start creating prime polygon from raster...')
         start3 = timeit.default_timer()
         polygon_with_holes =  arcpy.RasterToPolygon_conversion(in_raster= bin_Raster, out_polygon_features=polygon_with_holes, simplify="SIMPLIFY", raster_field="Value", create_multipart_features="SINGLE_OUTER_PART", max_vertices_per_feature="")
@@ -156,7 +165,8 @@ if __name__ == '__main__':
     # image_Path = '//cabcvan1nas003/doqq/FULL/IL/1998/z16/il_1m_1998-z16-east - copy 2.sid'
     # image_Path = '//cabcvan1nas003/doqq/FULL/WA/1990/z10/wa_1m_1990_z10-6.sid'
     # image_Path = '//CABCVAN1NAS003/doqq/201x/AZ/GILA/2010/ortho_1-2_1n_s_az007_2010_1.sid'
-    image_Path = '//cabcvan1nas003/doqq/osa/CA/Los Angeles/2012/ortho_1-1_1n_s_ca037_2012_2.sid'
+    # image_Path = '//cabcvan1nas003/doqq/osa/CA/Los Angeles/2012/ortho_1-1_1n_s_ca037_2012_2.sid'
+    image_Path  = '//CABCVAN1NAS003/doqq/FULL/CA/1994/z11/ca_1m_1994-z11centralsouth.sid'
     footprint_Polygon = get_Footprint(image_Path)
     endTotal= timeit.default_timer()
     arcpy.AddMessage(('End footprint extraction process. Total Duration:', round(endTotal -startTotal,4)))

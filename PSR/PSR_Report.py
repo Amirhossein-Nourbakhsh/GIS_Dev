@@ -23,8 +23,9 @@ if __name__ == "__main__":
    start = timeit.default_timer() 
    # Fetch data from database using GIS framework
    # orderObj = models.Order().getbyId(932499)
-   orderObj = models.Order().getbyNumber(20292800115)
+   # orderObj = models.Order().getbyNumber(20292800115) # single page
+   orderObj = models.Order().getbyId(order_Id)
    # Generate Wetland report
-   # PSR_Wetland.Generate_WetlandReport(orderObj)
+   PSR_Wetland.Generate_WetlandReport(orderObj)
    end = timeit.default_timer()
    arcpy.AddMessage(('End PSR report process. Duration:', round(end -start,4)))
