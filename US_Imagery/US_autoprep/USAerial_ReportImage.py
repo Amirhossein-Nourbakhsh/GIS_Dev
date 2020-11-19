@@ -180,7 +180,8 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
         image_source = imagedict[order_value][1]
         imagepath = imagedict[order_value][2]
         img_sr = arcpy.Describe(imagepath).spatialReference
-        if img_sr == 'Unknown':
+        print img_sr.name
+        if img_sr.name == 'Unknown' or img_sr.name == 'GCS_Unknown':
             arcpy.DefineProjection_management(imagepath,4326)
         lyrpath = os.path.join(scratch,str(auid) + '.lyr')
         arcpy.MakeRasterLayer_management(imagepath,lyrpath)
@@ -251,13 +252,13 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
     SW_corner= str(extent.XMin) + ',' +str(extent.YMin)
     SE_corner= str(extent.XMax) + ',' +str(extent.YMin)
     print NW_corner, NE_corner, SW_corner, SE_corner
-    centerlat = round(((extent.YMax - extent.YMin)/2) + extent.YMin, 7)
-    centerlong = round((((extent.XMin*-1) - (extent.XMax*-1))/2) + extent.XMin, 7)
+    centerlong = round(extent.XMin + (extent.XMax - extent.XMin)/2, 7)
+    centerlat = round(extent.YMin + (extent.YMax - extent.YMin)/2, 7)
     print "centerlat: "+ str(centerlat)
     print "centerlong: "+ str(centerlong)
     try:
         image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passreportextent'], "ORDER_NUM" : OrderNumText,"TYPE":"ae_pdf",
-        "SWLAT":str(extent.YMin),"SWLONG":str(extent.XMin),"NELAT":(extent.YMax),"NELONG":str(extent.XMax),"FILENAME":str(image_year + '_' + image_source  + '_'+filescale +'.jpg'),
+        "SWLAT":str(extent.YMin),"SWLONG":str(extent.XMin),"NELAT":(extent.YMax),"NELONG":str(extent.XMax),"FILENAME":str(report_image_name),
         "CENTERLAT" : str(centerlat), "CENTERLONG":str(centerlong), "IMAGE_WIDTH":"","IMAGE_HEIGHT":""})
         message_return = Oracle('test').call_erisapi(image_extents)
         if message_return[3] != 'Y':
@@ -271,8 +272,8 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '934578'#arcpy.GetParameterAsText(0)
-    scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
+    orderID = '934438'#arcpy.GetParameterAsText(0)#'934578'#arcpy.GetParameterAsText(0)
+    scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export_rev.mxd'
     wgs84_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\wgs84_template.mxd'
