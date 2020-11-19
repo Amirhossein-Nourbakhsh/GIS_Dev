@@ -2,6 +2,9 @@ import sys
 import cx_Oracle
 import db_connections
 import arcpy
+import numpy as np
+import arcpy, os
+from ast import literal_eval
 
 class Order(object):
     Id = ''
@@ -44,9 +47,23 @@ class Order(object):
             con.close()   
     @classmethod
     def __getGeometry(self): # return geometry in WGS84 (GCS)/it is a private function which is used inside the class
-        srWGS84 = arcpy.SpatialReference('WGS 1984')
+        srWGS84 = arcpy.SpatialReference(4326)
         orderFC = db_connections.orderFC
         orderGeom = arcpy.da.SearchCursor(orderFC,("SHAPE@"),"order_id = " + str(self.Id) ).next()[0]
+        if orderGeom == None:
+            orderGeom = arcpy.Geometry()
+            
+            where = 'order_id = ' + str(self.Id)
+            row = arcpy.da.SearchCursor(orderFC,("GEOMETRY_TYPE","GEOMETRY"),where).next()
+            coord_string = ((row[1])[1:-1])
+            coordinates = np.array(literal_eval(coord_string))
+            geometry_type = row[0]
+            if geometry_type.lower()== 'point':
+                orderGeom = arcpy.Multipoint(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]),srWGS84)
+            elif geometry_type.lower() =='polyline':        
+                orderGeom = arcpy.Polyline(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]),srWGS84)
+            elif geometry_type.lower() =='polygon':
+                orderGeom = arcpy.Polygon(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]),srWGS84)
         return orderGeom.projectAs(srWGS84)
     @classmethod
     def getPSR(self):
@@ -94,6 +111,7 @@ class PSR(object):
         try:
             con = cx_Oracle.connect(db_connections.connectionString)
             cur = con.cursor()
+            ### insert data into eris_maps_psr table
             query = cur.callproc('eris_psr.InsertMap', (orderObj.Id, 'WETLAND', orderObj.number +'_NY_WETL'+str(page_num)+'.jpg', int(page_num)+1))
         finally:
             cur.close()
