@@ -30,7 +30,7 @@ class ImageBasePath:
 class OutputDirectory:
     job_directory_test = r'\\192.168.136.164\v2_usaerial\JobData\test'
     job_directory_prod = r'\\192.168.136.164\v2_usaerial\JobData\prod'
-    georef_images = r'\\cabcvan1nas003\historical\Georeferenced_Aerial'
+    georef_images = r'\\cabcvan1nas003\doqq\Georeferenced_DOQQ_test'
 class TransformationType():
     POLYORDER0 = "POLYORDER0"
     POLYORDER1 = "POLYORDER1"
