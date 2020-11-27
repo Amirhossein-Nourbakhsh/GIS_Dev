@@ -112,6 +112,7 @@ class PSR(object):
             con = cx_Oracle.connect(db_connections.connectionString)
             cur = con.cursor()
             ### insert data into eris_maps_psr table
+            print('Here call storeprocedure...')
             query = cur.callproc('eris_psr.InsertMap', (orderObj.Id, 'WETLAND', orderObj.number +'_NY_WETL'+str(page_num)+'.jpg', int(page_num)+1))
         finally:
             cur.close()

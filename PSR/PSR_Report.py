@@ -18,7 +18,7 @@ sys.setdefaultencoding('utf8')
 psr_list = []
 if __name__ == "__main__":
    # orderId = '930894' #single pages: 20292800115 - 20200814009
-   order_Id = '354268' ## newyork
+   order_Id = '462873' # no psr ->'354268' ## newyork
    # order_Id = '932499' # multi page
    arcpy.AddMessage('Start PSR report...')
    start = timeit.default_timer() 
