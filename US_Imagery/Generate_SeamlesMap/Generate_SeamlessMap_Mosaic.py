@@ -4,14 +4,17 @@
 # Author:      Hamid Kiavarz
 # Created:     06/2020
 #-------------------------------------------------------------------------------
-import arcpy, os ,timeit      
+import glob
+from os import path
+import arcpy, os ,timeit
 import json
 import logging
 from arcpy.sa import *
 from multiprocessing import Pool
 import os.path
 import logging
-
+from os.path import dirname, abspath
+from os import path
 arcpy.CheckOutExtension("Spatial")
 
 def get_spatial_res(imagepath):
@@ -22,7 +25,7 @@ def get_spatial_res(imagepath):
         return str(cellsizeY)
     else:
         return str(cellsizeX)
-   
+
 def get_filesize(imagepath):
     return str(os.stat(imagepath).st_size)
 def get_imagepath(imagepath,ext):
@@ -45,7 +48,7 @@ def get_file_extension(fileName):
     ext = '.' + extArray[len(extArray)-1]
     if ext == '.alg':
         ext = '.jp2'
-    return ext       
+    return ext
 def get_ImagePathandExt(inputFile):
     image_Path = ""
     ext=""
@@ -86,7 +89,7 @@ def get_Image_Metadata(imagepath,extension,FID):
     geoRef = 'Y'
     fileSize = 'NA'
     spatial_res = 'NA'
-    
+
     originalFID = str(FID)
     bits = arcpy.GetRasterProperties_management(imagepath,'VALUETYPE')
     width = arcpy.GetRasterProperties_management(imagepath,'COLUMNCOUNT')
@@ -96,7 +99,7 @@ def get_Image_Metadata(imagepath,extension,FID):
     spatial_res = get_spatial_res(imagepath)
     desc = arcpy.Describe(imagepath)
     year = get_year(desc.baseName,desc.path)
-    
+
     return [originalFID, bits, width, length, ext, geoRef, fileSize, imagepath, spatial_res, year]
 def get_Footprint(inputRaster):
     try:
@@ -120,8 +123,8 @@ def get_Footprint(inputRaster):
         inputSR = arcpy.Describe(resampleRaster).spatialReference
         end1 = timeit.default_timer()
         arcpy.AddMessage(('End resampling the input raster. Duration:', round(end1 -start1,4)))
-        
- 
+
+
         arcpy.AddMessage('Start creating binary raster (Raster Calculator)...')
         start2 = timeit.default_timer()
         expression = 'Con(' + '"' + 'resampleRaster' + '.tif' + '"' + ' >= 10 , 1)'
@@ -129,9 +132,9 @@ def get_Footprint(inputRaster):
         end2 = timeit.default_timer()
         arcpy.AddMessage(('End creating binary raster. Duration:', round(end2 -start2,4)))
 
-        # Convert binary raster to polygon       
+        # Convert binary raster to polygon
         arcpy.AddMessage('Start creating prime polygon from raster...')
-        start3 = timeit.default_timer()  
+        start3 = timeit.default_timer()
         # arcpy.RasterToPolygon_conversion(bin_Raster, 'primePolygon.shp', "SIMPLIFY", "VALUE")
         polygon_with_holes =  arcpy.RasterToPolygon_conversion(in_raster= bin_Raster, out_polygon_features=polygon_with_holes, simplify="SIMPLIFY", raster_field="Value", create_multipart_features="SINGLE_OUTER_PART", max_vertices_per_feature="")
         end3 = timeit.default_timer()
@@ -139,17 +142,17 @@ def get_Footprint(inputRaster):
 
         ### extract the main polygon (with maximum area) which includes several donuts
         arcpy.AddMessage('Start extracting exterior ring (outer outline) of polygon...')
-        start4 = timeit.default_timer()      
+        start4 = timeit.default_timer()
         sql_clause = (None, 'ORDER BY Shape_Area DESC')
         geom = arcpy.Geometry()
         row = arcpy.da.SearchCursor(polygon_with_holes,('SHAPE@'),None,None,False,sql_clause).next()
         geom = row[0]
         end4 = timeit.default_timer()
         arcpy.AddMessage(('End extracting polygon. Duration:', round(end4 -start4,4)))
-        
+
         ### extract the exterior points from main polygon to generate pure polygon from ouer line of main polygon
         arcpy.AddMessage('Start extracting exterior points ...')
-        start5 = timeit.default_timer()      
+        start5 = timeit.default_timer()
         outer_coords = []
         for island in geom.getPart():
             # arcpy.AddMessage("Vertices in island: {0}".format(island.count))
@@ -159,32 +162,32 @@ def get_Footprint(inputRaster):
                     newPoint = (point.X,point.Y)
                     if len(outer_coords) == 0:
                         outer_coords.append(newPoint)
-                    elif not newPoint == outer_coords[0]:   
+                    elif not newPoint == outer_coords[0]:
                         outer_coords.append((newPoint))
                     elif len(outer_coords) > 50:
                         outer_coords.append((newPoint))
                         break
-        
+
         # # # # points_FC = arcpy.CreateFeatureclass_management(tmpGDB,"points_FC", "POINT", "", "DISABLED", "DISABLED", inputSR)
         # # # # i = 0
-        # # # # with arcpy.da.InsertCursor(points_FC,["SHAPE@XY"]) as cursor: 
+        # # # # with arcpy.da.InsertCursor(points_FC,["SHAPE@XY"]) as cursor:
         # # # #     for coord in outer_coords:
-        # # # #         cursor.insertRow([coord]) 
+        # # # #         cursor.insertRow([coord])
         # # # #         i+= 1
         # # # #         if i > 2:
-        # # # #             break       
+        # # # #             break
         # # # #     del cursor
-        
-        ### Create footprint  featureclass -- > polygon 
+
+        ### Create footprint  featureclass -- > polygon
         footprint_FC = arcpy.CreateFeatureclass_management(tmpGDB,"footprint_FC", "POLYGON", "", "DISABLED", "DISABLED", inputSR)
         cursor = arcpy.da.InsertCursor(footprint_FC, ['SHAPE@'])
         cursor.insertRow([arcpy.Polygon(arcpy.Array([arcpy.Point(*coords) for coords in outer_coords]),inputSR)])
         del cursor
         end5 = timeit.default_timer()
         arcpy.AddMessage(('End extracting exterior points and inserted as FC. Duration:', round(end5 -start5,4)))
-        
+
         arcpy.AddMessage('Start simplifying footprint polygon...')
-        start6 = timeit.default_timer() 
+        start6 = timeit.default_timer()
         arcpy.Generalize_edit(footprint_FC, '100 Meter')
         finalGeometry = (arcpy.da.SearchCursor(footprint_FC,('SHAPE@')).next())[0]
         end6 = timeit.default_timer()
@@ -197,7 +200,7 @@ def get_Footprint(inputRaster):
         raise
 def UpdateSeamlessFC(DQQQ_footprint_FC,metaData,ft_Polygon):
     arcpy.AddMessage('Start Uploading to seamless FC...')
-    start7 = timeit.default_timer() 
+    start7 = timeit.default_timer()
     srWGS84 = arcpy.SpatialReference('WGS 1984')
     insertRow = arcpy.da.InsertCursor(DQQQ_footprint_FC, ['Original_FID','BITS','WIDTH','LENGTH','EXT','GEOREF','FILESIZE','IMAGEPATH','SPATIAL_RESOLUTION','YEAR','SHAPE@'])
     rowtuple=[str(metaData[0]),str(metaData[1]),str(metaData[2]),str(metaData[3]),str(metaData[4]),str(metaData[5]),str(metaData[6]),str(metaData[7]),str(metaData[8]),str(metaData[9]),ft_Polygon]
@@ -205,76 +208,94 @@ def UpdateSeamlessFC(DQQQ_footprint_FC,metaData,ft_Polygon):
     end7 = timeit.default_timer()
     arcpy.AddMessage(('End Uploading to seamless FC. Duration:', round(end7 -start7,4)))
     del insertRow
+def find_file(in_path, file_name):
+
+    dest_path = None
+    while True:
+        if (os.path.exists(in_path)):
+            for (dirpath, dirnames, filenames) in os.walk(in_path):
+                 if file_name in filenames:
+                    dest_path = dirpath
+                    break
+            else:
+                 in_path = os.path.dirname(in_path)
+        else:
+            in_path = os.path.dirname(in_path)
+        if os.path.basename(in_path) in ['199x','200x','201x']:
+            dest_path = ''
+            break
+        if not dest_path == None:
+            break 
+    return  dest_path
 
 if __name__ == '__main__':
-    
+
     ws =  arcpy.env.scratchFolder
     arcpy.env.workspace = ws
-    arcpy.env.overwriteOutput = True   
+    arcpy.env.overwriteOutput = True
     arcpy.AddMessage(ws)
     inputRaster = arcpy.GetParameterAsText(0)
     # DQQQ_footprint_FC = r'\\cabcvan1nas003\doqq\DOQQ_ALL_11202020\DOQQ_ALL_WGS84.shp'
-    logfile = r'C:\Users\HKiavarz\Documents\log_DOQQ_seamless.txt'
+    logfile = r'C:\Users\HKiavarz\Documents\log_DOQQ_seamless_unknown_path.txt'
     DQQQ_ALL_FC = r'\\cabcvan1nas003\doqq\DOQQ_ALL_11202020\DOQQ_ALL_WGS84.shp'
-    DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\DOQQ_seamless_map'
-    
+    # DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\DOQQ_seamless_map'
+    DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\DOQQ_Seamless_map_unknowPath'
+
+
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.WARNING)
     handler = logging.FileHandler(logfile)
     handler.setLevel(logging.WARNING)
     logger.addHandler(handler)
-    
+
     startTotal = timeit.default_timer()
-    
+
     srWGS84 = arcpy.SpatialReference('WGS 1984')
-    
+
     params =[]
-    
+
     # expression = "FID >= 170000 AND FID <= 170691"
-    expression = "FID >= 141044"
-    list = []
-    # rowExist = 0
-    # for item in list:
-    #     expressionFC = "TABLE_ = '" + str(item) + "'"
-    #     try:
-    #         Original_FID = arcpy.da.SearchCursor(DQQQ_footprint_FC, ['Original_FID'],expressionFC).next()[0]
-    #         rowExist = 1
-    #     except StopIteration:
-    #         rowExist = 0
-    #     if rowExist == 0: # check if it is already processed
-    #         # rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE_','SHAPE@'],where_clause=expression)
-    startDataset = timeit.default_timer()   
-    arcpy.AddMessage('-------------------------------------------------------------------------------------------------')
-    rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE','SHAPE@'],expression)
-    i=0
-    for row in rows:
-        arcpy.AddMessage('Start FID: ' + str(row[0]) + ' - processing Dataset: ' + row[1])
-        tabfile_Path = row[1].replace('nas2520','cabcvan1nas003')
-        i += 1
-        
-        if os.path.isfile(tabfile_Path) > 0:
-            imagePathInfo = get_ImagePathandExt(tabfile_Path)
-            if len(imagePathInfo[0]) > 0:
-                if imagePathInfo[1].lower() in ['.tif','.jpg','.sid','.png','.tiff','.jpeg','.jp2','.ecw']:
-                    metaData = get_Image_Metadata(imagePathInfo[0],imagePathInfo[1],row[0])
-                    # footprint_Polygon = get_Footprint(image_Path)
-                    footprint_Polygon = row[2].projectAs(srWGS84)
-                    UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
-                else:
-                    arcpy.AddWarning("FID : {} - Input raster: is not the type of Composite Geodataset, or does not exist".format(row[0]))
-                    logger.warning("FID :, {}, Input raster: is not the type of Composite Geodataset, or does not exist:, {} ".format(row[0], row[1]))
-            else:
-                arcpy.AddWarning("FID :  {} -  Images is not available forthis path : {} ".format(row[0], row[1]))
-                logger.warning("FID : , {}, Images is not available for this path :, {} ".format(row[0], row[1]))
-        else:
-            arcpy.AddWarning("FID : {} - Tab file Path is not valid or available for: ".format(row[0]))
-            logger.warning("FID : , {}, Tab file Path is not valid or available for:, {} ".format(row[0], row[1]))
-        
-        # if i > 10:
-        #     break;
-            
+    # expression = "FID = 35"
+    list = [145617]
+
+    for item in list:
+        expression = "FID = " + str(item)
+        startDataset = timeit.default_timer()
+        arcpy.AddMessage('-------------------------------------------------------------------------------------------------')
+        rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE','SHAPE@'],expression)
+        i=0
+        for row in rows:
+            arcpy.AddMessage('Start FID: ' + str(row[0]) + ' - processing Dataset: ' + row[1])
+            tabfile_org = row[1].replace('nas2520','cabcvan1nas003')
+            tabfile_path = ''
+            tab_file_name = os.path.basename(tabfile_org)
+            tab_file_org_path = os.path.dirname(tabfile_org)
+            # if os.path.isfile(tabfile_org_Path) > 0:
+            #     tabfile_Path = tabfile_org_Path
+            # else:
+            tabfile_path = find_file(tab_file_org_path, tab_file_name)
+            print('final dest path: %s' % tabfile_path)
+            # if os.path.exists(tabfile_Path):
+            #     tab_file = os.path.join(tabfile_Path, tab_file_name)
+            #     img_path_info = get_ImagePathandExt(tab_file)
+            #     print(img_path_info)
+            #     if len(imagePathInfo[0]) > 0:
+            #         if imagePathInfo[1].lower() in ['.tif','.jpg','.sid','.png','.tiff','.jpeg','.jp2','.ecw']:
+            #             metaData = get_Image_Metadata(imagePathInfo[0],imagePathInfo[1],row[0])
+            #             # footprint_Polygon = get_Footprint(image_Path)
+            #             footprint_Polygon = row[2].projectAs(srWGS84)
+            #             UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
+            #         else:
+            #             arcpy.AddWarning("FID : {} - Input raster: is not the type of Composite Geodataset, or does not exist".format(row[0]))
+            #             logger.warning("FID :, {}, Input raster: is not the type of Composite Geodataset, or does not exist:, {} ".format(row[0], row[1]))
+            #     else:
+            #         arcpy.AddWarning("FID :  {} -  Images is not available forthis path : {} ".format(row[0], row[1]))
+            #         logger.warning("FID : , {}, Images is not available for this path :, {} ".format(row[0], row[1]))
+            # else:
+            #     arcpy.AddWarning("FID : {} - Tab file Path is not valid or available for: ".format(row[0]))
+            #     logger.warning("FID : , {}, Tab file Path is not valid or available for:, {} ".format(row[0], row[1]))
+
     endTotal= timeit.default_timer()
     arcpy.AddMessage(('Total Duration:', round(endTotal -startTotal,4)))
-    
-    
-    
+
+
