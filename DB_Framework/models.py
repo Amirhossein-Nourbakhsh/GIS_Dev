@@ -49,7 +49,8 @@ class Order(object):
     def __getGeometry(self): # return geometry in WGS84 (GCS)/it is a private function which is used inside the class
         srWGS84 = arcpy.SpatialReference(4326)
         orderFC = db_connections.orderFC
-        orderGeom = arcpy.da.SearchCursor(orderFC,("SHAPE@"),"order_id = " + str(self.Id) ).next()[0]
+        # orderGeom = arcpy.da.SearchCursor(orderFC,("SHAPE@"),"order_id = " + str(self.Id) ).next()[0]
+        orderGeom = None
         if orderGeom == None:
             orderGeom = arcpy.Geometry()
             
