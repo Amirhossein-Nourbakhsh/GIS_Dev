@@ -1,13 +1,3 @@
-########################################################
- ## Name: Create ERIS Report and XML
- ## Source Name: Risk_Score_Report.py
- ## Version: ArcGIS 10.8
- ## Author: Hamid Kiavarz
- ##
- ## Description: Generates the PDF file for the Risk reports.
- ## Date July 2020
- ##############################################u##########
-
 # Import required modules
 import json,timeit
 import cx_Oracle, urllib, glob
