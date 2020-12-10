@@ -186,7 +186,7 @@ def export_reportimage(imagepath,ordergeometry,auid):
         geo_extent = geometry_layer.getExtent()
         df.extent = geo_extent
         print df.scale
-        if df.scale <= 7500 or image_source == 'DOQQ':
+        """if df.scale <= 7500 or image_source == 'DOQQ':
             if df.scale <= 7500 or image_source != 'DOQQ':
                 df.extent = geo_extent
                 df.scale = MapScale
@@ -199,8 +199,18 @@ def export_reportimage(imagepath,ordergeometry,auid):
                 h_res = 3300
         elif df.scale > 7500 and image_source != 'DOQQ':
             df.extent = image_extent
-            df.scale = df.scale*0.89 #very important setting as it defines how much of the image will be displayed to FE
+            df.scale = df.scale*0.91 #very important setting as it defines how much of the image will be displayed to FE
             w_res=2550
+            h_res= int((image_extent.height/image_extent.width)*w_res)"""
+        if image_source == 'DOQQ':
+            df.extent = geo_extent
+            df.scale = ((df.scale/100)+1)*100
+            w_res = 5100
+            h_res = 6600
+        elif image_source != 'DOQQ':
+            df.extent = image_extent
+            df.scale = ((df.scale/100)-1)*100 #very important setting as it defines how much of the image will be displayed to FE
+            w_res=5100
             h_res= int((image_extent.height/image_extent.width)*w_res)
             #if image_extent.width < 0 and image_extent.height < 0:
                 #w_res=int((image_extent.width*1000)*3)
@@ -252,7 +262,7 @@ def export_reportimage(imagepath,ordergeometry,auid):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '934489'#arcpy.GetParameterAsText(0)#'934465'#arcpy.GetParameterAsText(0)
+    orderID = '968430'#arcpy.GetParameterAsText(0)#'934465'#arcpy.GetParameterAsText(0)
     AUI_ID = ''#arcpy.GetParameterAsText(1)#''#arcpy.GetParameterAsText(1)
     scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
