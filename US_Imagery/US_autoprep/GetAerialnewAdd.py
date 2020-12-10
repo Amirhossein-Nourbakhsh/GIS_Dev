@@ -157,13 +157,13 @@ def export_reportimage(imagepath,auid):
         del mxd
 
 if __name__ == '__main__':
-    OrderID = '934647'#arcpy.GetParameterAsText(0)#'934404'#arcpy.GetParameterAsText(0)
-    AUI_ID = ''#arcpy.GetParameterAsText(1)
-    ee_oid = ''#arcpy.GetParameterAsText(2)#'408212'#arcpy.GetParameterAsText(2)
-    scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
+    OrderID = arcpy.GetParameterAsText(0)#'934404'#arcpy.GetParameterAsText(0)
+    AUI_ID = arcpy.GetParameterAsText(1)
+    ee_oid = arcpy.GetParameterAsText(2)#'408212'#arcpy.GetParameterAsText(2)
+    scratch = arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
-    georeferenced_historical = r'\\cabcvan1nas003\historical\Georeferenced_Aerial'
-    georeferenced_doqq = r'\\cabcvan1nas003\historical\Georeferenced_DOQQ'
+    georeferenced_historical = r'\\cabcvan1nas003\historical\Georeferenced_Aerial_test'
+    georeferenced_doqq = r'\\cabcvan1nas003\historical\Georeferenced_DOQQ_test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
     arcpy.env.OverwriteOutput = True
 
