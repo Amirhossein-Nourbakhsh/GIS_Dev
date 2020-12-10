@@ -214,7 +214,7 @@ if __name__ == '__main__':
     auid = arcpy.GetParameterAsText(1)
     # orderID = '934785'
     # auid = '29815903'
-    env = 'test'
+    env = 'prod'
     if str(orderID) != '' and str(auid) != '':
         mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
         MapScale = 6000
