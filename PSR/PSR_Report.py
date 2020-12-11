@@ -8,9 +8,8 @@ import gc, time
 import traceback
 from numpy import gradient
 from numpy import arctan2, arctan, sqrt
-import psr_config
-import wetland
-import flood_plain
+# import wetland
+# import flood_plain
 import os,sys, timeit
 sys.path.insert(1,os.path.join(os.getcwd(),'DB_Framework'))
 import models
@@ -44,6 +43,6 @@ if __name__ == "__main__":
    # Generate Wetland report
    # wetland.Generate_WetlandReport(order_obj)
    # Generate flood report
-   flood_plain.Generate_FloodReport(order_obj)
+   # flood_plain.Generate_FloodReport(order_obj)
    end = timeit.default_timer()
    arcpy.AddMessage(('End PSR report process. Duration:', round(end -start,4)))
