@@ -75,7 +75,10 @@ if __name__ == '__main__':
             elevation = getSingleElevation(xy,imgs[30],config.imgdir_demCA,30)
 
         if elevation is None:
-            elevation=''
+            elevation = getGoogleElevation(xy)
+        
+        if elevation is None:
+            elevation = ''
 
         arcpy.AddMessage("{0}: {1}".format('Elevation Output', elevation))
         arcpy.SetParameter(1,elevation)
