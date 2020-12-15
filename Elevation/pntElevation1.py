@@ -45,7 +45,7 @@ def getSingleElevation((X,Y),imglist,path,key):
     return None
 def getGoogleElevation((X,Y)):
     GOOGLE_URL = 'https://maps.googleapis.com/maps/api/elevation/json?locations='
-    googlekey = os.environ['googlemapsapikey']
+    googlekey = r'AIzaSyBmub_p_nY5jXrFMawPD8jdU0DgSrWfBic'
     url = GOOGLE_URL + str(Y)+','+str(X) + '&key='+googlekey
 
     with contextlib.closing(urllib.urlopen(url)) as x:
