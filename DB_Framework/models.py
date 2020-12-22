@@ -12,7 +12,7 @@ class Order(object):
     address = ''
     province = ''
     geometry = arcpy.Geometry()
-    def getbyId(self,order_Id):
+    def get_by_Id(self,order_Id):
         try:
             connectionString = db_connections.connectionString
             con = cx_Oracle.connect(connectionString)
@@ -46,7 +46,7 @@ class Order(object):
             cur.close()
             con.close()   
     @classmethod
-    def __getGeometry(self): # return geometry in WGS84 (GCS)/it is a private function which is used inside the class
+    def __getGeometry(self): # return geometry in WGS84 (GCS) / private function
         srWGS84 = arcpy.SpatialReference(4326)
         orderFC = db_connections.orderFC
         # orderGeom = arcpy.da.SearchCursor(orderFC,("SHAPE@"),"order_id = " + str(self.Id) ).next()[0]

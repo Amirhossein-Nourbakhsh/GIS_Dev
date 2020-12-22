@@ -33,11 +33,11 @@ def generate_singlepage_report(orderObj,mxd_wetland,outputjpg_wetland,scratchfol
     shutil.copy(outputjpg_wetland, os.path.join(psr_config.report_path, 'PSRmaps', str(orderObj.number)))
     arcpy.AddMessage('      --> Wetland Output: %s' % os.path.join(psr_config.report_path, 'PSRmaps', str(orderObj.number)))
     del mxd_wetland
-def generate_multipage_report(orderObj,mxd_wetland,outputjpg_wetland,bufferSHP_wetland,df_wetland,orderGeomlyrfile,scratchfolder):
+def generate_multipage_report(orderObj,mxd_wetland,outputjpg_wetland,buffer_wetland_shp,df_wetland,orderGeomlyrfile,scratchfolder):
     gridlr = "gridlr_wetland"   # gdb feature class doesn't work, could be a bug. So use .shp
     gridlrshp = os.path.join(scratchfolder, gridlr)
-    gridlrshp = arcpy.GridIndexFeatures_cartography(gridlrshp, bufferSHP_wetland, "", "", "", "2 MILES", "2 MILES")  #note the tool takes featureclass name only, not the full path
-    spatial_ref = arcpy.Describe(bufferSHP_wetland).spatialReference
+    gridlrshp = arcpy.GridIndexFeatures_cartography(gridlrshp, buffer_wetland_shp, "", "", "", "2 MILES", "2 MILES")  #note the tool takes featureclass name only, not the full path
+    spatial_ref = arcpy.Describe(buffer_wetland_shp).spatialReference
     # part 1: the overview map
     # add grid layer
     gridLayer = arcpy.mapping.Layer(psr_config.gridlyrfile)
@@ -101,10 +101,9 @@ def Generate_WetlandReport(orderObj):
     ### set paths
     orderGeo_GCS_shp= os.path.join(scratchfolder,"orderGeo_GCS_shp.shp")
     orderGeo_PCS_shp= os.path.join(scratchfolder,"orderGeometry_PCS.shp")
-    bufferSHP_wetland = os.path.join(scratchfolder,"buffer_wetland.shp")
-    outputjpg_wetland = os.path.join(scratchfolder, str(orderObj.Id) +'_US_WETL.jpg')
+    buffer_wetland_shp = os.path.join(scratchfolder,"buffer_wetland.shp")
+    output_wetland_jpg = os.path.join(scratchfolder, str(orderObj.number) +'_US_WETL.jpg')
     outputjpg_wetlandNY = os.path.join(scratchfolder, str(orderObj.number)+'_NY_WETL.jpg')
-    gridsize = "2 MILES"
     centre_point = orderObj.geometry.trueCentroid
     sr = arcpy.GetUTMFromLocation(centre_point.X,centre_point.Y)
     orderGeometry_PCS = orderObj.geometry.projectAs(sr)
@@ -115,7 +114,7 @@ def Generate_WetlandReport(orderObj):
         ### Wetland Map
         wetland_radius = next(psrObj.search_radius for psrObj in psr_list if psrObj.type == 'wetland')
         bufferDist_wetland = str(wetland_radius) + ' MILES'
-        arcpy.Buffer_analysis(orderGeo_PCS_shp, bufferSHP_wetland, bufferDist_wetland)
+        arcpy.Buffer_analysis(orderGeo_PCS_shp, buffer_wetland_shp, bufferDist_wetland)
         mxd_wetland = arcpy.mapping.MapDocument(psr_config.mxdfile_wetland)
         df_wetland = arcpy.mapping.ListDataFrames(mxd_wetland,"big")[0]
         df_wetland.spatialReference = sr
@@ -127,9 +126,9 @@ def Generate_WetlandReport(orderObj):
         arcpy.AddMessage('      --> multiple pages: %s' % str(multipage_wetland))
         # print the maps
         if multipage_wetland == False:  # sinle page report
-           generate_singlepage_report(orderObj,mxd_wetland,outputjpg_wetland,scratchfolder)
+           generate_singlepage_report(orderObj,mxd_wetland,output_wetland_jpg,scratchfolder)
         else:                           # multipage report
-            generate_multipage_report(orderObj,mxd_wetland,outputjpg_wetland,bufferSHP_wetland,df_wetland,orderGeomlyrfile,scratchfolder)
+            generate_multipage_report(orderObj,mxd_wetland,output_wetland_jpg,buffer_wetland_shp,df_wetland,orderGeomlyrfile,scratchfolder)
         end = timeit.default_timer()
         arcpy.AddMessage((' -- End generating PSR Wetland report. Duration:', round(end -start,4)))
     else:
@@ -138,7 +137,7 @@ def Generate_WetlandReport(orderObj):
    ### Create wetlan report for Newyork province
     if orderObj.province =='NY':
         arcpy.AddMessage ("      --> Starting NY wetland section: " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-        bufferSHP_wetland = os.path.join(scratchfolder,"buffer_wetland.shp")
+        buffer_wetland_shp = os.path.join(scratchfolder,"buffer_wetland.shp")
         mxd_wetlandNY = arcpy.mapping.MapDocument(psr_config.mxdfile_wetlandNY)
         df_wetlandNY = arcpy.mapping.ListDataFrames(mxd_wetlandNY,"big")[0]
         df_wetlandNY.spatialReference = sr
@@ -154,9 +153,9 @@ def Generate_WetlandReport(orderObj):
             del mxd_wetlandNY
             del df_wetlandNY
         else:                           # multipage
-            gridlr = "gridlr_wetland"
-            gridlrshp = os.path.join(scratchfolder, gridlr)
-            arcpy.GridIndexFeatures_cartography(gridlrshp, bufferSHP_wetland, "", "", "", gridsize, gridsize)  #note the tool takes featureclass name only, not the full path
+            grid_lyr = "gridlr_wetland"
+            gridlrshp = os.path.join(scratchfolder, grid_lyr)
+            arcpy.GridIndexFeatures_cartography(gridlrshp, buffer_wetland_shp, "", "", "", psr_config.grid_size, psr_config.grid_size)  #note the tool takes featureclass name only, not the full path
 
             # part 1: the overview map
             # add grid layer

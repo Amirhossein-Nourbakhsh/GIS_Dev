@@ -688,12 +688,12 @@ if __name__ == '__main__':
     try:
         # INPUT #####################################
         OrderIDText = ""#'#arcpy.GetParameterAsText(0).strip()#'736799'#
-        OrderNumText = "20300700173"
+        OrderNumText = "20321000276"
         multipage = False #True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
         gridsize = '2 Miles'#arcpy.GetParameterAsText(2).strip()#0#
         code = 'usa'#arcpy.GetParameterAsText(3).strip()#'usa'#
         isInstant = False #True if arcpy.GetParameterAsText(4).strip().lower()=='yes'else False
-        scratch = os.path.join(r"W:\Data Analysts\Alison\_GIS\DB_SCRATCHY", OrderNumText) 
+        scratch = os.path.join(r"C:\Users\HKiavarz\Documents\Scratch", OrderNumText) 
 
         # GET ORDER_ID FROM ORDER_NUM
         if OrderIDText == "":

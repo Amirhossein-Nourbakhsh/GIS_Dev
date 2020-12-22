@@ -1182,7 +1182,6 @@ try:
                 availPanels = availPanels + in_row.FIRM_PAN+'(effective:' + str(in_row.EFF_DATE)[0:10]+') '
             del in_row
             del in_rows
-
         try:
             con = cx_Oracle.connect(connectionString)
             cur = con.cursor()

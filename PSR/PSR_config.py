@@ -37,7 +37,7 @@ connectionPath = r"\\cabcvan1gis005\GISData\PSR\python"
 orderGeomlyrfile_point = r"\\cabcvan1gis005\GISData\PSR\python\mxd\SiteMaker.lyr"
 orderGeomlyrfile_polyline = r"\\cabcvan1gis005\GISData\PSR\python\mxd\orderLine.lyr"
 orderGeomlyrfile_polygon = r"\\cabcvan1gis005\GISData\PSR\python\mxd\orderPoly.lyr"
-bufferlyrfile = r"\\cabcvan1gis005\GISData\PSR\python\mxd\buffer.lyr"
+buffer_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\buffer.lyr"
 topowhitelyrfile = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo_white.lyr"
 gridlyrfile = r"\\cabcvan1gis005\GISData\PSR\python\mxd\Grid_hollow.lyr"
 relieflyrfile = r"\\cabcvan1gis005\GISData\PSR\python\mxd\relief.lyr"
@@ -49,8 +49,10 @@ tifdir_topo = r"\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff"
 
 data_shadedrelief = r"\\cabcvan1fpr009\US_DEM\CellGrid_1X1Degree_NW.shp"
 data_geol = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\GEOL_DD_MERGE'
-data_flood = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\S_Fld_haz_Ar_merged2018'
-data_floodpanel = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\S_FIRM_PAN_MERGED2018'
+# data_flood = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\S_Fld_Haz_Ar_merged2018'
+data_flood = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\flood_map_wgs84'
+
+data_flood_panel = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\flood_panel_map_wgs84'
 data_wetland = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\Merged_wetland_Final'
 eris_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\ErisWellSites.lyr"   #which contains water, oil/gas wells etc.
 path_shadedrelief = r"\\cabcvan1fpr009\US_DEM\hillshade13"
@@ -83,8 +85,8 @@ mxdfile_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland.mxd"
 mxdfile_wetlandNY = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandNY_CC.mxd"
 mxdMMfile_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandMM.mxd"
 mxdMMfile_wetlandNY = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandMMNY.mxd"
-mxdfile_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.mxd"
-mxdMMfile_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\floodMM.mxd"
+mxd_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.mxd"
+mxd_mm_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\floodMM.mxd"
 mxdfile_geol = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.mxd"
 mxdMMfile_geol = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geologyMM.mxd"
 mxdfile_soil = r"\\cabcvan1gis005\GISData\PSR\python\mxd\soil.mxd"
@@ -120,7 +122,8 @@ fc_soils_keylist = ['muaggatt.mukey', 'component.cokey','chorizon.chkey','chtext
 fc_soils_whereClause_queryTable = "muaggatt.mukey = component.mukey and component.cokey = chorizon.cokey and chorizon.chkey = chtexturegrp.chkey"
 
 tbx = r"\\cabcvan1gis005\GISData\PSR\python\ERIS.tbx"
-
+# grid size
+grid_size = "2 MILES"
 # Explorer
 datalyr_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland_kml.lyr"
 datalyr_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.lyr"
