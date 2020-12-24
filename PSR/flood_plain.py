@@ -70,11 +70,10 @@ def generate_flood_report(order_obj):
         psr_utility.add_layer_to_mxd("buffer_flood",df_flood,psr_config.buffer_lyr_file, 1.1)
         psr_utility.add_layer_to_mxd("order_geometry_pcs", df_flood,order_geom_lyr_file,1)
         arcpy.RefreshActiveView();
-        
+        arcpy.AddMessage('      - multiple pages: %s' % str(psr_utility.if_multipage(order_geometry_pcs_shp)))
         if not psr_utility.if_multipage(order_geometry_pcs_shp): # single-page
-           
             mxd_flood.saveACopy(os.path.join(scratch_folder, "mxd_flood.mxd"))  
-            arcpy.mapping.ExportToJPEG(mxd_flood, output_jpg_flood, "PAGE_LAYOUT", resolution=150, jpeg_quality=85)
+            arcpy.mapping.ExportToJPEG(mxd_flood, output_jpg_flood, "PAGE_LAYOUT", resolution=75, jpeg_quality=40)
             if not os.path.exists(os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number)):
                 os.mkdir(os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number))
             arcpy.AddMessage('      - output jpg image path (overview map): %s' % os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number,os.path.basename(output_jpg_flood)))
@@ -95,7 +94,7 @@ def generate_flood_report(order_obj):
             df_flood.scale = df_flood.scale * 1.1
 
             mxd_flood.saveACopy(os.path.join(scratch_folder, "mxd_flood.mxd"))
-            arcpy.mapping.ExportToJPEG(mxd_flood, output_jpg_flood, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+            arcpy.mapping.ExportToJPEG(mxd_flood, output_jpg_flood, "PAGE_LAYOUT", 480, 640, 75, "False", "24-BIT_TRUE_COLOR", 40)
             if not os.path.exists(os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number)):
                 os.mkdir(os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number))
             shutil.copy(output_jpg_flood, os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number))
@@ -128,7 +127,7 @@ def generate_flood_report(order_obj):
                 titleTextE.elementPositionX = 0.5946
                 arcpy.RefreshTOC()
 
-                arcpy.mapping.ExportToJPEG(mxd_multi_flood, output_jpg_flood[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+                arcpy.mapping.ExportToJPEG(mxd_multi_flood, output_jpg_flood[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 75, "False", "24-BIT_TRUE_COLOR", 40)
                 if not os.path.exists(os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number)):
                     os.mkdir(os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number))
                 shutil.copy(output_jpg_flood[0:-4]+str(i)+".jpg", os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number))
@@ -152,8 +151,8 @@ def generate_flood_report(order_obj):
                 # panel available, just not records in area
                 in_rows = arcpy.SearchCursor(flood_panel_selectedby_order_shp)
                 for in_row in in_rows:
-                    arcpy.AddMessage(": " + in_row.FIRM_PAN)    # panel number
-                    arcpy.AddMessage(in_row.EFF_DATE)      # effective date
+                    arcpy.AddMessage('      - : ' + in_row.FIRM_PAN)    # panel number
+                    arcpy.AddMessage('      - %s' % in_row.EFF_DATE)      # effective date
                     flood_panels = flood_panels + in_row.FIRM_PAN+'(effective:' + str(in_row.EFF_DATE)[0:10]+') '
                     del in_row
                 del in_rows
@@ -167,8 +166,8 @@ def generate_flood_report(order_obj):
         else:
             in_rows = arcpy.SearchCursor(flood_panel_selectedby_order_shp)
             for in_row in in_rows:
-                arcpy.AddMessage(": " + in_row.FIRM_PAN)      # panel number
-                arcpy.AddMessage(in_row.EFF_DATE)             # effective date
+                arcpy.AddMessage('      : ' + in_row.FIRM_PAN)      # panel number
+                arcpy.AddMessage('      - %s' %in_row.EFF_DATE)             # effective date
                 flood_panels = flood_panels + in_row.FIRM_PAN+'(effective:' + str(in_row.EFF_DATE)[0:10]+') '
                 del in_row
             del in_rows
@@ -199,4 +198,5 @@ def generate_flood_report(order_obj):
             
     else:
         arcpy.AddWarning('      - There is no floorplain PSR for this Order!')
-    arcpy.AddMessage('  -- End generating PSR flood report...')
+    end = timeit.default_timer()
+    arcpy.AddMessage((' -- End generating PSR flood report. Duration:', round(end -start,4)))

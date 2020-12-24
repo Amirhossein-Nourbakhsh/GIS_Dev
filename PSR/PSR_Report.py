@@ -22,9 +22,9 @@ psr_list = []
 
 if __name__ == "__main__":
 
-   order_id = '930894' #single pages: 20292800115 - 20200814009
+   # order_id = '930894' #single pages: 20292800115 - 20200814009
    # order_id = '462873' # no psr ->'354268' ## newyork
-   # order_id = '932499' # multi page
+   order_id = '932499' # multi page
    arcpy.AddMessage('Start PSR report...')
    start = timeit.default_timer() 
  ### set scratch folder  
@@ -40,7 +40,7 @@ if __name__ == "__main__":
    order_obj = models.Order().get_by_Id(order_id)
 
    # Wetland report
-   # wetland.Generate_WetlandReport(order_obj)
+   wetland.Generate_WetlandReport(order_obj)
    
    # flood report
    flood_plain.generate_flood_report(order_obj)
