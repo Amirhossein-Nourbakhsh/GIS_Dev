@@ -85,12 +85,12 @@ def generate_multipage_report(orderObj,mxd_wetland,outputjpg_wetland,buffer_wetl
     del mxdMM_wetland
     del dfMM_wetland
     
-def Generate_WetlandReport(orderObj):
+def Generate_WetlandReport(order_obj):
     arcpy.AddMessage('  -- Start generating PSR wetland report...')
     start = timeit.default_timer()   
-    if orderObj.geometry.type.lower()== 'point':
+    if order_obj.geometry.type.lower()== 'point':
         orderGeomlyrfile = psr_config.orderGeomlyrfile_point
-    elif orderObj.geometry.type.lower() =='polyline':
+    elif order_obj.geometry.type.lower() =='polyline':
         orderGeomlyrfile = psr_config.orderGeomlyrfile_polyline
     else: #polygon
         orderGeomlyrfile = psr_config.orderGeomlyrfile_polygon
@@ -102,14 +102,14 @@ def Generate_WetlandReport(orderObj):
     orderGeo_GCS_shp= os.path.join(scratchfolder,"orderGeo_GCS_shp.shp")
     orderGeo_PCS_shp= os.path.join(scratchfolder,"orderGeometry_PCS.shp")
     buffer_wetland_shp = os.path.join(scratchfolder,"buffer_wetland.shp")
-    output_wetland_jpg = os.path.join(scratchfolder, str(orderObj.number) +'_US_WETL.jpg')
-    outputjpg_wetlandNY = os.path.join(scratchfolder, str(orderObj.number)+'_NY_WETL.jpg')
-    centre_point = orderObj.geometry.trueCentroid
+    output_wetland_jpg = os.path.join(scratchfolder, str(order_obj.number) +'_US_WETL.jpg')
+    outputjpg_wetlandNY = os.path.join(scratchfolder, str(order_obj.number)+'_NY_WETL.jpg')
+    centre_point = order_obj.geometry.trueCentroid
     sr = arcpy.GetUTMFromLocation(centre_point.X,centre_point.Y)
-    orderGeometry_PCS = orderObj.geometry.projectAs(sr)
+    orderGeometry_PCS = order_obj.geometry.projectAs(sr)
     arcpy.CopyFeatures_management(orderGeometry_PCS, orderGeo_PCS_shp)
     multipage_wetland = if_multipage(orderGeo_PCS_shp)
-    psr_list = orderObj.getPSR()
+    psr_list = order_obj.getPSR()
     if len(psr_list) > 0:
         ### Wetland Map
         wetland_radius = next(psrObj.search_radius for psrObj in psr_list if psrObj.type == 'wetland')
@@ -126,16 +126,16 @@ def Generate_WetlandReport(orderObj):
         arcpy.AddMessage('      --> multiple pages: %s' % str(multipage_wetland))
         # print the maps
         if multipage_wetland == False:  # sinle page report
-           generate_singlepage_report(orderObj,mxd_wetland,output_wetland_jpg,scratchfolder)
+           generate_singlepage_report(order_obj,mxd_wetland,output_wetland_jpg,scratchfolder)
         else:                           # multipage report
-            generate_multipage_report(orderObj,mxd_wetland,output_wetland_jpg,buffer_wetland_shp,df_wetland,orderGeomlyrfile,scratchfolder)
+            generate_multipage_report(order_obj,mxd_wetland,output_wetland_jpg,buffer_wetland_shp,df_wetland,orderGeomlyrfile,scratchfolder)
         end = timeit.default_timer()
         arcpy.AddMessage((' -- End generating PSR Wetland report. Duration:', round(end -start,4)))
     else:
         arcpy.AddWarning('There is no wetland PSR for this Order!')
    
    ### Create wetlan report for Newyork province
-    if orderObj.province =='NY':
+    if order_obj.province =='NY':
         arcpy.AddMessage ("      --> Starting NY wetland section: " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
         buffer_wetland_shp = os.path.join(scratchfolder,"buffer_wetland.shp")
         mxd_wetlandNY = arcpy.mapping.MapDocument(psr_config.mxdfile_wetlandNY)
@@ -148,8 +148,8 @@ def Generate_WetlandReport(orderObj):
         if multipage_wetland == False:
             mxd_wetlandNY.saveACopy(os.path.join(scratchfolder, "mxd_wetlandNY.mxd"))
             arcpy.mapping.ExportToJPEG(mxd_wetlandNY, outputjpg_wetlandNY, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-            shutil.copy(outputjpg_wetlandNY, os.path.join(psr_config.report_path, 'PSRmaps', orderObj.number))
-            arcpy.AddMessage('      --> Wetland Output for NY state: %s' % os.path.join(psr_config.report_path, 'PSRmaps', orderObj.number))
+            shutil.copy(outputjpg_wetlandNY, os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number))
+            arcpy.AddMessage('      --> Wetland Output for NY state: %s' % os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number))
             del mxd_wetlandNY
             del df_wetlandNY
         else:                           # multipage
@@ -168,16 +168,15 @@ def Generate_WetlandReport(orderObj):
 
             mxd_wetlandNY.saveACopy(os.path.join(scratchfolder, "mxd_wetlandNY.mxd"))
             arcpy.mapping.ExportToJPEG(mxd_wetlandNY, outputjpg_wetlandNY, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-            if not os.path.exists(os.path.join(psr_config.report_path, 'PSRmaps', orderObj.number)):
-                os.mkdir(os.path.join(psr_config.report_path, 'PSRmaps', orderObj.number))
-            shutil.copy(outputjpg_wetlandNY, os.path.join(psr_config.report_path, 'PSRmaps', orderObj.number))
+            if not os.path.exists(os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number)):
+                os.mkdir(os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number))
+            shutil.copy(outputjpg_wetlandNY, os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number))
 
             del mxd_wetlandNY
             del df_wetlandNY
 
             # part 2: the data driven pages
             
-
             page = int(arcpy.GetCount_management(gridlrshp).getOutput(0))  + page
             mxdMM_wetlandNY = arcpy.mapping.MapDocument(psr_config.mxdMMfile_wetlandNY)
 
@@ -200,13 +199,14 @@ def Generate_WetlandReport(orderObj):
                 titleTextE.elementPositionX = 0.468
                 arcpy.RefreshTOC()
                 arcpy.mapping.ExportToJPEG(mxdMM_wetlandNY, outputjpg_wetlandNY[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-                if not os.path.exists(os.path.join(psr_config.report_path, 'PSRmaps', orderObj.number)):
-                    os.mkdir(os.path.join(psr_config.report_path, 'PSRmaps', orderObj.number))
-                shutil.copy(outputjpg_wetlandNY[0:-4]+str(i)+".jpg", os.path.join(psr_config.report_path, 'PSRmaps', orderObj.number))
-                arcpy.AddMessage('      --> Wetland Output for NY state: %s' % os.path.join(psr_config.report_path, 'PSRmaps', orderObj.number))
+                if not os.path.exists(os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number)):
+                    os.mkdir(os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number))
+                shutil.copy(outputjpg_wetlandNY[0:-4]+str(i)+".jpg", os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number))
+                arcpy.AddMessage('      --> Wetland Output for NY state: %s' % os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number))
             del mxdMM_wetlandNY
             del dfMM_wetlandNY
-        psrObj = models.PSR()
+        psr_obj = models.PSR()
         for i in range(1,page): ##insert generated .jpg report path into eris_maps_psr table
-            psrObj.insert_report(orderObj,i)
+            psr_obj.insert_map(order_obj.id, 'WETLAND', order_obj.number +'_NY_WETL'+str(i)+'.jpg', int(i)+1)
+           
    
