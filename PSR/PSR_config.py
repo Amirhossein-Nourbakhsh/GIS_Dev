@@ -22,7 +22,11 @@ def server_loc_config(configpath,environment):
         return server_config
     else:
         return 'invalid server configuration'
-
+class Report_Type:
+    wetland = 'wetland'
+    flood = 'flood'
+    topo = 'topo'
+    
 server_environment = 'test'
 server_config_file = r'\\cabcvan1gis006\GISData\ERISServerConfig.ini'
 server_config = server_loc_config(server_config_file,server_environment)
@@ -33,6 +37,8 @@ upload_link = server_config['viewer_upload']+r"/ErisInt/BIPublisherPortal_prod/V
 #production: upload_link = r"http://CABCVAN1OBI002/ErisInt/BIPublisherPortal_prod/Viewer.svc/"
 reportcheck_path = server_config['reportcheck']
 connectionPath = r"\\cabcvan1gis005\GISData\PSR\python"
+
+scratch_folder=  arcpy.env.scratchFolder
 
 orderGeomlyrfile_point = r"\\cabcvan1gis005\GISData\PSR\python\mxd\SiteMaker.lyr"
 orderGeomlyrfile_polyline = r"\\cabcvan1gis005\GISData\PSR\python\mxd\orderLine.lyr"
@@ -128,3 +134,20 @@ grid_size = "2 MILES"
 datalyr_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland_kml.lyr"
 datalyr_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.lyr"
 datalyr_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.lyr"
+
+
+def output_jpg(order_obj, report_type):
+    if report_type == Report_Type.wetland :
+        return os.path.join(scratch_folder, str(order_obj.number) +'_US_WETL.jpg')
+    elif report_type == Report_Type.flood:
+        return os.path.join(scratch_folder, order_obj.number + '_US_FLOOD.jpg')
+    elif report_type == Report_Type.topo:
+        return os.path.join(scratch_folder, order_obj.number+'_US_TOPO.jpg')
+### order geometry paths config
+order_geometry_pcs_shp =  os.path.join(scratch_folder,'order_geometry_pcs.shp')
+order_geometry_gcs_shp =  os.path.join(scratch_folder,'order_geometry_gcs.shp')
+order_buffer_shp =  os.path.join(scratch_folder,'order_buffer.shp')
+### flood report paths config
+order_buffer_flood_shp = os.path.join(scratch_folder,'order_buffer_flood.shp')
+flood_selectedby_order_shp = os.path.join(scratch_folder,"flood_selectedby_order.shp")
+flood_panel_selectedby_order_shp = os.path.join(scratch_folder,"flood_panel_selectedby_order.shp")

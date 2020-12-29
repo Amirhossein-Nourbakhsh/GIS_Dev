@@ -14,7 +14,7 @@ sys.path.insert(1,os.path.join(os.path.dirname(file_path),'DB_Framework'))
 import models
 import wetland
 import flood_plain
-import psr_config
+import topo
 
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -39,10 +39,12 @@ if __name__ == "__main__":
    
    order_obj = models.Order().get_by_Id(order_id)
 
-   # Wetland report
-   wetland.Generate_WetlandReport(order_obj)
-   
-   # flood report
+   # topo map report
+   # topo.generate_topo_report(order_obj)
+
+   # # Wetland report
+   # wetland.generate_wetland_report(order_obj)
+   # # flood report
    flood_plain.generate_flood_report(order_obj)
    
    end = timeit.default_timer()

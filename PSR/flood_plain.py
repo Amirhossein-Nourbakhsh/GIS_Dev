@@ -13,19 +13,12 @@ def generate_flood_report(order_obj):
     arcpy.AddMessage('  -- Start generating PSR flood report...')
     start = timeit.default_timer()   
     ### set scratch folder
-    scratch_folder =  arcpy.env.scratchFolder
-    arcpy.env.workspace = scratch_folder
+    arcpy.env.workspace = psr_config.scratch_folder
     arcpy.env.overwriteOutput = True   
-    arcpy.AddMessage('      - scratch folder: %s' %scratch_folder)
+    arcpy.AddMessage('      - scratch folder: %s' % psr_config.scratch_folder)
+    
     eris_id = 0
-    ### set paths
-    order_buffer_shp = os.path.join(scratch_folder,"buffer_flood.shp")
-    order_geometry_pcs_shp =  os.path.join(scratch_folder,"order_geometry_pcs.shp")
-    order_geometry_gcs_shp =  os.path.join(scratch_folder,"order_geometry_gcs.shp")
-    flood_selectedby_order_shp = os.path.join(scratch_folder,"flood_selectedby_order.shp")
-    flood_panel_selectedby_order_shp = os.path.join(scratch_folder,"flood_panel_selectedby_order.shp")
-    output_jpg_flood = os.path.join(scratch_folder, order_obj.number + '_US_FLOOD.jpg')
-    tempGDB = os.path.join(scratch_folder,r"temp.gdb")
+    output_jpg_flood = psr_config.output_jpg(order_obj,psr_config.Report_Type.flood)
     ### set geometry layer file
     if order_obj.geometry.type.lower() in ['point','multipoint']:
         order_geom_lyr_file = psr_config.orderGeomlyrfile_point
@@ -37,8 +30,8 @@ def generate_flood_report(order_obj):
     centre_point = order_obj.geometry.trueCentroid
     spatial_ref_pcs = arcpy.GetUTMFromLocation(centre_point.X,centre_point.Y)
     order_geometry_pcs = order_obj.geometry.projectAs(spatial_ref_pcs)
-    arcpy.CopyFeatures_management(order_obj.geometry, order_geometry_gcs_shp)
-    arcpy.CopyFeatures_management(order_geometry_pcs, order_geometry_pcs_shp)
+    arcpy.CopyFeatures_management(order_obj.geometry, psr_config.order_geometry_gcs_shp)
+    arcpy.CopyFeatures_management(order_geometry_pcs, psr_config.order_geometry_pcs_shp)
     ### extract buffer size for flood report
     psr_list = order_obj.get_psr()
     page = 1
@@ -46,18 +39,18 @@ def generate_flood_report(order_obj):
         buffer_radius = next(psrObj.search_radius for psrObj in psr_list if psrObj.type == 'flood')
        
         order_buffer_dist = str(buffer_radius) + ' MILES'
-        arcpy.Buffer_analysis(order_geometry_pcs, order_buffer_shp, order_buffer_dist) ### create buffer map based on order geometry
+        arcpy.Buffer_analysis(order_geometry_pcs, psr_config.order_buffer_shp, order_buffer_dist) ### create buffer map based on order geometry
         
         arcpy.MakeFeatureLayer_management(psr_config.data_flood, 'flood_lyr') 
-        arcpy.SelectLayerByLocation_management('flood_lyr', 'intersect', order_buffer_shp)
-        arcpy.CopyFeatures_management('flood_lyr', flood_selectedby_order_shp)
+        arcpy.SelectLayerByLocation_management('flood_lyr', 'intersect',  psr_config.order_buffer_shp)
+        arcpy.CopyFeatures_management('flood_lyr', psr_config.flood_selectedby_order_shp)
         
         arcpy.MakeFeatureLayer_management(psr_config.data_flood_panel, 'flood_panel_lyr') 
-        arcpy.SelectLayerByLocation_management('flood_panel_lyr', 'intersect', order_buffer_shp)
-        arcpy.CopyFeatures_management('flood_panel_lyr', flood_panel_selectedby_order_shp)
+        arcpy.SelectLayerByLocation_management('flood_panel_lyr', 'intersect',  psr_config.order_buffer_shp)
+        arcpy.CopyFeatures_management('flood_panel_lyr', psr_config.flood_panel_selectedby_order_shp)
         
-        arcpy.Statistics_analysis(flood_selectedby_order_shp, os.path.join(scratch_folder,"summary_flood.dbf"), [['FLD_ZONE','FIRST'], ['ZONE_SUBTY','FIRST']],'ERIS_CLASS')
-        arcpy.Sort_management(os.path.join(scratch_folder,"summary_flood.dbf"), os.path.join(scratch_folder,"summary_sorted_flood.dbf"), [["ERIS_CLASS", "ASCENDING"]])
+        arcpy.Statistics_analysis(psr_config.flood_selectedby_order_shp, os.path.join(psr_config.scratch_folder,"summary_flood.dbf"), [['FLD_ZONE','FIRST'], ['ZONE_SUBTY','FIRST']],'ERIS_CLASS')
+        arcpy.Sort_management(os.path.join(psr_config.scratch_folder,"summary_flood.dbf"), os.path.join(psr_config.scratch_folder,"summary_sorted_flood.dbf"), [["ERIS_CLASS", "ASCENDING"]])
         
         mxd_flood = arcpy.mapping.MapDocument(psr_config.mxd_file_flood)
         df_flood = arcpy.mapping.ListDataFrames(mxd_flood,"Flood*")[0]
@@ -70,9 +63,9 @@ def generate_flood_report(order_obj):
         psr_utility.add_layer_to_mxd("buffer_flood",df_flood,psr_config.buffer_lyr_file, 1.1)
         psr_utility.add_layer_to_mxd("order_geometry_pcs", df_flood,order_geom_lyr_file,1)
         arcpy.RefreshActiveView();
-        arcpy.AddMessage('      - multiple pages: %s' % str(psr_utility.if_multipage(order_geometry_pcs_shp)))
-        if not psr_utility.if_multipage(order_geometry_pcs_shp): # single-page
-            mxd_flood.saveACopy(os.path.join(scratch_folder, "mxd_flood.mxd"))  
+        arcpy.AddMessage('      - multiple pages: %s' % str(psr_utility.if_multipage(psr_config.order_geometry_pcs_shp)))
+        if not psr_utility.if_multipage(psr_config.order_geometry_pcs_shp): # single-page
+            mxd_flood.saveACopy(os.path.join(psr_config.scratch_folder, "mxd_flood.mxd"))  
             arcpy.mapping.ExportToJPEG(mxd_flood, output_jpg_flood, "PAGE_LAYOUT", resolution=75, jpeg_quality=40)
             if not os.path.exists(os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number)):
                 os.mkdir(os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number))
@@ -81,19 +74,19 @@ def generate_flood_report(order_obj):
             del mxd_flood
             del df_flood
         else: # multi-page
-            grid_lyr_shp = os.path.join(scratch_folder, 'grid_lyr_flood.shp')
-            arcpy.GridIndexFeatures_cartography(grid_lyr_shp, order_buffer_shp, "", "", "", psr_config.grid_size, psr_config.grid_size)
+            grid_lyr_shp = os.path.join(psr_config.scratch_folder, 'grid_lyr_flood.shp')
+            arcpy.GridIndexFeatures_cartography(grid_lyr_shp, psr_config.order_buffer_shp, "", "", "", psr_config.grid_size, psr_config.grid_size)
             
             # part 1: the overview map
             # add grid layer
             grid_layer = arcpy.mapping.Layer(psr_config.gridlyrfile)
-            grid_layer.replaceDataSource(scratch_folder,"SHAPEFILE_WORKSPACE","grid_lyr_flood")
+            grid_layer.replaceDataSource(psr_config.scratch_folder,"SHAPEFILE_WORKSPACE","grid_lyr_flood")
             arcpy.mapping.AddLayer(df_flood,grid_layer,"Top")
 
             df_flood.extent = grid_layer.getExtent()
             df_flood.scale = df_flood.scale * 1.1
 
-            mxd_flood.saveACopy(os.path.join(scratch_folder, "mxd_flood.mxd"))
+            mxd_flood.saveACopy(os.path.join(psr_config.scratch_folder, "mxd_flood.mxd"))
             arcpy.mapping.ExportToJPEG(mxd_flood, output_jpg_flood, "PAGE_LAYOUT", 480, 640, 75, "False", "24-BIT_TRUE_COLOR", 40)
             if not os.path.exists(os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number)):
                 os.mkdir(os.path.join(psr_config.report_path, 'PSRmaps', order_obj.number))
@@ -112,9 +105,9 @@ def generate_flood_report(order_obj):
             psr_utility.add_layer_to_mxd("order_geometry_pcs", df_mm_flood,order_geom_lyr_file,1)
             
             grid_layer_mm = arcpy.mapping.ListLayers(mxd_multi_flood,"Grid" ,df_mm_flood)[0]
-            grid_layer_mm.replaceDataSource(scratch_folder,"SHAPEFILE_WORKSPACE","grid_lyr_flood")
+            grid_layer_mm.replaceDataSource(psr_config.scratch_folder,"SHAPEFILE_WORKSPACE","grid_lyr_flood")
             arcpy.CalculateAdjacentFields_cartography(grid_lyr_shp, "PageNumber")
-            mxd_multi_flood.saveACopy(os.path.join(scratch_folder, "mxd_mm_flood.mxd"))
+            mxd_multi_flood.saveACopy(os.path.join(psr_config.scratch_folder, "mxd_mm_flood.mxd"))
             
             for i in range(1,int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0)) + 1):
                 arcpy.SelectLayerByAttribute_management(grid_layer_mm, "NEW_SELECTION", ' "PageNumber" =  ' + str(i))
@@ -141,15 +134,15 @@ def generate_flood_report(order_obj):
             
         flood_panels = ''
         psr_obj = models.PSR()
-        if (int(arcpy.GetCount_management(os.path.join(scratch_folder,"summary_flood.dbf")).getOutput(0))== 0):
+        if (int(arcpy.GetCount_management(os.path.join(psr_config.scratch_folder,"summary_flood.dbf")).getOutput(0))== 0):
             # no floodplain records selected....
             arcpy.AddMessage('      - No floodplain records are selected....')
-            if (int(arcpy.GetCount_management(flood_panel_selectedby_order_shp).getOutput(0))== 0):
+            if (int(arcpy.GetCount_management(psr_config.flood_panel_selectedby_order_shp).getOutput(0))== 0):
                 # no panel available, means no data
                 arcpy.AddMessage('      - no panels available in the area')
             else:
                 # panel available, just not records in area
-                in_rows = arcpy.SearchCursor(flood_panel_selectedby_order_shp)
+                in_rows = arcpy.SearchCursor(psr_config.flood_panel_selectedby_order_shp)
                 for in_row in in_rows:
                     arcpy.AddMessage('      - : ' + in_row.FIRM_PAN)    # panel number
                     arcpy.AddMessage('      - %s' % in_row.EFF_DATE)      # effective date
@@ -164,7 +157,7 @@ def generate_flood_report(order_obj):
                 psr_obj.insert_flex_rep(order_obj, eris_id, '10683', 2, 'N', 1, 'Available FIRM Panels in area: ', flood_panels)
             psr_obj.insert_map(order_obj.id, 'FLOOD', order_obj.number + '_US_FLOOD.jpg', 1)
         else:
-            in_rows = arcpy.SearchCursor(flood_panel_selectedby_order_shp)
+            in_rows = arcpy.SearchCursor(psr_config.flood_panel_selectedby_order_shp)
             for in_row in in_rows:
                 arcpy.AddMessage('      : ' + in_row.FIRM_PAN)      # panel number
                 arcpy.AddMessage('      - %s' %in_row.EFF_DATE)             # effective date
@@ -173,7 +166,7 @@ def generate_flood_report(order_obj):
             del in_rows
 
             flood_IDs =[]
-            in_rows = arcpy.SearchCursor(os.path.join(scratch_folder,"summary_flood.dbf"))
+            in_rows = arcpy.SearchCursor(os.path.join(psr_config.scratch_folder,"summary_flood.dbf"))
             eris_id += 1
             psr_obj.insert_order_detail(order_obj.id , eris_id, '10683')
             psr_obj.insert_flex_rep(order_obj.id, eris_id, '10683', 2, 'N', 1, 'Available FIRM Panels in area: ', flood_panels)
