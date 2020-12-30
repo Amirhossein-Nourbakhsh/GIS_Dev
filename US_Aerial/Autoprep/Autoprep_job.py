@@ -204,12 +204,12 @@ def export_reportimage(imagepath,ordergeometry,auid):
             h_res= int((image_extent.height/image_extent.width)*w_res)"""
         if image_collection == 'DOQQ':
             df.extent = geo_extent
-            df.scale = ((df.scale/100)+1)*100
+            df.scale = ((df.scale/100)+1)*200
             w_res = 5100
             h_res = 6600
         elif image_collection != 'DOQQ':
             df.extent = image_extent
-            df.scale = ((df.scale/100)-1)*100 #very important setting as it defines how much of the image will be displayed to FE
+            df.scale = ((df.scale/100)-1)*85 #very important setting as it defines how much of the image will be displayed to FE
             w_res=5100
             h_res= int((image_extent.height/image_extent.width)*w_res)
             #if image_extent.width < 0 and image_extent.height < 0:
@@ -262,9 +262,9 @@ def export_reportimage(imagepath,ordergeometry,auid):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '968502'#arcpy.GetParameterAsText(0)#'934465'#arcpy.GetParameterAsText(0)
-    AUI_ID = ''#arcpy.GetParameterAsText(1)#''#arcpy.GetParameterAsText(1)
-    scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
+    orderID = arcpy.GetParameterAsText(0)#'934465'#arcpy.GetParameterAsText(0)
+    AUI_ID = arcpy.GetParameterAsText(1)#''#arcpy.GetParameterAsText(1)
+    scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
     conversion_input = r'\\192.168.136.164\v2_usaerial\input'
