@@ -149,9 +149,10 @@ if __name__ == '__main__':
             imagename = image['IMAGE_NAME']
             aerialyear = image['AERIAL_YEAR']
             imagesource = image['IMAGE_SOURCE']
+            imagecollection = image['IMAGE_COLLECTION_TYPE']
             originalpath = image['ORIGINAL_IMAGE_PATH']
             imageuploadpath = os.path.join(uploaded_dir,originalpath.split('\\')[-1])
-            if imagesource == 'DOQQ':
+            if imagecollection == 'DOQQ':
                 arcpy.AddWarning('Cannot convert DOQQ image '+originalpath)
             else:
                 if os.path.exists(imageuploadpath):
