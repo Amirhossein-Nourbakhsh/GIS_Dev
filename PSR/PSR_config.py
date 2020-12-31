@@ -24,8 +24,11 @@ def server_loc_config(configpath,environment):
         return 'invalid server configuration'
 class Report_Type:
     wetland = 'wetland'
+    ny_wetland = 'ny_wetland'
     flood = 'flood'
     topo = 'topo'
+    relief = 'relief'
+    wells = 'wells'
     
 server_environment = 'test'
 server_config_file = r'\\cabcvan1gis006\GISData\ERISServerConfig.ini'
@@ -40,9 +43,9 @@ connectionPath = r"\\cabcvan1gis005\GISData\PSR\python"
 
 scratch_folder=  arcpy.env.scratchFolder
 
-orderGeomlyrfile_point = r"\\cabcvan1gis005\GISData\PSR\python\mxd\SiteMaker.lyr"
-orderGeomlyrfile_polyline = r"\\cabcvan1gis005\GISData\PSR\python\mxd\orderLine.lyr"
-orderGeomlyrfile_polygon = r"\\cabcvan1gis005\GISData\PSR\python\mxd\orderPoly.lyr"
+order_geom_lyr_point = r"\\cabcvan1gis005\GISData\PSR\python\mxd\SiteMaker.lyr"
+order_geom_lyr_polyline = r"\\cabcvan1gis005\GISData\PSR\python\mxd\orderLine.lyr"
+order_geom_lyr_polygon = r"\\cabcvan1gis005\GISData\PSR\python\mxd\orderPoly.lyr"
 buffer_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\buffer.lyr"
 topowhitelyrfile = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo_white.lyr"
 gridlyrfile = r"\\cabcvan1gis005\GISData\PSR\python\mxd\Grid_hollow.lyr"
@@ -139,6 +142,8 @@ datalyr_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.lyr"
 def output_jpg(order_obj, report_type):
     if report_type == Report_Type.wetland :
         return os.path.join(scratch_folder, str(order_obj.number) +'_US_WETL.jpg')
+    elif report_type == Report_Type.ny_wetland :
+         return os.path.join(scratch_folder, str(order_obj.number) +'_NY_WETL.jpg')
     elif report_type == Report_Type.flood:
         return os.path.join(scratch_folder, order_obj.number + '_US_FLOOD.jpg')
     elif report_type == Report_Type.topo:
@@ -147,6 +152,8 @@ def output_jpg(order_obj, report_type):
 order_geometry_pcs_shp =  os.path.join(scratch_folder,'order_geometry_pcs.shp')
 order_geometry_gcs_shp =  os.path.join(scratch_folder,'order_geometry_gcs.shp')
 order_buffer_shp =  os.path.join(scratch_folder,'order_buffer.shp')
+order_geom_lyr_file = None
+spatial_ref_pcs = None
 ### flood report paths config
 order_buffer_flood_shp = os.path.join(scratch_folder,'order_buffer_flood.shp')
 flood_selectedby_order_shp = os.path.join(scratch_folder,"flood_selectedby_order.shp")

@@ -72,7 +72,6 @@ class Order(object):
             cur.execute("select OMR_OID, DS_OID, SEARCH_RADIUS, REPORT_SOURCE from order_radius_psr where order_id =" + str(self.id))
             items = cur.fetchall()
             PSR_list = [] 
-            i = 1
             for item in items:
                 psr_obj = PSR()
                 psr_obj.order_id = self.id
@@ -88,11 +87,12 @@ class Order(object):
                     psr_obj.type = 'soil'
                 elif str(psr_obj.ds_oid) == '10689':
                     psr_obj.type = 'radon'
-                psr_obj.search_radius = item[2]
-                psr_obj.report_source = item[3]
-
-                PSR_list.append(psr_obj)
-                i += 1
+                elif str(psr_obj.ds_oid) == '10695':
+                    psr_obj.type = 'topo'
+                if not psr_obj.type == None:
+                    psr_obj.search_radius = item[2]
+                    psr_obj.report_source = item[3]
+                    PSR_list.append(psr_obj)
             return PSR_list
         finally:
             cur.close()
@@ -103,7 +103,7 @@ class PSR(object):
     ds_oid = ''
     search_radius = ''
     report_source = ''
-    type = ''
+    type = None
     def insert_map(self,order_id,psr_type, psr_filename, p_seq_no):
         try:
             con = cx_Oracle.connect(db_connections.connection_string)
