@@ -121,10 +121,10 @@ class Oracle:
             self.close_connection()
 
 if __name__ == '__main__':
-    OrderID = '934647'#arcpy.GetParameterAsText(0)#'934586'#arcpy.GetParameterAsText(0)#'934409'#arcpy.GetParameterAsText(0)
-    AUI_ID = ''#arcpy.GetParameterAsText(1)
-    ee_oid = ''#arcpy.GetParameterAsText(2)#'408212'#arcpy.GetParameterAsText(2)
-    scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
+    OrderID = arcpy.GetParameterAsText(0)#'934586'#arcpy.GetParameterAsText(0)#'934409'#arcpy.GetParameterAsText(0)
+    AUI_ID = arcpy.GetParameterAsText(1)
+    ee_oid = arcpy.GetParameterAsText(2)#'408212'#arcpy.GetParameterAsText(2)
+    scratch = arcpy.env.scratchFolder#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     arcpy.env.OverwriteOutput = True
 
@@ -147,8 +147,9 @@ if __name__ == '__main__':
             imagename = image['IMAGE_NAME']
             aerialyear = image['AERIAL_YEAR']
             imagesource = image['IMAGE_SOURCE']
+            imagecollection = image['IMAGE_COLLECTION_TYPE']
             originalpath = image['ORIGINAL_IMAGE_PATH']
-            if imagesource == 'DOQQ':
+            if imagecollection == 'DOQQ':
                 arcpy.AddWarning('Cannot convert DOQQ image '+originalpath)
             else:
                 if os.path.exists(originalpath):
