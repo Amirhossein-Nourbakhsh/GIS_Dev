@@ -171,12 +171,11 @@ def generate_topo_report(order_obj):
         source_text.text = "Source: USGS 7.5 Minute Topographic Map"
 
         arcpy.RefreshTOC()
-        
         if not utility.if_multipage(config.order_geometry_pcs_shp) :
             arcpy.mapping.ExportToJPEG(mxd_topo, output_jpg_topo, "PAGE_LAYOUT")#, resolution=200, jpeg_quality=90)
-            if not os.path.exists(os.path.join(report_path, 'PSRmaps', order_obj.number)):
-                os.mkdir(os.path.join(report_path, 'PSRmaps', order_obj.number))
-            shutil.copy(output_jpg_topo, os.path.join(report_path, 'PSRmaps', order_obj.number))
+            if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
+                os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+            shutil.copy(output_jpg_topo, os.path.join(config.report_path, 'PSRmaps', order_obj.number))
             arcpy.AddMessage('      - output jpg image path: %s' % output_jpg_topo)
             mxd_topo.saveACopy(os.path.join(config.scratch_folder,"mxd_topo.mxd"))
             del mxd_topo
@@ -188,7 +187,7 @@ def generate_topo_report(order_obj):
             # part 1: the overview map
             # add grid layer
             grid_layer = arcpy.mapping.Layer(config.grid_lyr_file)
-            grid_layer.replaceDataSource(config.scratch_folder,"FILEGDB_WORKSPACE","grid_lyr_topo")
+            grid_layer.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE","grid_lyr_topo")
             arcpy.mapping.AddLayer(df_topo,grid_layer,"Top")
 
             df_topo.extent = grid_layer.getExtent()
@@ -196,10 +195,10 @@ def generate_topo_report(order_obj):
 
             mxd_topo.saveACopy(os.path.join(config.scratch_folder, "mxd_topo.mxd"))
             arcpy.mapping.ExportToJPEG(mxd_topo, output_jpg_topo, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-            if not os.path.exists(os.path.join(report_path, 'PSRmaps', order_obj.number)):
-                os.mkdir(os.path.join(report_path, 'PSRmaps', order_obj.number))
-            shutil.copy(output_jpg_topo, os.path.join(report_path, 'PSRmaps', order_obj.number))
-            arcpy.AddMessage('      - output jpg image path: %s' % output_jpg_topo)
+            if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
+                os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+            shutil.copy(output_jpg_topo, os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+            arcpy.AddMessage('      - output jpg image : %s' % os.path.join(config.report_path,os.path.basename(output_jpg_topo)))
             del mxd_topo
             del df_topo
 
@@ -212,7 +211,7 @@ def generate_topo_report(order_obj):
             utility.add_layer_to_mxd("order_geometry_pcs", df_mm_topo,config.order_geom_lyr_file,1)
 
             grid_layer_mm = arcpy.mapping.ListLayers(mxd_mm_topo,"Grid" ,df_mm_topo)[0]
-            grid_layer_mm.replaceDataSource(scratch, "FILEGDB_WORKSPACE","grid_lyr_topo")
+            grid_layer_mm.replaceDataSource(config.scratch_folder, "SHAPEFILE_WORKSPACE","grid_lyr_topo")
             arcpy.CalculateAdjacentFields_cartography(grid_lyr_shp, "PageNumber")
             mxd_mm_topo.saveACopy(os.path.join(config.scratch_folder, "mxd_mm_topo.mxd"))
 
@@ -249,13 +248,13 @@ def generate_topo_report(order_obj):
 
                 arcpy.RefreshTOC()
 
-                arcpy.mapping.ExportToJPEG(mxd_mm_topo, outputjpg_topo[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-                if not os.path.exists(os.path.join(report_path, 'PSRmaps', order_obj_number)):
-                    os.mkdir(os.path.join(report_path, 'PSRmaps', order_obj_number))
-                shutil.copy(outputjpg_topo[0:-4]+str(i)+".jpg", os.path.join(report_path, 'PSRmaps', order_obj_number))
-                arcpy.AddMessage('      - output jpg image path: %s' % output_jpg_topo)
-            del mxdMM_topo
-            del dfMM_topo
+                arcpy.mapping.ExportToJPEG(mxd_mm_topo, output_jpg_topo[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+                if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
+                    os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+                shutil.copy(output_jpg_topo[0:-4]+str(i)+".jpg", os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+                arcpy.AddMessage('      - output jpg image: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number, os.path.basename(output_jpg_topo[0:-4]+str(i)+".jpg")))
+            del mxd_mm_topo
+            del df_mm_topo
     else:
         arcpy.AddWarning('      - There is no topo PSR for this Order!')
     end = timeit.default_timer()
