@@ -65,7 +65,7 @@ def generate_flood_report(order_obj):
             
             # part 1: the overview map
             # add grid layer
-            grid_layer = arcpy.mapping.Layer(config.gridlyrfile)
+            grid_layer = arcpy.mapping.Layer(config.grid_lyr_file)
             grid_layer.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE","grid_lyr_flood")
             arcpy.mapping.AddLayer(df_flood,grid_layer,"Top")
 

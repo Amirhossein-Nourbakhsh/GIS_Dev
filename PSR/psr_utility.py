@@ -1,15 +1,15 @@
 import arcpy,os
 import psr_config as config
 
-def if_multipage(geometry_pcs_shp, report_type = None):
+def if_multipage(geometry_pcs_shp, input_report_type = None):
     multi_page = None
     geomExtent = arcpy.Describe(geometry_pcs_shp).extent
     if geomExtent.width > 1300 or geomExtent.height > 1300:
         multi_page = True
     else:
         multi_page = False
-    if geomExtent.width > 500 or geomExtent.height > 500:
-        if report_type in [report_type.topo, report_type.relief, report_type.wells]:
+    if geomExtent.width > 500 or geomExtent.height > 500 and multi_page == None:
+        if input_report_type in [config.Report_Type.topo, config.Report_Type.relief, config.Report_Type.wells]:
             multi_page = True
     return multi_page
 def add_layer_to_mxd(layer_name,data_frame,lyr_file, scale):

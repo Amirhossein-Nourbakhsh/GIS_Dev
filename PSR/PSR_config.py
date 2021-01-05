@@ -47,14 +47,10 @@ order_geom_lyr_point = r"\\cabcvan1gis005\GISData\PSR\python\mxd\SiteMaker.lyr"
 order_geom_lyr_polyline = r"\\cabcvan1gis005\GISData\PSR\python\mxd\orderLine.lyr"
 order_geom_lyr_polygon = r"\\cabcvan1gis005\GISData\PSR\python\mxd\orderPoly.lyr"
 buffer_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\buffer.lyr"
-topowhitelyrfile = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo_white.lyr"
-gridlyrfile = r"\\cabcvan1gis005\GISData\PSR\python\mxd\Grid_hollow.lyr"
+grid_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\Grid_hollow.lyr"
 relieflyrfile = r"\\cabcvan1gis005\GISData\PSR\python\mxd\relief.lyr"
 
-masterlyr_topo = r"\\cabcvan1gis005\GISData\Topo_USA\masterfile\CellGrid_7_5_Minute.shp"
-data_topo = r"\\cabcvan1gis005\GISData\Topo_USA\masterfile\Cell_PolygonAll.shp"
-csvfile_topo = r"\\cabcvan1gis005\GISData\Topo_USA\masterfile\All_USTopo_T_7.5_gda_results.csv"
-tifdir_topo = r"\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff"
+
 
 data_shadedrelief = r"\\cabcvan1fpr009\US_DEM\CellGrid_1X1Degree_NW.shp"
 data_geol = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\GEOL_DD_MERGE'
@@ -84,10 +80,7 @@ masterlyr_cities = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USCities.lyr"
 masterlyr_NHTowns = r"\\cabcvan1gis005\GISData\PSR\python\mxd\NHTowns.lyr"
 masterlyr_zipcodes = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USZipcodes.lyr"
 
-mxdfile_topo = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo.mxd"
-mxdfile_topo_Tacoma = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo_tacoma.mxd"
-mxdMMfile_topo = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topoMM.mxd"
-mxdMMfile_topo_Tacoma = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topoMM_tacoma.mxd"
+
 mxdfile_relief =  r"\\cabcvan1gis005\GISData\PSR\python\mxd\shadedrelief.mxd"
 mxdMMfile_relief =  r"\\cabcvan1gis005\GISData\PSR\python\mxd\shadedreliefMM.mxd"
 mxdfile_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland.mxd"
@@ -154,7 +147,20 @@ order_geometry_gcs_shp =  os.path.join(scratch_folder,'order_geometry_gcs.shp')
 order_buffer_shp =  os.path.join(scratch_folder,'order_buffer.shp')
 order_geom_lyr_file = None
 spatial_ref_pcs = None
+### topo report paths config
+mxd_file_topo = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo.mxd"
+mxd_file_topo_Tacoma = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo_tacoma.mxd"
+mxd_mm_file_topo = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topoMM.mxd"
+mxd_mm_file_topo_Tacoma = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topoMM_tacoma.mxd"
+topo_master_lyr = r"\\cabcvan1gis005\GISData\Topo_USA\masterfile\CellGrid_7_5_Minute_wgs84.shp"
+data_topo = r"\\cabcvan1gis005\GISData\Topo_USA\masterfile\Cell_PolygonAll.shp"
+topo_white_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo_white.lyr"
+topo_csv_file = r"\\cabcvan1gis005\GISData\Topo_USA\masterfile\All_USTopo_T_7.5_gda_results.csv"
+topo_tif_dir = r"\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff"
+topo_frame = os.path.join(scratch_folder, "topo_frame.shp")
+
 ### flood report paths config
 order_buffer_flood_shp = os.path.join(scratch_folder,'order_buffer_flood.shp')
 flood_selectedby_order_shp = os.path.join(scratch_folder,"flood_selectedby_order.shp")
 flood_panel_selectedby_order_shp = os.path.join(scratch_folder,"flood_panel_selectedby_order.shp")
+
