@@ -1,6 +1,6 @@
 import arcpy,os
 import ConfigParser
-
+import arcpy
 def server_loc_config(configpath,environment):
     configParser = ConfigParser.RawConfigParser()
     configParser.read(configpath)
@@ -29,6 +29,8 @@ class Report_Type:
     topo = 'topo'
     relief = 'relief'
     wells = 'wells'
+    geology = 'geology'
+    soil = 'soil'
     
 server_environment = 'test'
 server_config_file = r'\\cabcvan1gis006\GISData\ERISServerConfig.ini'
@@ -48,19 +50,15 @@ order_geom_lyr_polyline = r"\\cabcvan1gis005\GISData\PSR\python\mxd\orderLine.ly
 order_geom_lyr_polygon = r"\\cabcvan1gis005\GISData\PSR\python\mxd\orderPoly.lyr"
 buffer_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\buffer.lyr"
 grid_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\Grid_hollow.lyr"
-relieflyrfile = r"\\cabcvan1gis005\GISData\PSR\python\mxd\relief.lyr"
 
 
-
-data_shadedrelief = r"\\cabcvan1fpr009\US_DEM\CellGrid_1X1Degree_NW.shp"
-data_geol = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\GEOL_DD_MERGE'
 # data_flood = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\S_Fld_Haz_Ar_merged2018'
 data_flood = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\flood_map_wgs84'
 
 data_flood_panel = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\flood_panel_map_wgs84'
 data_wetland = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\Merged_wetland_Final'
 eris_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\ErisWellSites.lyr"   #which contains water, oil/gas wells etc.
-path_shadedrelief = r"\\cabcvan1fpr009\US_DEM\hillshade13"
+
 datalyr_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland_kml.lyr"
 ##datalyr_wetlandNY = r"E:\GISData\PSR\python\mxd\wetlandNY.lyr"
 datalyr_wetlandNYkml = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandNY_kml.lyr"
@@ -70,27 +68,13 @@ datalyr_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.lyr"
 datalyr_contour = r"\\cabcvan1gis005\GISData\PSR\python\mxd\contours_largescale.lyr"
 datalyr_plumetacoma = r"\\cabcvan1gis005\GISData\PSR\python\mxd\Plume.lyr"
 
-imgdir_demCA = r"\\Cabcvan1fpr009\US_DEM\DEM1"
-masterlyr_demCA = r"\\Cabcvan1fpr009\US_DEM\Canada_DEM_edited.shp"
-imgdir_dem = r"\\Cabcvan1fpr009\US_DEM\DEM13"
-masterlyr_dem = r"\\Cabcvan1fpr009\US_DEM\CellGrid_1X1Degree_NW_imagename_update.shp"
-masterlyr_states = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USStates.lyr"
-masterlyr_counties = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USCounties.lyr"
-masterlyr_cities = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USCities.lyr"
-masterlyr_NHTowns = r"\\cabcvan1gis005\GISData\PSR\python\mxd\NHTowns.lyr"
-masterlyr_zipcodes = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USZipcodes.lyr"
-
-
-mxdfile_relief =  r"\\cabcvan1gis005\GISData\PSR\python\mxd\shadedrelief.mxd"
-mxdMMfile_relief =  r"\\cabcvan1gis005\GISData\PSR\python\mxd\shadedreliefMM.mxd"
 mxdfile_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland.mxd"
 mxdfile_wetlandNY = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandNY_CC.mxd"
 mxdMMfile_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandMM.mxd"
 mxdMMfile_wetlandNY = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandMMNY.mxd"
 mxd_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.mxd"
 mxd_mm_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\floodMM.mxd"
-mxdfile_geol = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.mxd"
-mxdMMfile_geol = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geologyMM.mxd"
+
 mxdfile_soil = r"\\cabcvan1gis005\GISData\PSR\python\mxd\soil.mxd"
 mxdMMfile_soil = r"\\cabcvan1gis005\GISData\PSR\python\mxd\soilMM.mxd"
 mxdfile_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wells.mxd"
@@ -98,9 +82,84 @@ mxdMMfile_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wellsMM.mxd"
 
 srGCS83 = arcpy.SpatialReference(os.path.join(connectionPath, r"projections\GCSNorthAmerican1983.prj"))
 
-datapath_soil_HI =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_HI.gdb'
-datapath_soil_AK =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_AK.gdb'
-datapath_soil_CONUS =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_CONUS_10m.gdb'
+
+
+tbx = r"\\cabcvan1gis005\GISData\PSR\python\ERIS.tbx"
+# grid size
+grid_size = "2 MILES"
+# Explorer
+datalyr_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland_kml.lyr"
+datalyr_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.lyr"
+datalyr_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.lyr"
+
+
+def output_jpg(order_obj, report_type):
+    if report_type == Report_Type.wetland :
+        return os.path.join(scratch_folder, str(order_obj.number) + '_US_WETL.jpg')
+    elif report_type == Report_Type.ny_wetland :
+         return os.path.join(scratch_folder, str(order_obj.number) + '_NY_WETL.jpg')
+    elif report_type == Report_Type.flood:
+        return os.path.join(scratch_folder, order_obj.number + '_US_FLOOD.jpg')
+    elif report_type == Report_Type.topo:
+        return os.path.join(scratch_folder, order_obj.number + '_US_TOPO.jpg')
+    elif report_type == Report_Type.relief:
+        return os.path.join(scratch_folder, order_obj.number + '_US_RELIEF.jpg')
+    elif report_type == Report_Type.geology:
+        return os.path.join(scratch_folder, order_obj.number + '_US_GEOLOGY.jpg')
+    elif report_type == Report_Type.soil:
+        return os.path.join(scratch_folder, order_obj.number + '_US_SOIL.jpg')
+### base maps
+imgdir_demCA = r"\\Cabcvan1fpr009\US_DEM\DEM1"
+master_lyr_dem_CA = r"\\Cabcvan1fpr009\US_DEM\Canada_DEM_edited.shp"
+imgdir_dem = r"\\Cabcvan1fpr009\US_DEM\DEM13"
+master_lyr_dem = r"\\cabcvan1gis005\GISData\Data\US_DEM\CellGrid_1X1Degree_NW_wgs84.shp"
+masterlyr_states = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USStates.lyr"
+masterlyr_counties = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USCounties.lyr"
+masterlyr_cities = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USCities.lyr"
+masterlyr_NHTowns = r"\\cabcvan1gis005\GISData\PSR\python\mxd\NHTowns.lyr"
+masterlyr_zipcodes = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USZipcodes.lyr"
+### order geometry paths config
+order_geometry_pcs_shp =  os.path.join(scratch_folder,'order_geometry_pcs.shp')
+order_geometry_gcs_shp =  os.path.join(scratch_folder,'order_geometry_gcs.shp')
+order_buffer_shp =  os.path.join(scratch_folder,'order_buffer.shp')
+order_geom_lyr_file = None
+spatial_ref_pcs = None
+### relief report paths config
+mxd_file_relief =  r"\\cabcvan1gis005\GISData\PSR\python\mxd\shadedrelief.mxd"
+mxd_mm_file_relief =  r"\\cabcvan1gis005\GISData\PSR\python\mxd\shadedreliefMM.mxd"
+path_shaded_relief = r"\\cabcvan1fpr009\US_DEM\hillshade13"
+relief_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\relief.lyr"
+data_shaded_relief = r"\\cabcvan1fpr009\US_DEM\CellGrid_1X1Degree_NW.shp"
+
+### topo report paths config
+mxd_file_topo = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo.mxd"
+mxd_file_topo_Tacoma = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo_tacoma.mxd"
+mxd_mm_file_topo = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topoMM.mxd"
+mxd_mm_file_topo_Tacoma = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topoMM_tacoma.mxd"
+topo_master_lyr = r"\\cabcvan1gis005\GISData\Topo_USA\masterfile\CellGrid_7_5_Minute_wgs84.shp"
+data_topo = r"\\cabcvan1gis005\GISData\Topo_USA\masterfile\Cell_PolygonAll.shp"
+topo_white_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo_white.lyr"
+topo_csv_file = r"\\cabcvan1gis005\GISData\Topo_USA\masterfile\All_USTopo_T_7.5_gda_results.csv"
+topo_tif_dir = r"\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff"
+topo_frame = os.path.join(scratch_folder, "topo_frame.shp")
+
+### flood report paths config
+order_buffer_flood_shp = os.path.join(scratch_folder,'order_buffer_flood.shp')
+flood_selectedby_order_shp = os.path.join(scratch_folder,"flood_selectedby_order.shp")
+flood_panel_selectedby_order_shp = os.path.join(scratch_folder,"flood_panel_selectedby_order.shp")
+
+### geology report paths config
+data_geology = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\GEOL_DD_MERGE' ## WGS84
+geology_selectedby_order_shp = os.path.join(scratch_folder,"geology_selectedby_order.shp")
+mxd_file_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.mxd"
+mxd_mm_file_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geologyMM.mxd"
+
+### soil report paths config
+data_path_soil_HI =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_HI.gdb'
+data_path_soil_AK =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_AK.gdb'
+data_path_soil_CONUS =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_CONUS_10m.gdb'
+soil_selectedby_order_shp = os.path.join(scratch_folder,"soil_selectedby_order.shp")
+soil_selectedby_order_pcs_shp =  os.path.join(scratch_folder,"soil_selectedby_order_pcs.shp")
 
 hydrologic_dict = {
         "A":'Soils in this group have low runoff potential when thoroughly wet. Water is transmitted freely through the soil.',
@@ -122,45 +181,3 @@ hydric_dict = {
 fc_soils_fieldlist  = [['muaggatt.mukey','mukey'], ['muaggatt.musym','musym'], ['muaggatt.muname','muname'],['muaggatt.drclassdcd','drclassdcd'],['muaggatt.hydgrpdcd','hydgrpdcd'],['muaggatt.hydclprs','hydclprs'], ['muaggatt.brockdepmin','brockdepmin'], ['muaggatt.wtdepannmin','wtdepannmin'], ['component.cokey','cokey'],['component.compname','compname'], ['component.comppct_r','comppct_r'], ['component.majcompflag','majcompflag'],['chorizon.chkey','chkey'],['chorizon.hzname','hzname'],['chorizon.hzdept_r','hzdept_r'],['chorizon.hzdepb_r','hzdepb_r'], ['chtexturegrp.chtgkey','chtgkey'], ['chtexturegrp.texdesc1','texdesc'], ['chtexturegrp.rvindicator','rv']]
 fc_soils_keylist = ['muaggatt.mukey', 'component.cokey','chorizon.chkey','chtexturegrp.chtgkey']
 fc_soils_whereClause_queryTable = "muaggatt.mukey = component.mukey and component.cokey = chorizon.cokey and chorizon.chkey = chtexturegrp.chkey"
-
-tbx = r"\\cabcvan1gis005\GISData\PSR\python\ERIS.tbx"
-# grid size
-grid_size = "2 MILES"
-# Explorer
-datalyr_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland_kml.lyr"
-datalyr_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.lyr"
-datalyr_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.lyr"
-
-
-def output_jpg(order_obj, report_type):
-    if report_type == Report_Type.wetland :
-        return os.path.join(scratch_folder, str(order_obj.number) +'_US_WETL.jpg')
-    elif report_type == Report_Type.ny_wetland :
-         return os.path.join(scratch_folder, str(order_obj.number) +'_NY_WETL.jpg')
-    elif report_type == Report_Type.flood:
-        return os.path.join(scratch_folder, order_obj.number + '_US_FLOOD.jpg')
-    elif report_type == Report_Type.topo:
-        return os.path.join(scratch_folder, order_obj.number+'_US_TOPO.jpg')
-### order geometry paths config
-order_geometry_pcs_shp =  os.path.join(scratch_folder,'order_geometry_pcs.shp')
-order_geometry_gcs_shp =  os.path.join(scratch_folder,'order_geometry_gcs.shp')
-order_buffer_shp =  os.path.join(scratch_folder,'order_buffer.shp')
-order_geom_lyr_file = None
-spatial_ref_pcs = None
-### topo report paths config
-mxd_file_topo = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo.mxd"
-mxd_file_topo_Tacoma = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo_tacoma.mxd"
-mxd_mm_file_topo = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topoMM.mxd"
-mxd_mm_file_topo_Tacoma = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topoMM_tacoma.mxd"
-topo_master_lyr = r"\\cabcvan1gis005\GISData\Topo_USA\masterfile\CellGrid_7_5_Minute_wgs84.shp"
-data_topo = r"\\cabcvan1gis005\GISData\Topo_USA\masterfile\Cell_PolygonAll.shp"
-topo_white_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo_white.lyr"
-topo_csv_file = r"\\cabcvan1gis005\GISData\Topo_USA\masterfile\All_USTopo_T_7.5_gda_results.csv"
-topo_tif_dir = r"\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff"
-topo_frame = os.path.join(scratch_folder, "topo_frame.shp")
-
-### flood report paths config
-order_buffer_flood_shp = os.path.join(scratch_folder,'order_buffer_flood.shp')
-flood_selectedby_order_shp = os.path.join(scratch_folder,"flood_selectedby_order.shp")
-flood_panel_selectedby_order_shp = os.path.join(scratch_folder,"flood_panel_selectedby_order.shp")
-

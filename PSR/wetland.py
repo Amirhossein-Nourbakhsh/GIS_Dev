@@ -203,7 +203,7 @@ def generate_wetland_report(order_obj):
             del mxdMM_wetlandNY
             del dfMM_wetlandNY
         psr_obj = models.PSR()
-        for i in range(1,page): ##insert generated .jpg report path into eris_maps_psr table
+        for i in range(1,page): #insert generated .jpg report path into eris_maps_psr table
             psr_obj.insert_map(order_obj.id, 'WETLAND', order_obj.number +'_NY_WETL'+str(i)+'.jpg', int(i)+1)
            
    

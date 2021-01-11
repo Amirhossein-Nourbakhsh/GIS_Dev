@@ -82,7 +82,7 @@ class Order(object):
                 elif str(psr_obj.ds_oid) == '10684':
                     psr_obj.type = 'wetland'
                 elif str(psr_obj.ds_oid) == '10685':
-                    psr_obj.type = 'geol'
+                    psr_obj.type = 'geology'
                 elif str(psr_obj.ds_oid) == '9334':
                     psr_obj.type = 'soil'
                 elif str(psr_obj.ds_oid) == '10689':

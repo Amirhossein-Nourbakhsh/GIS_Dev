@@ -1,5 +1,6 @@
 import arcpy,os
 import psr_config as config
+import numpy as np
 
 def if_multipage(geometry_pcs_shp, input_report_type = None):
     multi_page = None
@@ -32,3 +33,25 @@ def set_order_geometry(order_obj):
     order_geometry_pcs = order_obj.geometry.projectAs(config.spatial_ref_pcs)
     arcpy.CopyFeatures_management(order_obj.geometry, config.order_geometry_gcs_shp)
     arcpy.CopyFeatures_management(order_geometry_pcs, config.order_geometry_pcs_shp)
+def return_unique_setstring_musym(table_name):
+    data = arcpy.da.TableToNumPyArray(table_name, ['mukey', 'musym'])
+    uniques = np.unique(data[data['musym']!='NOTCOM']['mukey'])
+    if len(uniques) == 0:
+        return ''
+    else:
+        my_tring = '('
+        for item in uniques:
+            my_tring = my_tring + "'" + str(item) + "', "
+        my_string = my_tring[0:-2] + ")"
+        return my_string
+def return_unique_setString(table_name, field_name):
+    data = arcpy.da.TableToNumPyArray(table_name, [field_name])
+    uniques = np.unique(data[field_name])
+    if len(uniques) == 0:
+        return ''
+    else:
+        my_string = '('
+        for item in uniques:
+            my_string = my_string + "'" + str(item) + "', "
+        my_string = my_string[0:-2] + ")"
+        return my_string

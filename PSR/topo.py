@@ -1,14 +1,12 @@
 
 from imp import reload
 import arcpy, os, sys
-from datetime import datetime
-import timeit,time
+import timeit
 import csv
 import shutil
 import psr_utility as utility
 import psr_config as config
 sys.path.insert(1,os.path.join(os.getcwd(),'DB_Framework'))
-import models
 reload(sys)
 
 def generate_topo_report(order_obj):
@@ -255,6 +253,14 @@ def generate_topo_report(order_obj):
                 arcpy.AddMessage('      - output jpg image: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number, os.path.basename(output_jpg_topo[0:-4]+str(i)+".jpg")))
             del mxd_mm_topo
             del df_mm_topo
+            #insert generated .jpg report path into eris_maps_psr table
+            psr_obj = models.PSR()
+            if os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number, order_obj.number + '_US_TOPO.jpg')):
+                psr_obj.insert_map(order_obj.id, 'RELIEF', order_obj.number + '_US_TOPO.jpg', 1)
+                for i in range(1,page):
+                    psr_obj.insert_map(order_obj.id, 'TOPO', order_obj.number + '_US_TOPO' + str(i) + '.jpg', i + 1)
+            else:
+                arcpy.AddMessage('No Relief map is available')
     else:
         arcpy.AddWarning('      - There is no topo PSR for this Order!')
     end = timeit.default_timer()
