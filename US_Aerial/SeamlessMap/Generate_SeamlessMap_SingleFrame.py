@@ -168,7 +168,7 @@ def get_spatialres(imagepath,ext):
         return '0'
 
 
-master_xl = r"C:\Users\JLoucks\Desktop\historical\historical_11202020.csv"
+master_xl = r"C:\Users\JLoucks\Desktop\historical\historical_01072021.csv"
 data = []
 v = open(master_xl)
 r = csv.reader(v)
@@ -219,9 +219,9 @@ for item in r:
         item.append('NA')
         item.append('NO IMAGE')
         item.append('No readable spatial res')
-    #print item
+    print item
     data.append(item)
-with open(r"C:\Users\JLoucks\Desktop\historical\meta_historical_11202020.csv",'wb') as result_file:
+with open(r"C:\Users\JLoucks\Desktop\historical\meta_historical_01072021.csv",'wb') as result_file:
     wr = csv.writer(result_file,dialect='excel')
     wr.writerows(data)
 result_file.close()
