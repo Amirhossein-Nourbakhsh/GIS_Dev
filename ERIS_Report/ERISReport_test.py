@@ -47,7 +47,7 @@ def server_loc_config(configpath,environment):
         return 'invalid server configuration'
 
 server_environment = 'test'
-server_config_file = r'\\cabcvan1gis006\gptools\ERISServerConfig.ini'
+server_config_file = r'\\cabcvan1gis007\gptools\ERISServerConfig.ini'
 server_config = server_loc_config(server_config_file,server_environment)
 eris_report_path = r"gptools\ERISReport"
 us_topo_path = r"gptools\Topo_USA"
@@ -61,7 +61,7 @@ class Machine:
 
 class Credential:
     oracle_test = r"eris_gis/gis295@GMTESTC.glaciermedia.inc"
-    oracle_production = r'eris_gis/gis295@cabcvan1ora003.glaciermedia.inc:1521/GMPRODC'#'eris_gis/gis295@GMPRODC.glaciermedia.inc"
+    oracle_production = r'eris_gis/gis295@GMPRODC.glaciermedia.inc"
 
 class ReportPath:
     noninstant_reports_test = server_config['noninstant']
@@ -201,7 +201,7 @@ class Oracle:
     oracle_functions = {
     'getorderinfo':"eris_gis.getOrderInfo",
     'printtopo':"eris_gis.printTopo",
-    'geterispointdetails':"eris_gis.getErisPointDetails "}
+    'geterispointdetails':"eris_gis.getErisPointDetails"}
 
     oracle_procedures ={
     'xplorerflag':"eris_gis.getOrderXplorer"}
@@ -296,6 +296,7 @@ def createBuffers(orderBuffers,output_folder,buffer_name=r"buffer_%s.shp"):
     for i in range(len(orderBuffers)):
         buffer_dict[i]=createGeometry(eval(orderBuffers[i].values()[0])[0],"polygon",output_folder,buffer_name%i)
         buffer_sizes_dict[i] =float(orderBuffers[i].keys()[0])
+    print(buffer_dict,buffer_sizes_dict)
     return [buffer_dict,buffer_sizes_dict]
 
 def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef = arcpy.SpatialReference(4269)):
@@ -318,9 +319,10 @@ def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef
 def addERISpoint(pointInfo,mxd,output_folder,out_points=r'points.shp'):
     out_pointsSHP = os.path.join(output_folder,out_points)
     erisPointsLayer = config.LAYER.erisPoints
-    erisIDs_4points = dict((_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID'),[('m%sc'%(_.get("MAP_KEY_LOC"))) if _.get("MAP_KEY_NO_TOT")==1 else ('m%sc(%s)'%(_.get("MAP_KEY_LOC"), _.get("MAP_KEY_NO_TOT"))) ,float('%s'%(1 if round(_.get("ELEVATION_DIFF"),2)>0.0 else 0 if round(_.get("ELEVATION_DIFF"),2)==0.0 else -1 if round(_.get("ELEVATION_DIFF"),2)<0.0 else 100))]) for _ in pointInfo)
+    #erisIDs_4points = dict((_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID'),[('m%sc'%(_.get("MAP_KEY_LOC"))) if _.get("MAP_KEY_NO_TOT")==1 else ('m%sc(%s)'%(_.get("MAP_KEY_LOC"), _.get("MAP_KEY_NO_TOT"))) ,float('%s'%(1 if round(_.get("ELEVATION_DIFF"),2)>0.0 else 0 if round(_.get("ELEVATION_DIFF"),2)==0.0 else -1 if round(_.get("ELEVATION_DIFF"),2)<0.0 else 100))]) for _ in pointInfo)
+    erisIDs_4points = dict((_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID'),[('m%sc'%(_.get("MAP_KEY_LOC"))) if _.get("MAP_KEY_NO_TOT")==1 else ('m%sc(%s)'%(_.get("MAP_KEY_LOC"), _.get("MAP_KEY_NO_TOT"))) ,float('%s'%(1 if _.get("ELEVATION_DIFF")>0.0 else 0 if _.get("ELEVATION_DIFF")==0.0 else -1 if _.get("ELEVATION_DIFF")<0.0 else 100))]) for _ in pointInfo)
     erispoints = dict((int(_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID')),(_.get("X"),_.get("Y"))) for _ in pointInfo)
-    
+    # print(erisIDs_4points)
     if erisIDs_4points != {}:
         arcpy.CreateFeatureclass_management(output_folder, out_points, "MULTIPOINT", "", "DISABLED", "DISABLED", arcpy.SpatialReference(4269))
         check_field = arcpy.ListFields(out_pointsSHP,"ERISID")
@@ -366,7 +368,6 @@ def getMaps(mxd, output_folder,map_name,buffer_dict, buffer_sizes_list,unit_code
     if buffer_name.endswith(".shp"):
         buffer_name = buffer_name[:-4]
     bufferLayer = config.LAYER.buffer
-    print(buffer_dict)
     for i in buffer_dict.keys():
         if buffer_sizes_list[i]>=0.04:
             mxd.addLayer(bufferLayer,output_folder,"buffer_%s"%(i))
@@ -374,7 +375,7 @@ def getMaps(mxd, output_folder,map_name,buffer_dict, buffer_sizes_list,unit_code
             mxd.zoomToLayer("Grid") if i == buffer_dict.keys()[-1] and multiPage == True else mxd.zoomToTopLayer()
             mxd.df.scale = ((int(1.1*mxd.df.scale)/100)+1)*100
             unit = 'Kilometer' if unit_code ==9036 else 'Mile'
-            mxd.addTextoMap("Map","Map : %s %s Radius"%(buffer_sizes_list[i],unit))
+            mxd.addTextoMap("Map","Map: %s %s Radius"%(buffer_sizes_list[i],unit))
             arcpy.mapping.ExportToPDF(mxd.mxd,os.path.join(output_folder,map_name%(i)))
             temp.append(os.path.join(output_folder,map_name%(i)))
     if temp==[] and buffer_dict=={}:
@@ -402,7 +403,7 @@ def exportMultipage(mxd,output_folder,map_name,UTMzone,grid_size,erisPointLayer,
     mxd.resolution =250
     temp = getMaps(mxd, output_folder,map_name, buffer_dict, buffer_sizes_list, unit_code, buffer_name=r"buffer_%s.shp", multiPage = True)
     mxd.turnLabel(erisPointLayer,True)
-    mxd.addTextoMap("Map","Grid : ")
+    mxd.addTextoMap("Map","Grid: ")
     mxd.addTextoMap("Grid",'<dyn type="page"  property="number"/>')
     ddMMDDP = mxd.mxd.dataDrivenPages
     ddMMDDP.refresh()
@@ -458,18 +459,17 @@ def getCurrentTopo(masterfile_topo,inputSHP,output_folder): # copy current topo 
                 exec("info =  topo_image_path.topo_%s"%(cellid))
                 infomatrix.append(info)
                 print(infomatrix)
-            except  Exception as e:
-# START - NO CURRENT TOPOS, PRINT THE MOST RECENT HTMC AVAILABLE --------------------------------------------------------------------------------------------------------------
-                print("--------------------------------")
-                print("ERROR RAISED IN getCurrentTopo:")
-                print(e)
+            except  AttributeError as ae:
+                print("AttributeError: No current topo available")
+                print(ae)
 
                 newmastertopo = r'\\cabcvan1gis006\GISData\Topo_USA\masterfile\Cell_PolygonAll.shp'                
                 csvfile_h = r'\\cabcvan1gis006\GISData\Topo_USA\masterfile\All_HTMC_all_all_gda_results.csv'
                 global tifdir_topo
                 tifdir_topo = r'\\cabcvan1fpr009\USGS_Topo\USGS_HTMC_Geotiff'
                 masterLayer = arcpy.mapping.Layer(newmastertopo)
-                arcpy.SelectLayerByLocation_management(masterLayer,'intersect', inputSHP, '0.25 KILOMETERS')  #it doesn't seem to work without the distance
+                #arcpy.SelectLayerByLocation_management(masterLayer,'intersect', inputSHP, '0.25 KILOMETERS')  #it doesn't seem to work without the distance
+                arcpy.SelectLayerByLocation_management(masterLayer,'INTERSECT', inputSHP)
                 cellids_selected = []
                 cellids = []
                 infomatrix = []
@@ -491,7 +491,6 @@ def getCurrentTopo(masterfile_topo,inputSHP,output_folder): # copy current topo 
                     masterLayer = None
                     
                     with open(csvfile_h, "rb") as f:
-                        print("___All USGS HTMC Topo List.")
                         reader = csv.reader(f)
                         for row in reader:
                             if row[9] in cellids:
@@ -535,8 +534,6 @@ def getCurrentTopo(masterfile_topo,inputSHP,output_folder): # copy current topo 
                                 if len(yearcandidates) > 0:
                                     # print "***** length of yearcnadidates is " + str(len(yearcandidates))
                                     year2use = str(max(yearcandidates))
-                                print(row[5])
-                                print(year2use)
                                 if year2use == "":
                                     print ("################### cannot determine the year of the map!!")
                                 
@@ -546,11 +543,6 @@ def getCurrentTopo(masterfile_topo,inputSHP,output_folder): # copy current topo 
                     # print(infomatrix)
                     # GET MAX YEAR ONLY
                     infomatrix = [item for item in infomatrix if item[1] == max(item[1] for item in infomatrix)]             
-                    print("--------------------------------")
-# END --------------------------------------------------------------------------------------------------------------------------------------------------------------------        
-
-        # print(infomatrix)
-        # print(tifdir_topo)
         _=[]
         for item in infomatrix:
             tifname = item[0][0:-4]   # note without .tif part
@@ -653,21 +645,21 @@ def exportViewerTable(ImagePath,FileName):
 
     delete_query = "delete from overlay_image_info where order_id = '%s' and type = '%s' and filename = '%s'"%(OrderIDText,metaitem['type'],FileName)
     insert_query = "insert into overlay_image_info values (%s, %s, %s, %.5f, %.5f, %.5f, %.5f, %s, '', '')" % (str(OrderIDText), orderInfo['ORDER_NUM'], "'" + metaitem['type']+"'", metaitem['lat_sw'], metaitem['long_sw'], metaitem['lat_ne'], metaitem['long_ne'],"'"+metaitem['imagename']+"'" )
-    image_info = Oracle('prod').insert_overlay(delete_query,insert_query)
+    image_info = Oracle('test').insert_overlay(delete_query,insert_query)
 
 if __name__ == '__main__':
     try:
         # INPUT #####################################
-        OrderIDText = '909805'#arcpy.GetParameterAsText(0).strip()#'736799'#
+        OrderIDText = '988390'#'#arcpy.GetParameterAsText(0).strip()#'736799'#
         multipage = False #True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
-        gridsize = '5'#arcpy.GetParameterAsText(2).strip()#0#
+        gridsize = '2 Miles'#arcpy.GetParameterAsText(2).strip()#0#
         code = 'usa'#arcpy.GetParameterAsText(3).strip()#'usa'#
         isInstant = False #True if arcpy.GetParameterAsText(4).strip().lower()=='yes'else False
-        scratch = r"W:\Data Analysts\Alison\_GIS\DB_SCRATCHY\20282100307"
+        scratch = r'C:\Users\JLoucks\Documents\JL\test2'
 
         # Server Setting ############################
         code = 9093 if code.strip().lower()=='usa' else 9036 if code.strip().lower()=='can' else 9049 if code.strip().lower()=='mex' else ValueError
-        config = ProdConfig(code)
+        config = TestConfig(code)
 
         # PARAMETERS ################################
         orderGeometry = r'orderGeometry.shp'
@@ -680,16 +672,16 @@ if __name__ == '__main__':
         aerial_pdf = os.path.join(scratch,'mapbing.pdf')
         topo_pdf = os.path.join(scratch,"maptopo.pdf")
         pdfreport = os.path.join(scratch,map_name)
-        grid_unit = 'Kilometers' if code ==9036 and float(gridsize.strip())<100 else 'Meters' if code ==9036 else 'Miles'
+        grid_unit = 'Kilometers' if code == 9036 and float(gridsize.strip())<100 else 'Meters' if code ==9036 else 'Miles'
         gridsize = '%s %s'%(gridsize,grid_unit)
         viewerpath = server_config['viewer']
-        currentuploadurl = server_config['viewer_upload']+r"/ErisInt/BIPublisherPortal_prod/Viewer.svc/CurImageUpload?ordernumber="
+        currentuploadurl = server_config['viewer_upload']+r"/ErisInt/BIPublisherPortal_test/Viewer.svc/CurImageUpload?ordernumber="
 
         # STEPS ####################################
         # 1  get order info by Oracle call
-        orderInfo= Oracle('prod').call_function('getorderinfo',OrderIDText)
-        needTopo= Oracle('prod').call_function('printTopo',OrderIDText)
-        xplorerflag= Oracle('prod').call_procedure('xplorerflag',OrderIDText)[0]
+        orderInfo= Oracle('test').call_function('getorderinfo',OrderIDText)
+        needTopo= Oracle('test').call_function('printTopo',OrderIDText)
+        xplorerflag= Oracle('test').call_procedure('xplorerflag',OrderIDText)[0]
         end = timeit.default_timer()
         arcpy.AddMessage(('call oracle', round(end -start1,4)))
         start=end
@@ -723,6 +715,7 @@ if __name__ == '__main__':
             bufferMax = os.path.join(scratch,buffer_name%(len(orderInfo['BUFFER_GEOMETRY'])+1))
             maxBuffer = max([float(_.keys()[0]) for _ in orderInfo['BUFFER_GEOMETRY']]) if orderInfo['BUFFER_GEOMETRY'] !=[] else 0#
             maxBuffer ="%s MILE"%(2*maxBuffer if maxBuffer>0.2 else 2)
+            # print(orderInfo['BUFFER_GEOMETRY'])
             arcpy.Buffer_analysis(orderGeometrySHP,bufferMax,maxBuffer)
             end = timeit.default_timer()
             arcpy.AddMessage(('create max buffer', round(end -start,4)))
@@ -734,7 +727,7 @@ if __name__ == '__main__':
             start=end
 
         # 4-2 add ERIS points
-        erisPointsInfo= Oracle('prod').call_function('geterispointdetails',OrderIDText)
+        erisPointsInfo = Oracle('test').call_function('geterispointdetails',OrderIDText)
         # for i in erisPointsInfo:
         #     print(i)
         erisPointsLayer=addERISpoint(erisPointsInfo,map1,scratch)
@@ -845,6 +838,3 @@ if __name__ == '__main__':
         arcpy.AddError(pymsg)
         arcpy.AddError(msgs)
         raise
-
-print ("Final DB maps path: " + (config.noninstant_reports + "\\map_" + orderInfo['ORDER_NUM'] + ".pdf"))
-print ("_____DONE")

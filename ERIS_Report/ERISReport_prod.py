@@ -61,7 +61,7 @@ class Machine:
 
 class Credential:
     oracle_test = r"eris_gis/gis295@GMTESTC.glaciermedia.inc"
-    oracle_production = r'eris_gis/gis295@cabcvan1ora003.glaciermedia.inc:1521/GMPRODC'#'eris_gis/gis295@GMPRODC.glaciermedia.inc"
+    oracle_production = r'eris_gis/gis295@GMPRODC.glaciermedia.inc"
 
 class ReportPath:
     noninstant_reports_test = server_config['noninstant']
@@ -319,35 +319,8 @@ def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef
 def addERISpoint(pointInfo,mxd,output_folder,out_points=r'points.shp'):
     out_pointsSHP = os.path.join(output_folder,out_points)
     erisPointsLayer = config.LAYER.erisPoints
-    erisIDs_4points = {}                                  # disassembled from below line erisIDs_4points
-    # for i in pointInfo:
-    #     print("------------------------------")
-    #     print(i)
-    #     for k, v in i.items():
-    #         # erisid = ""
-
-    #         if k == "MAP_KEY_NO_TOT" and v == 1:
-    #             mapkey = 'm%sc'%(i["MAP_KEY_LOC"])
-    #         else:
-    #             mapkey = 'm%sc(%s)'%(i["MAP_KEY_LOC"], i["MAP_KEY_NO_TOT"])
-
-    #         if k == "ELEVATION_DIFF" and round(float(v),2) > 0.0:
-    #             elev = float(1)
-    #         elif k == "ELEVATION_DIFF" and float(round(v,2)) == 0.0:
-    #             elev = float(0)
-    #         elif k == "ELEVATION_DIFF" and float(round(v,2)) < 0.0:
-    #             elev = float(-1)            
-    #         else:
-    #             elev = float(100)    
-    #         # float('%s'%(1 if round(_.get("ELEVATION_DIFF"),2)>0.0 else 0 if round(_.get("ELEVATION_DIFF"),2)==0.0 else -1 if round(_.get("ELEVATION_DIFF"),2)<0.0 else 100)
-
-    #         if k == "DATASOURCE_POINTS":
-    #             for erisdataids in v:
-    #                 erisid = erisdataids["ERIS_DATA_ID"]
-    #                 erisIDs_4points[erisid] = [mapkey, elev]
-    # print(erisIDs_4points)
-
-    erisIDs_4points = dict((_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID'),[('m%sc'%(_.get("MAP_KEY_LOC"))) if _.get("MAP_KEY_NO_TOT")==1 else ('m%sc(%s)'%(_.get("MAP_KEY_LOC"), _.get("MAP_KEY_NO_TOT"))) ,float('%s'%(1 if round(_.get("ELEVATION_DIFF"),2)>0.0 else 0 if round(_.get("ELEVATION_DIFF"),2)==0.0 else -1 if round(_.get("ELEVATION_DIFF"),2)<0.0 else 100))]) for _ in pointInfo)
+    #erisIDs_4points = dict((_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID'),[('m%sc'%(_.get("MAP_KEY_LOC"))) if _.get("MAP_KEY_NO_TOT")==1 else ('m%sc(%s)'%(_.get("MAP_KEY_LOC"), _.get("MAP_KEY_NO_TOT"))) ,float('%s'%(1 if round(_.get("ELEVATION_DIFF"),2)>0.0 else 0 if round(_.get("ELEVATION_DIFF"),2)==0.0 else -1 if round(_.get("ELEVATION_DIFF"),2)<0.0 else 100))]) for _ in pointInfo)
+    erisIDs_4points = dict((_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID'),[('m%sc'%(_.get("MAP_KEY_LOC"))) if _.get("MAP_KEY_NO_TOT")==1 else ('m%sc(%s)'%(_.get("MAP_KEY_LOC"), _.get("MAP_KEY_NO_TOT"))) ,float('%s'%(1 if _.get("ELEVATION_DIFF")>0.0 else 0 if _.get("ELEVATION_DIFF")==0.0 else -1 if _.get("ELEVATION_DIFF")<0.0 else 100))]) for _ in pointInfo)
     erispoints = dict((int(_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID')),(_.get("X"),_.get("Y"))) for _ in pointInfo)
     # print(erisIDs_4points)
     if erisIDs_4points != {}:
@@ -395,7 +368,6 @@ def getMaps(mxd, output_folder,map_name,buffer_dict, buffer_sizes_list,unit_code
     if buffer_name.endswith(".shp"):
         buffer_name = buffer_name[:-4]
     bufferLayer = config.LAYER.buffer
-    print(buffer_dict)
     for i in buffer_dict.keys():
         if buffer_sizes_list[i]>=0.04:
             mxd.addLayer(bufferLayer,output_folder,"buffer_%s"%(i))
@@ -487,18 +459,17 @@ def getCurrentTopo(masterfile_topo,inputSHP,output_folder): # copy current topo 
                 exec("info =  topo_image_path.topo_%s"%(cellid))
                 infomatrix.append(info)
                 print(infomatrix)
-            except  Exception as e:
-# START - NO CURRENT TOPOS, PRINT THE MOST RECENT HTMC AVAILABLE --------------------------------------------------------------------------------------------------------------
-                print("--------------------------------")
-                print("ERROR RAISED IN getCurrentTopo:")
-                print(e)
+            except  AttributeError as ae:
+                print("AttributeError: No current topo available")
+                print(ae)
 
                 newmastertopo = r'\\cabcvan1gis006\GISData\Topo_USA\masterfile\Cell_PolygonAll.shp'                
                 csvfile_h = r'\\cabcvan1gis006\GISData\Topo_USA\masterfile\All_HTMC_all_all_gda_results.csv'
                 global tifdir_topo
                 tifdir_topo = r'\\cabcvan1fpr009\USGS_Topo\USGS_HTMC_Geotiff'
                 masterLayer = arcpy.mapping.Layer(newmastertopo)
-                arcpy.SelectLayerByLocation_management(masterLayer,'intersect', inputSHP, '0.25 KILOMETERS')  #it doesn't seem to work without the distance
+                #arcpy.SelectLayerByLocation_management(masterLayer,'intersect', inputSHP, '0.25 KILOMETERS')  #it doesn't seem to work without the distance
+                arcpy.SelectLayerByLocation_management(masterLayer,'INTERSECT', inputSHP)
                 cellids_selected = []
                 cellids = []
                 infomatrix = []
@@ -520,7 +491,6 @@ def getCurrentTopo(masterfile_topo,inputSHP,output_folder): # copy current topo 
                     masterLayer = None
                     
                     with open(csvfile_h, "rb") as f:
-                        print("___All USGS HTMC Topo List.")
                         reader = csv.reader(f)
                         for row in reader:
                             if row[9] in cellids:
@@ -564,8 +534,6 @@ def getCurrentTopo(masterfile_topo,inputSHP,output_folder): # copy current topo 
                                 if len(yearcandidates) > 0:
                                     # print "***** length of yearcnadidates is " + str(len(yearcandidates))
                                     year2use = str(max(yearcandidates))
-                                print(row[5])
-                                print(year2use)
                                 if year2use == "":
                                     print ("################### cannot determine the year of the map!!")
                                 
@@ -575,11 +543,6 @@ def getCurrentTopo(masterfile_topo,inputSHP,output_folder): # copy current topo 
                     # print(infomatrix)
                     # GET MAX YEAR ONLY
                     infomatrix = [item for item in infomatrix if item[1] == max(item[1] for item in infomatrix)]             
-                    print("--------------------------------")
-# END --------------------------------------------------------------------------------------------------------------------------------------------------------------------        
-
-        # print(infomatrix)
-        # print(tifdir_topo)
         _=[]
         for item in infomatrix:
             tifname = item[0][0:-4]   # note without .tif part
@@ -687,25 +650,12 @@ def exportViewerTable(ImagePath,FileName):
 if __name__ == '__main__':
     try:
         # INPUT #####################################
-        OrderIDText = ""#'#arcpy.GetParameterAsText(0).strip()#'736799'#
-        OrderNumText = "20321000276"
+        OrderIDText = '988390'#'#arcpy.GetParameterAsText(0).strip()#'736799'#
         multipage = False #True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
         gridsize = '2 Miles'#arcpy.GetParameterAsText(2).strip()#0#
         code = 'usa'#arcpy.GetParameterAsText(3).strip()#'usa'#
         isInstant = False #True if arcpy.GetParameterAsText(4).strip().lower()=='yes'else False
-        scratch = os.path.join(r"C:\Users\HKiavarz\Documents\Scratch", OrderNumText) 
-
-        # GET ORDER_ID FROM ORDER_NUM
-        if OrderIDText == "":
-            connectionString = 'eris_gis/gis295@cabcvan1ora003.glaciermedia.inc:1521/GMPRODC'
-            con = cx_Oracle.connect(connectionString)
-            cur = con.cursor()
-            cur.execute("select order_id from orders where order_num = '" + str(OrderNumText) + "'")
-            result = cur.fetchall()
-            OrderIDText = str(result[0][0]).strip()
-            print("Order ID: " + OrderIDText)
-            cur.close()
-            con.close()
+        scratch = r'C:\Users\JLoucks\Documents\JL\test2'
 
         # Server Setting ############################
         code = 9093 if code.strip().lower()=='usa' else 9036 if code.strip().lower()=='can' else 9049 if code.strip().lower()=='mex' else ValueError
@@ -766,8 +716,6 @@ if __name__ == '__main__':
             maxBuffer = max([float(_.keys()[0]) for _ in orderInfo['BUFFER_GEOMETRY']]) if orderInfo['BUFFER_GEOMETRY'] !=[] else 0#
             maxBuffer ="%s MILE"%(2*maxBuffer if maxBuffer>0.2 else 2)
             # print(orderInfo['BUFFER_GEOMETRY'])
-            print(bufferMax)
-            print(maxBuffer)
             arcpy.Buffer_analysis(orderGeometrySHP,bufferMax,maxBuffer)
             end = timeit.default_timer()
             arcpy.AddMessage(('create max buffer', round(end -start,4)))
@@ -890,6 +838,3 @@ if __name__ == '__main__':
         arcpy.AddError(pymsg)
         arcpy.AddError(msgs)
         raise
-
-print ("Final DB maps path: " + (config.noninstant_reports + "\\map_" + orderInfo['ORDER_NUM'] + ".pdf"))
-print ("_____DONE")
