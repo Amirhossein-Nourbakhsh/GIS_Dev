@@ -24,6 +24,12 @@ import xml.etree.ElementTree as ET
 start1 = timeit.default_timer()
 arcpy.env.overwriteOutput = True
 
+eris_report_path = r"GISData\ERISReport\ERISReport\PDFToolboxes"
+us_topo_path =r"GISData\Topo_USA"
+eris_aerial_ca_path = r"GISData\Aerial_CAN"
+tifdir_topo = r'\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff'
+world_aerial_arcGIS_online_URL = r"https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/0/query?f=json&returnGeometry=false&spatialRel=esriSpatialRelIntersects&maxAllowableOffset=0&geometryType=esriGeometryPoint&inSR=4326&outFields=SRC_DATE"
+
 def server_loc_config(configpath,environment):
     configParser = ConfigParser.RawConfigParser()
     configParser.read(configpath)
@@ -47,21 +53,21 @@ def server_loc_config(configpath,environment):
         return 'invalid server configuration'
 
 server_environment = 'test'
-server_config_file = r'\\cabcvan1gis007\gptools\ERISServerConfig.ini'
+server_config_file = r'\\cabcvan1gis006\GISData\ERISServerConfig.ini'
 server_config = server_loc_config(server_config_file,server_environment)
-eris_report_path = r"gptools\ERISReport"
-us_topo_path = r"gptools\Topo_USA"
-eris_aerial_ca_path = r"gptools\Aerial_CAN"
-tifdir_topo = r"\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff"
-world_aerial_arcGIS_online_URL = r"https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/0/query?f=json&returnGeometry=false&spatialRel=esriSpatialRelIntersects&maxAllowableOffset=0&geometryType=esriGeometryPoint&inSR=4326&outFields=SRC_DATE"
+#eris_report_path = r"gptools\ERISReport"
+#us_topo_path = r"gptools\Topo_USA"
+#eris_aerial_ca_path = r"gptools\Aerial_CAN"
+#tifdir_topo = r"\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff"
+#world_aerial_arcGIS_online_URL = r"https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/0/query?f=json&returnGeometry=false&spatialRel=esriSpatialRelIntersects&maxAllowableOffset=0&geometryType=esriGeometryPoint&inSR=4326&outFields=SRC_DATE"
 
 class Machine:
     machine_test = r"\\cabcvan1gis006"
     machine_prod = r"\\cabcvan1gis007"
 
 class Credential:
-    oracle_test = r"eris_gis/gis295@GMTESTC.glaciermedia.inc"
-    oracle_production = r'eris_gis/gis295@GMPRODC.glaciermedia.inc"
+    oracle_test = r'eris_gis/gis295@GMTESTC.glaciermedia.inc'
+    oracle_production = r'eris_gis/gis295@GMPRODC.glaciermedia.inc'
 
 class ReportPath:
     noninstant_reports_test = server_config['noninstant']
@@ -650,12 +656,12 @@ def exportViewerTable(ImagePath,FileName):
 if __name__ == '__main__':
     try:
         # INPUT #####################################
-        OrderIDText = '988390'#'#arcpy.GetParameterAsText(0).strip()#'736799'#
-        multipage = False #True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
-        gridsize = '2 Miles'#arcpy.GetParameterAsText(2).strip()#0#
-        code = 'usa'#arcpy.GetParameterAsText(3).strip()#'usa'#
-        isInstant = False #True if arcpy.GetParameterAsText(4).strip().lower()=='yes'else False
-        scratch = r'C:\Users\JLoucks\Documents\JL\test2'
+        OrderIDText = arcpy.GetParameterAsText(0).strip()#'736799'#
+        multipage = True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
+        gridsize = arcpy.GetParameterAsText(2).strip()#0#
+        code = arcpy.GetParameterAsText(3).strip()#'usa'#
+        isInstant = True if arcpy.GetParameterAsText(4).strip().lower()=='yes'else False
+        scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'
 
         # Server Setting ############################
         code = 9093 if code.strip().lower()=='usa' else 9036 if code.strip().lower()=='can' else 9049 if code.strip().lower()=='mex' else ValueError
