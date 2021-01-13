@@ -41,7 +41,7 @@ def generate_multipage_report(order_obj,mxd_wetland,outputjpg_wetland,buffer_wet
     spatial_ref = arcpy.Describe(buffer_wetland_shp).spatialReference
     # part 1: the overview map
     # add grid layer
-    gridLayer = arcpy.mapping.Layer(config.gridlyrfile)
+    gridLayer = arcpy.mapping.Layer(config.grid_lyr_file)
     gridLayer.replaceDataSource(scratchfolder,"SHAPEFILE_WORKSPACE",gridlr)
     arcpy.mapping.AddLayer(df_wetland,gridLayer,"Top")
     df_wetland.extent = gridLayer.getExtent()

@@ -25,32 +25,23 @@ if __name__ == "__main__":
    ### set workspace
    arcpy.env.workspace = config.scratch_folder
    arcpy.env.overwriteOutput = True   
-   # temp gdb in scratch folder
-   temp_gdb = os.path.join(config.scratch_folder,r"temp.gdb")
-   
-   if not os.path.exists(temp_gdb):
+
+   if not os.path.exists(config.temp_gdb):
       arcpy.CreateFileGDB_management(config.scratch_folder,r"temp") 
    ### isntantiate of order class and set order geometry and buffering
    order_obj = models.Order().get_by_Id(order_id)
    utility.set_order_geometry(order_obj)
-   
    # shaded releif map report
-   # relief.generate_relief_report(order_obj)
-   
+   relief.generate_relief_report(order_obj)
    # topo map report
-   # topo.generate_topo_report(order_obj)
-
+   topo.generate_topo_report(order_obj)
    # # Wetland report
-   # wetland.generate_wetland_report(order_obj)
-   
+   wetland.generate_wetland_report(order_obj)
    # # flood report
-   # flood_plain.generate_flood_report(order_obj)
-   
-   # # geology report
-   # geology.generate_geology_report(order_obj)
-   
+   flood_plain.generate_flood_report(order_obj)
+   ## geology report
+   geology.generate_geology_report(order_obj)
    # soil report
    soil.generate_soil_report(order_obj)
-   
    end = timeit.default_timer()
    arcpy.AddMessage(('End PSR report process. Duration:', round(end -start,4)))

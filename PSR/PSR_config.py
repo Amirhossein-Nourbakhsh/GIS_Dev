@@ -44,6 +44,8 @@ reportcheck_path = server_config['reportcheck']
 connectionPath = r"\\cabcvan1gis005\GISData\PSR\python"
 
 scratch_folder=  arcpy.env.scratchFolder
+# temp gdb in scratch folder
+temp_gdb = os.path.join(scratch_folder,r"temp.gdb")
 
 order_geom_lyr_point = r"\\cabcvan1gis005\GISData\PSR\python\mxd\SiteMaker.lyr"
 order_geom_lyr_polyline = r"\\cabcvan1gis005\GISData\PSR\python\mxd\orderLine.lyr"
@@ -75,8 +77,6 @@ mxdMMfile_wetlandNY = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandMMNY.mxd"
 mxd_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.mxd"
 mxd_mm_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\floodMM.mxd"
 
-mxdfile_soil = r"\\cabcvan1gis005\GISData\PSR\python\mxd\soil.mxd"
-mxdMMfile_soil = r"\\cabcvan1gis005\GISData\PSR\python\mxd\soilMM.mxd"
 mxdfile_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wells.mxd"
 mxdMMfile_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wellsMM.mxd"
 
@@ -108,6 +108,8 @@ def output_jpg(order_obj, report_type):
         return os.path.join(scratch_folder, order_obj.number + '_US_GEOLOGY.jpg')
     elif report_type == Report_Type.soil:
         return os.path.join(scratch_folder, order_obj.number + '_US_SOIL.jpg')
+    
+    
 ### base maps
 imgdir_demCA = r"\\Cabcvan1fpr009\US_DEM\DEM1"
 master_lyr_dem_CA = r"\\Cabcvan1fpr009\US_DEM\Canada_DEM_edited.shp"
@@ -155,12 +157,19 @@ mxd_file_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.mxd"
 mxd_mm_file_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geologyMM.mxd"
 
 ### soil report paths config
+# data_path_soil_HI =r'\\cabcvan1gis005\GISData\Data\CONUS_2015\gSSURGO_HI.gdb'  ## WGS84
+# data_path_soil_AK =r'\\cabcvan1gis005\GISData\Data\CONUS_2015\gSSURGO_AK.gdb'  ## WGS84
+# data_path_soil_CONUS =r'\\cabcvan1gis005\GISData\Data\CONUS_2015\gSSURGO_CONUS_10m.gdb'  ## WGS84
+
 data_path_soil_HI =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_HI.gdb'
 data_path_soil_AK =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_AK.gdb'
 data_path_soil_CONUS =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_CONUS_10m.gdb'
+
 soil_selectedby_order_shp = os.path.join(scratch_folder,"soil_selectedby_order.shp")
 soil_selectedby_order_pcs_shp =  os.path.join(scratch_folder,"soil_selectedby_order_pcs.shp")
-
+soil_selectedby_frame =  os.path.join(scratch_folder,"soil_selectedby_frame.shp")
+mxd_file_soil = r"\\cabcvan1gis005\GISData\PSR\python\mxd\soil.mxd"
+mxd_mm_file_soil = r"\\cabcvan1gis005\GISData\PSR\python\mxd\soilMM.mxd"
 hydrologic_dict = {
         "A":'Soils in this group have low runoff potential when thoroughly wet. Water is transmitted freely through the soil.',
         "B":'Soils in this group have moderately low runoff potential when thoroughly wet. Water transmission through the soil is unimpeded.',
@@ -178,6 +187,6 @@ hydric_dict = {
         '4':'Unknown',
         }
 
-fc_soils_fieldlist  = [['muaggatt.mukey','mukey'], ['muaggatt.musym','musym'], ['muaggatt.muname','muname'],['muaggatt.drclassdcd','drclassdcd'],['muaggatt.hydgrpdcd','hydgrpdcd'],['muaggatt.hydclprs','hydclprs'], ['muaggatt.brockdepmin','brockdepmin'], ['muaggatt.wtdepannmin','wtdepannmin'], ['component.cokey','cokey'],['component.compname','compname'], ['component.comppct_r','comppct_r'], ['component.majcompflag','majcompflag'],['chorizon.chkey','chkey'],['chorizon.hzname','hzname'],['chorizon.hzdept_r','hzdept_r'],['chorizon.hzdepb_r','hzdepb_r'], ['chtexturegrp.chtgkey','chtgkey'], ['chtexturegrp.texdesc1','texdesc'], ['chtexturegrp.rvindicator','rv']]
-fc_soils_keylist = ['muaggatt.mukey', 'component.cokey','chorizon.chkey','chtexturegrp.chtgkey']
-fc_soils_whereClause_queryTable = "muaggatt.mukey = component.mukey and component.cokey = chorizon.cokey and chorizon.chkey = chtexturegrp.chkey"
+fc_soils_field_list  = [['muaggatt.mukey','mukey'], ['muaggatt.musym','musym'], ['muaggatt.muname','muname'],['muaggatt.drclassdcd','drclassdcd'],['muaggatt.hydgrpdcd','hydgrpdcd'],['muaggatt.hydclprs','hydclprs'], ['muaggatt.brockdepmin','brockdepmin'], ['muaggatt.wtdepannmin','wtdepannmin'], ['component.cokey','cokey'],['component.compname','compname'], ['component.comppct_r','comppct_r'], ['component.majcompflag','majcompflag'],['chorizon.chkey','chkey'],['chorizon.hzname','hzname'],['chorizon.hzdept_r','hzdept_r'],['chorizon.hzdepb_r','hzdepb_r'], ['chtexturegrp.chtgkey','chtgkey'], ['chtexturegrp.texdesc1','texdesc'], ['chtexturegrp.rvindicator','rv']]
+fc_soils_key_list = ['muaggatt.mukey', 'component.cokey','chorizon.chkey','chtexturegrp.chtgkey']
+fc_soils_where_clause_query_table = "muaggatt.mukey = component.mukey and component.cokey = chorizon.cokey and chorizon.chkey = chtexturegrp.chkey"

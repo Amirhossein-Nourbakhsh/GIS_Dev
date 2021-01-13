@@ -6,6 +6,7 @@ import csv
 import shutil
 import psr_utility as utility
 import psr_config as config
+import models
 sys.path.insert(1,os.path.join(os.getcwd(),'DB_Framework'))
 reload(sys)
 
