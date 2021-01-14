@@ -32,7 +32,9 @@ def set_order_geometry(order_obj):
     config.spatial_ref_pcs = arcpy.GetUTMFromLocation(centre_point.X,centre_point.Y)
     order_geometry_pcs = order_obj.geometry.projectAs(config.spatial_ref_pcs)
     arcpy.CopyFeatures_management(order_obj.geometry, config.order_geometry_gcs_shp)
+    arcpy.DefineProjection_management(config.order_geometry_gcs_shp, config.spatial_ref_gcs)
     arcpy.CopyFeatures_management(order_geometry_pcs, config.order_geometry_pcs_shp)
+    arcpy.DefineProjection_management(config.order_geometry_gcs_shp, config.spatial_ref_pcs)
 def return_unique_setstring_musym(table_name):
     data = arcpy.da.TableToNumPyArray(table_name, ['mukey', 'musym'])
     uniques = np.unique(data[data['musym']!='NOTCOM']['mukey'])
@@ -96,3 +98,34 @@ def return_componen_attribute_rv_indicator_Y(data_array,mukey):
         result_array.append(horizon_array)
 
     return result_array
+def get_elevation(data_set,fields):
+    pntlist={}
+    with arcpy.da.SearchCursor(dataset,fields) as uc:
+        for row in uc:
+            pntlist[row[2]]=(row[0],row[1])
+    del uc
+
+    params={}
+    params['XYs']=pntlist
+    params = urllib.urlencode(params)
+    inhouse_esri_geocoder = r"https://gisserverprod.glaciermedia.ca/arcgis/rest/services/GPTools_temp/pntElevation2/GPServer/pntElevation2/execute?env%3AoutSR=&env%3AprocessSR=&returnZ=false&returnM=false&f=pjson"
+    f = urllib.urlopen(inhouse_esri_geocoder,params)
+    results =  json.loads(f.read())
+    result = eval( results['results'][0]['value'])
+
+    check_field = arcpy.ListFields(dataset,"Elevation")
+    if len(check_field)==0:
+        arcpy.AddField_management(dataset, "Elevation", "DOUBLE", "12", "6", "", "", "NULLABLE", "NON_REQUIRED", "")
+    with arcpy.da.UpdateCursor(dataset,["Elevation"]) as uc:
+        for row in uc:
+            row[0]=-999
+            uc.updateRow(row)
+    del uc
+
+    with arcpy.da.UpdateCursor(dataset,['Elevation',fields[-1]]) as uc:
+        for row in uc:
+            if result[row[1]] !='':
+                row[0]= result[row[1]]
+                uc.updateRow(row)
+    del row
+    return dataset

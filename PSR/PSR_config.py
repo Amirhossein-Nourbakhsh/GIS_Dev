@@ -66,7 +66,7 @@ datalyr_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland_kml.lyr"
 datalyr_wetlandNYkml = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandNY_kml.lyr"
 datalyr_wetlandNYAPAkml = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandNYAPA_kml.lyr"
 datalyr_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.lyr"
-datalyr_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.lyr"
+data_lyr_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.lyr"
 datalyr_contour = r"\\cabcvan1gis005\GISData\PSR\python\mxd\contours_largescale.lyr"
 datalyr_plumetacoma = r"\\cabcvan1gis005\GISData\PSR\python\mxd\Plume.lyr"
 
@@ -80,17 +80,12 @@ mxd_mm_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\floodMM.mxd"
 mxdfile_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wells.mxd"
 mxdMMfile_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wellsMM.mxd"
 
-srGCS83 = arcpy.SpatialReference(os.path.join(connectionPath, r"projections\GCSNorthAmerican1983.prj"))
-
-
-
-tbx = r"\\cabcvan1gis005\GISData\PSR\python\ERIS.tbx"
 # grid size
 grid_size = "2 MILES"
 # Explorer
-datalyr_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland_kml.lyr"
+data_lyr_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland_kml.lyr"
 datalyr_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.lyr"
-datalyr_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.lyr"
+data_lyr_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.lyr"
 
 
 def output_jpg(order_obj, report_type):
@@ -110,14 +105,14 @@ def output_jpg(order_obj, report_type):
         return os.path.join(scratch_folder, order_obj.number + '_US_SOIL.jpg')
     
     
-### base maps
+### Basemaps
 imgdir_demCA = r"\\Cabcvan1fpr009\US_DEM\DEM1"
 master_lyr_dem_CA = r"\\Cabcvan1fpr009\US_DEM\Canada_DEM_edited.shp"
 imgdir_dem = r"\\Cabcvan1fpr009\US_DEM\DEM13"
 master_lyr_dem = r"\\cabcvan1gis005\GISData\Data\US_DEM\CellGrid_1X1Degree_NW_wgs84.shp"
-masterlyr_states = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USStates.lyr"
-masterlyr_counties = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USCounties.lyr"
-masterlyr_cities = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USCities.lyr"
+master_lyr_states = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USStates.lyr"
+master_lyr_counties = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USCounties.lyr"
+master_lyr_cities = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USCities.lyr"
 masterlyr_NHTowns = r"\\cabcvan1gis005\GISData\PSR\python\mxd\NHTowns.lyr"
 masterlyr_zipcodes = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USZipcodes.lyr"
 ### order geometry paths config
@@ -126,6 +121,7 @@ order_geometry_gcs_shp =  os.path.join(scratch_folder,'order_geometry_gcs.shp')
 order_buffer_shp =  os.path.join(scratch_folder,'order_buffer.shp')
 order_geom_lyr_file = None
 spatial_ref_pcs = None
+spatial_ref_gcs = arcpy.SpatialReference(4283)
 ### relief report paths config
 mxd_file_relief =  r"\\cabcvan1gis005\GISData\PSR\python\mxd\shadedrelief.mxd"
 mxd_mm_file_relief =  r"\\cabcvan1gis005\GISData\PSR\python\mxd\shadedreliefMM.mxd"
@@ -190,3 +186,11 @@ hydric_dict = {
 fc_soils_field_list  = [['muaggatt.mukey','mukey'], ['muaggatt.musym','musym'], ['muaggatt.muname','muname'],['muaggatt.drclassdcd','drclassdcd'],['muaggatt.hydgrpdcd','hydgrpdcd'],['muaggatt.hydclprs','hydclprs'], ['muaggatt.brockdepmin','brockdepmin'], ['muaggatt.wtdepannmin','wtdepannmin'], ['component.cokey','cokey'],['component.compname','compname'], ['component.comppct_r','comppct_r'], ['component.majcompflag','majcompflag'],['chorizon.chkey','chkey'],['chorizon.hzname','hzname'],['chorizon.hzdept_r','hzdept_r'],['chorizon.hzdepb_r','hzdepb_r'], ['chtexturegrp.chtgkey','chtgkey'], ['chtexturegrp.texdesc1','texdesc'], ['chtexturegrp.rvindicator','rv']]
 fc_soils_key_list = ['muaggatt.mukey', 'component.cokey','chorizon.chkey','chtexturegrp.chtgkey']
 fc_soils_where_clause_query_table = "muaggatt.mukey = component.mukey and component.cokey = chorizon.cokey and chorizon.chkey = chtexturegrp.chkey"
+### ogw report paths config
+order_centre_point_pcs = os.path.join(scratch_folder, "order_centre_point_pcs.shp")
+tbx = r"\\cabcvan1gis005\GISData\PSR\python\ERIS.tbx"
+
+### Rado report config
+states_selectedby_order = os.path.join(scratch_folder,"states_selectedby_order.shp")
+counties_selectedby_order = os.path.join(scratch_folder,"counties_selectedby_order.shp")
+cities_selectedby_order = os.path.join(scratch_folder,"cities_selectedby_order.shp")

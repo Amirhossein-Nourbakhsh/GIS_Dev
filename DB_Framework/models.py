@@ -92,7 +92,7 @@ class Order(object):
                 if not psr_obj.type == None:
                     psr_obj.search_radius = item[2]
                     psr_obj.report_source = item[3]
-                    PSR_list.append(psr_obj)
+                PSR_list.append(psr_obj)
             return PSR_list
         finally:
             cur.close()

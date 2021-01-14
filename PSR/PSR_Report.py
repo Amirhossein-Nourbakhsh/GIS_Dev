@@ -11,7 +11,8 @@ import relief
 import wetland
 import geology
 import soil
-
+import ogw
+import radon
 reload(sys)
 sys.setdefaultencoding('utf8')
 psr_list = []
@@ -31,17 +32,23 @@ if __name__ == "__main__":
    ### isntantiate of order class and set order geometry and buffering
    order_obj = models.Order().get_by_Id(order_id)
    utility.set_order_geometry(order_obj)
-   # shaded releif map report
-   relief.generate_relief_report(order_obj)
-   # topo map report
-   topo.generate_topo_report(order_obj)
-   # # Wetland report
-   wetland.generate_wetland_report(order_obj)
-   # # flood report
-   flood_plain.generate_flood_report(order_obj)
-   ## geology report
-   geology.generate_geology_report(order_obj)
-   # soil report
-   soil.generate_soil_report(order_obj)
+   
+   # # shaded releif map report
+   # relief.generate_relief_report(order_obj)
+   # # topo map report
+   # topo.generate_topo_report(order_obj)
+   # # # Wetland report
+   # wetland.generate_wetland_report(order_obj)
+   # # # flood report
+   # flood_plain.generate_flood_report(order_obj)
+   # ## geology report
+   # geology.generate_geology_report(order_obj)
+   # # soil report
+   # soil.generate_soil_report(order_obj)
+   # oil, gas and water wells report
+   # ogw.generate_ogw_report(order_obj)
+   # radon report
+   radon.generate_radon_report(order_obj)
+   
    end = timeit.default_timer()
    arcpy.AddMessage(('End PSR report process. Duration:', round(end -start,4)))
