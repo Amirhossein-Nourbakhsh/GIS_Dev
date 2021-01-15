@@ -132,4 +132,14 @@ class PSR(object):
         finally:
             cur.close()
             con.close()
+    def get_radon(self,order_id, state_list_str, zip_list_str, county_list_str, city_list_str):
+        try:
+            con = cx_Oracle.connect(db_connections.connection_string)
+            cur = con.cursor()
+             ### insert data into ... table 
+            cur.callproc('eris_psr.GetRadon', (order_id, state_list_str, zip_list_str, county_list_str, city_list_str))
+           
+        finally:
+            cur.close()
+            con.close()
       

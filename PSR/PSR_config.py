@@ -113,8 +113,8 @@ master_lyr_dem = r"\\cabcvan1gis005\GISData\Data\US_DEM\CellGrid_1X1Degree_NW_wg
 master_lyr_states = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USStates.lyr"
 master_lyr_counties = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USCounties.lyr"
 master_lyr_cities = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USCities.lyr"
-masterlyr_NHTowns = r"\\cabcvan1gis005\GISData\PSR\python\mxd\NHTowns.lyr"
-masterlyr_zipcodes = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USZipcodes.lyr"
+master_lyr_nh_towns = r"\\cabcvan1gis005\GISData\PSR\python\mxd\NHTowns.lyr"
+master_lyr_zip_codes = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USZipcodes.lyr"
 ### order geometry paths config
 order_geometry_pcs_shp =  os.path.join(scratch_folder,'order_geometry_pcs.shp')
 order_geometry_gcs_shp =  os.path.join(scratch_folder,'order_geometry_gcs.shp')
