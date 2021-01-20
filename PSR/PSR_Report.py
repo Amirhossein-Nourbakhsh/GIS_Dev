@@ -46,9 +46,9 @@ if __name__ == "__main__":
    # # soil report
    # soil.generate_soil_report(order_obj)
    # oil, gas and water wells report
-   # ogw.generate_ogw_report(order_obj)
+   ogw.generate_ogw_report(order_obj)
    # radon report
-   radon.generate_radon_report(order_obj)
+   # radon.generate_radon_report(order_obj)
    
    end = timeit.default_timer()
    arcpy.AddMessage(('End PSR report process. Duration:', round(end -start,4)))

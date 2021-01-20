@@ -11,6 +11,7 @@ class Order(object):
     number = ''
     address = ''
     province = ''
+    psr = None
     geometry = arcpy.Geometry()
     def get_by_Id(self,order_id):
         try:
@@ -45,25 +46,24 @@ class Order(object):
             con.close()   
     @classmethod
     def __getGeometry(self): # return geometry in WGS84 (GCS) / private function
-        srWGS84 = arcpy.SpatialReference(4326)
+        sr_wgs84 = arcpy.SpatialReference(4326)
         order_fc = db_connections.order_fc
         # orderGeom = arcpy.da.SearchCursor(orderFC,("SHAPE@"),"order_id = " + str(self.Id) ).next()[0]
-        orderGeom = None
-        if orderGeom == None:
-            orderGeom = arcpy.Geometry()
-            
+        order_geom = None
+        if order_geom == None:
+            order_geom = arcpy.Geometry()
             where = 'order_id = ' + str(self.id)
             row = arcpy.da.SearchCursor(order_fc,("GEOMETRY_TYPE","GEOMETRY"),where).next()
             coord_string = ((row[1])[1:-1])
             coordinates = np.array(literal_eval(coord_string))
             geometry_type = row[0]
             if geometry_type.lower()== 'point':
-                orderGeom = arcpy.Multipoint(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]),srWGS84)
+                order_geom = arcpy.Multipoint(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]), sr_wgs84)
             elif geometry_type.lower() =='polyline':        
-                orderGeom = arcpy.Polyline(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]),srWGS84)
+                order_geom = arcpy.Polyline(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]), sr_wgs84)
             elif geometry_type.lower() =='polygon':
-                orderGeom = arcpy.Polygon(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]),srWGS84)
-        return orderGeom.projectAs(srWGS84)
+                order_geom = arcpy.Polygon(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]), sr_wgs84)
+        return order_geom.projectAs( sr_wgs84 )
     @classmethod
     def get_psr(self):
         try:
@@ -89,9 +89,18 @@ class Order(object):
                     psr_obj.type = 'radon'
                 elif str(psr_obj.ds_oid) == '10695':
                     psr_obj.type = 'topo'
+                elif str(psr_obj.ds_oid) == '10093':
+                    psr_obj.type = 'pwsv'
+                elif str(psr_obj.ds_oid) == '5937':
+                     psr_obj.type = 'pces'
+                elif str(psr_obj.ds_oid) == '10061':
+                     psr_obj.type = 'ogw'
+                elif str(psr_obj.ds_oid) == '15676':
+                     psr_obj.type = 'water wells'
                 if not psr_obj.type == None:
                     psr_obj.search_radius = item[2]
                     psr_obj.report_source = item[3]
+                self.psr = psr_obj
                 PSR_list.append(psr_obj)
             return PSR_list
         finally:

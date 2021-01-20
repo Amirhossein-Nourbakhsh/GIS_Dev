@@ -291,7 +291,7 @@ if __name__ == '__main__':
                         # if  len(image_input_path_inv) == 0: # image is not in house
                         output_tif_image = os.path.join(OutputDirectory.georef_images,out_img_name + '.tif')
                         strprod_update_path = str({"PROCEDURE":Oracle.erisapi_procedures["UpdateInventoryImagePath"],"AUI_ID": str(auid), "ORIGINAL_IMAGEPATH":output_tif_image})
-                        message_return = Oracle(env).call_erisapi(strprod_update_path.replace('u','')) ## remove unicode chrachter u from json before calling str prod
+                        message_return = Oracle(env).call_erisapi(strprod_update_path.replace('u','')) ## remove unicode chrachter u from json before calling strprod
             end = timeit.default_timer()
             arcpy.AddMessage(('Duration:', round(end -start,4)))
         except:

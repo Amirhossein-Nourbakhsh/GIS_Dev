@@ -59,7 +59,7 @@ data_flood = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\flood_map_wgs84'
 
 data_flood_panel = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\flood_panel_map_wgs84'
 data_wetland = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\Merged_wetland_Final'
-eris_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\ErisWellSites.lyr"   #which contains water, oil/gas wells etc.
+
 
 datalyr_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland_kml.lyr"
 ##datalyr_wetlandNY = r"E:\GISData\PSR\python\mxd\wetlandNY.lyr"
@@ -187,10 +187,22 @@ fc_soils_field_list  = [['muaggatt.mukey','mukey'], ['muaggatt.musym','musym'], 
 fc_soils_key_list = ['muaggatt.mukey', 'component.cokey','chorizon.chkey','chtexturegrp.chtgkey']
 fc_soils_where_clause_query_table = "muaggatt.mukey = component.mukey and component.cokey = chorizon.cokey and chorizon.chkey = chtexturegrp.chkey"
 ### ogw report paths config
-order_centre_point_pcs = os.path.join(scratch_folder, "order_centre_point_pcs.shp")
-tbx = r"\\cabcvan1gis005\GISData\PSR\python\ERIS.tbx"
+dem_server = r"\\cabcvan1fpr009"
+us_dem = 'US_DEM'
+dir_dem = os.path.join(dem_server, us_dem,"DEM13")
+dir_dem_ca = os.path.join(dem_server, us_dem,"DEM1")
+master_lyr_dem = os.path.join(dem_server, us_dem,"DEM13.shp")
+master_lyr_dem_ca = os.path.join(dem_server, us_dem,"DEM1.shp")
+google_key = r'AIzaSyBmub_p_nY5jXrFMawPD8jdU0DgSrWfBic'
 
 ### Rado report config
 states_selectedby_order = os.path.join(scratch_folder,"states_selectedby_order.shp")
 counties_selectedby_order = os.path.join(scratch_folder,"counties_selectedby_order.shp")
 cities_selectedby_order = os.path.join(scratch_folder,"cities_selectedby_order.shp")
+
+### OGW report config
+order_center_pcs = os.path.join(scratch_folder, "order_center_pcs.shp")
+eris_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\ErisWellSites.lyr"   #which contains water, oil/gas wells etc.
+wells_merge = os.path.join(scratch_folder, "wells_merge.shp")
+wells_sj= os.path.join(scratch_folder,"wells_sj.shp")
+wells_sja= os.path.join(scratch_folder,"wells_sja.shp")

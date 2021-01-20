@@ -1,6 +1,12 @@
-import arcpy,os
+import arcpy,os, sys
 import psr_config as config
 import numpy as np
+file_path =os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(1,os.path.join(os.path.dirname(file_path),'Elevation'))
+import dem_footprints
+import dem_imgs_ll
+import urllib, contextlib
+import json as simple_json
 
 def if_multipage(geometry_pcs_shp, input_report_type = None):
     multi_page = None
@@ -98,34 +104,60 @@ def return_componen_attribute_rv_indicator_Y(data_array,mukey):
         result_array.append(horizon_array)
 
     return result_array
-def get_elevation(data_set,fields):
-    pntlist={}
-    with arcpy.da.SearchCursor(dataset,fields) as uc:
-        for row in uc:
-            pntlist[row[2]]=(row[0],row[1])
-    del uc
 
-    params={}
-    params['XYs']=pntlist
-    params = urllib.urlencode(params)
-    inhouse_esri_geocoder = r"https://gisserverprod.glaciermedia.ca/arcgis/rest/services/GPTools_temp/pntElevation2/GPServer/pntElevation2/execute?env%3AoutSR=&env%3AprocessSR=&returnZ=false&returnM=false&f=pjson"
-    f = urllib.urlopen(inhouse_esri_geocoder,params)
-    results =  json.loads(f.read())
-    result = eval( results['results'][0]['value'])
+def find_dem_parameters(master_grids, (x, y)): # one point at once
+    temp={}
+    for cell in master_grids:
+        [x_max,x_min,y_max,y_min] =[max([_[0] for _ in cell[0]]),min([_[0] for _ in cell[0]]),max([_[1] for _ in cell[0]]),min([_[1] for _ in cell[0]])]
+        if (x_min < x < x_max and y_min< y < y_max) :
+            if cell[2] not in temp.keys():
+                temp[cell[2]]=[cell[1]]
+            elif cell[1] not in temp[cell[2]]:
+                temp[cell[2]].append(cell[1])
+    return temp
+def get_single_elevation((x,y),dem_list,path,key):
+    if dem_list!=[]:
+        exec("mch = dem_imgs_ll.mch%s"%(key))
+        exec("mcw = dem_imgs_ll.mcw%s"%(key))
+        for dem in dem_list:
+            dem_path = os.path.join(path,dem)
+            ele = arcpy.RasterToNumPyArray(dem_path,arcpy.Point(x,y),1,1)
+            if len(ele)==1 and ele[0,0] >-50:
+                return ele[0,0]
+            del ele,dem_path,dem
+    return None
+def get_google_elevation((x,y)):
+    google_url = 'https://maps.googleapis.com/maps/api/elevation/json?locations='
+    url = google_url + str(x)+','+str(y) + '&key='+ config.google_key
 
-    check_field = arcpy.ListFields(dataset,"Elevation")
-    if len(check_field)==0:
-        arcpy.AddField_management(dataset, "Elevation", "DOUBLE", "12", "6", "", "", "NULLABLE", "NON_REQUIRED", "")
-    with arcpy.da.UpdateCursor(dataset,["Elevation"]) as uc:
-        for row in uc:
-            row[0]=-999
-            uc.updateRow(row)
-    del uc
+    with contextlib.closing(urllib.urlopen(url)) as x:
+        response = simple_json.load(x)
+        try:
+            elevation = response['results'][0]['elevation']
+            return str(int(elevation))
+        except KeyError:
+            elevation = ''
+            return elevation
+def get_elevation(long,lat):
+    ### This function extract elevation(z) value by passing lat and long information
+    elevation = None
+    xy = (long, lat)
+    # read module
+    master_grids = dem_footprints.dem_masterGrids
+    # find DEM for one point
+    dem_params = find_dem_parameters(master_grids,xy)
+    
+    if 10 in dem_params.keys():
+        # Calculate elevation based on 10m collection
+        elevation = get_single_elevation(xy,dem_params[10],config.imgdir_dem,10)
 
-    with arcpy.da.UpdateCursor(dataset,['Elevation',fields[-1]]) as uc:
-        for row in uc:
-            if result[row[1]] !='':
-                row[0]= result[row[1]]
-                uc.updateRow(row)
-    del row
-    return dataset
+        if elevation is None and 30 in dem_params.keys():
+            # 3.1 Calculate Elevation based on 30m collection
+            elevation = get_single_elevation(xy,dem_params[30],config.imgdir_demCA,30)
+
+        if elevation is None:
+            elevation = get_single_elevation(xy)
+        
+        if elevation is None:
+            elevation = ''
+    return elevation

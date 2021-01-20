@@ -14,7 +14,7 @@ import urllib, contextlib
 
 US_DEM = r"US_DEM"
 class Machine:
-    data_server = r"\\cabcvan1gis006"
+    data_server = r"\\cabcvan1gis009"
 class DEM():
     def __init__(self):
         self.imgdir_dem = os.path.join(Machine.data_server,US_DEM,"DEM13")
@@ -58,7 +58,9 @@ def getGoogleElevation((X,Y)):
             return elevation
 if __name__ == '__main__':
     try:
-        xy=eval((str(arcpy.GetParameterAsText(0)).strip("[]")))
+        input = '[[-79.38736389999991, 43.702032600000166]]'
+        xy=eval((str(input).strip("[]")))
+        # xy=eval((str(arcpy.GetParameterAsText(0)).strip("[]")))
         config = DEM()
         # 1 read Module
         masterGrids = dem_footprints.dem_masterGrids
