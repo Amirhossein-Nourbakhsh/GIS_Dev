@@ -161,3 +161,5 @@ def get_elevation(long,lat):
         if elevation is None:
             elevation = ''
     return elevation
+def get_file_size(image_path):
+    return os.stat(image_path).st_size
