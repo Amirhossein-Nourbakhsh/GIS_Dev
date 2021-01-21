@@ -150,7 +150,7 @@ def get_filemetadata(filepath,ext):
     return [datadpi,databits,datacomp,datawidth,datalength]
 def get_filesize(imagepath,ext):
     imagepath = imagepath.replace('.TAB',ext)
-    return str(os.stat(imagepath).st_size)
+    return str(os.path.getsize(imagepath))
 def get_imagepath(imagepath,ext):
     imagepath = imagepath.replace('.TAB',ext)
     return imagepath
@@ -168,7 +168,7 @@ def get_spatialres(imagepath,ext):
         return '0'
 
 
-master_xl = r"C:\Users\JLoucks\Desktop\historical\historical_01072021.csv"
+master_xl = r"C:\Users\JLoucks\Desktop\FULLOSA\osa_20210107.csv"
 data = []
 v = open(master_xl)
 r = csv.reader(v)
@@ -221,7 +221,7 @@ for item in r:
         item.append('No readable spatial res')
     print item
     data.append(item)
-with open(r"C:\Users\JLoucks\Desktop\historical\meta_historical_01072021.csv",'wb') as result_file:
+with open(r"C:\Users\JLoucks\Desktop\historical\meta_historical_01162021.csv",'wb') as result_file:
     wr = csv.writer(result_file,dialect='excel')
     wr.writerows(data)
 result_file.close()
