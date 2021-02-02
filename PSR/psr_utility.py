@@ -7,6 +7,7 @@ import dem_footprints
 import dem_imgs_ll
 import urllib, contextlib
 import json as simple_json
+import math
 
 def if_multipage(geometry_pcs_shp, input_report_type = None):
     multi_page = None
@@ -163,3 +164,54 @@ def get_elevation(long,lat):
     return elevation
 def get_file_size(image_path):
     return os.stat(image_path).st_size
+def get_direction_text(x1,y1,x2,y2):
+    angle = calculate_angle(x1,y1,x2,y2)
+    return dgr_dir_to_txt(angle)
+
+def calculate_angle(x1,y1,x2,y2):
+    #(x1,y1) is the reference point.
+    #return an angle in degrees [0,360]
+    a = y2-y1
+    b = x2-x1
+    angle_180 = math.degrees(math.atan2(a,b))
+    angle_360= (450-angle_180) % 360
+
+    return angle_360
+#convert the degree angle into a letter direction
+def dgr_dir_to_txt(dgr_360):
+    if (dgr_360 >= 348.75) or (dgr_360 < 11.25):
+        dir_text = "N"
+    elif (dgr_360 >= 11.25) and (dgr_360 < 33.75):
+        dir_text = "NNE"
+    elif (dgr_360 >= 33.75) and (dgr_360 < 56.25):
+        dir_text = "NE"
+    elif (dgr_360 >= 56.25) and (dgr_360 < 78.75):
+        dir_text = "ENE"
+    elif (dgr_360 >= 78.75) and (dgr_360 < 101.25):
+        dir_text = "E"
+    elif (dgr_360 >= 101.25) and (dgr_360 < 123.75):
+        dir_text = "ESE"
+    elif (dgr_360 >= 123.75) and (dgr_360 < 146.25):
+        dir_text = "SE"
+    elif (dgr_360 >= 146.25) and (dgr_360 < 168.75):
+        dir_text = "SSE"
+    elif (dgr_360 >= 168.75) and (dgr_360 < 191.25):
+        dir_text = "S"
+    elif (dgr_360 >= 191.25) and (dgr_360 < 213.75):
+        dir_text = "SSW"
+    elif (dgr_360 >= 213.75) and (dgr_360 < 236.25):
+        dir_text = "SW"
+    elif (dgr_360 >= 236.25) and (dgr_360 < 258.75):
+        dir_text = "WSW"
+    elif (dgr_360 >= 258.75) and (dgr_360 < 281.25):
+        dir_text = "W"
+    elif (dgr_360 >= 281.25) and (dgr_360 < 303.75):
+        dir_text = "WNW"
+    elif (dgr_360 >= 303.75) and (dgr_360 < 326.25):
+        dir_text = "NW"
+    elif (dgr_360 >= 326.25) and (dgr_360 < 348.75):
+        dir_text = "NNW"
+    else:
+        dir_text = "NUL"    # this line should not be reached
+
+    return dir_text

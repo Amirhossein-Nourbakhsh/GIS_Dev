@@ -31,6 +31,7 @@ class Report_Type:
     wells = 'wells'
     geology = 'geology'
     soil = 'soil'
+    wells = 'wells'
     
 server_environment = 'test'
 server_config_file = r'\\cabcvan1gis006\GISData\ERISServerConfig.ini'
@@ -77,8 +78,7 @@ mxdMMfile_wetlandNY = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandMMNY.mxd"
 mxd_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.mxd"
 mxd_mm_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\floodMM.mxd"
 
-mxdfile_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wells.mxd"
-mxdMMfile_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wellsMM.mxd"
+
 
 # grid size
 grid_size = "2 MILES"
@@ -103,6 +103,8 @@ def output_jpg(order_obj, report_type):
         return os.path.join(scratch_folder, order_obj.number + '_US_GEOLOGY.jpg')
     elif report_type == Report_Type.soil:
         return os.path.join(scratch_folder, order_obj.number + '_US_SOIL.jpg')
+    elif report_type == Report_Type.wells:
+        return os.path.join(scratch_folder, order_obj.number + '_US_WELLS.jpg')
     
     
 ### Basemaps
@@ -206,3 +208,7 @@ eris_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\ErisWellSites.lyr"   #whi
 wells_merge = os.path.join(scratch_folder, "wells_merge.shp")
 wells_sj= os.path.join(scratch_folder,"wells_sj.shp")
 wells_sja= os.path.join(scratch_folder,"wells_sja.shp")
+wells_final= os.path.join(scratch_folder,"wells_fin.shp")
+wells_display= os.path.join(scratch_folder,"wells_display.shp")
+mxd_file_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wells.mxd"
+mxd_mm_file_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wellsMM.mxd"

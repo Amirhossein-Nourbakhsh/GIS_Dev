@@ -23,7 +23,8 @@ def generate_topo_report(order_obj):
     psr_list = order_obj.get_psr()
     
     if len(psr_list) > 0:
-        buffer_radius = next(psr.search_radius for psr in psr_list if psr.type == 'topo')
+        
+        buffer_radius = next(psr.search_radius for psr in psr_list if psr.type.lower() in ['topo','pces'])
         order_buffer_dist = str(buffer_radius) + ' MILES'
         ### create buffer map based on order geometry
         arcpy.Buffer_analysis(config.order_geometry_pcs_shp, config.order_buffer_shp, order_buffer_dist) 
@@ -41,26 +42,26 @@ def generate_topo_report(order_obj):
         else:
             # longer shape
             width = height/7*7
-        xCentroid = (arcpy.Describe(config.order_buffer_shp).extent.XMax + arcpy.Describe(config.order_buffer_shp).extent.XMin)/2
-        yCentroid = (arcpy.Describe(config.order_buffer_shp).extent.YMax + arcpy.Describe(config.order_buffer_shp).extent.YMin)/2
+        x_centre_oid = (arcpy.Describe(config.order_buffer_shp).extent.XMax + arcpy.Describe(config.order_buffer_shp).extent.XMin)/2
+        x_centre_oid = (arcpy.Describe(config.order_buffer_shp).extent.YMax + arcpy.Describe(config.order_buffer_shp).extent.YMin)/2
         
         if utility.if_multipage(config.order_geometry_pcs_shp,config.Report_Type.topo):
             width = width + 6400     # add 2 miles to each side, for multipage
             height = height + 6400   # add 2 miles to each side, for multipage
-        point.X = xCentroid-width
-        point.Y = yCentroid+height
+        point.X = x_centre_oid - width
+        point.Y = x_centre_oid + height
         array.add(point)
-        point.X = xCentroid+width
-        point.Y = yCentroid+height
+        point.X = x_centre_oid + width
+        point.Y = x_centre_oid + height
         array.add(point)
-        point.X = xCentroid+width
-        point.Y = yCentroid-height
+        point.X = x_centre_oid + width
+        point.Y = x_centre_oid - height
         array.add(point)
-        point.X = xCentroid-width
-        point.Y = yCentroid-height
+        point.X = x_centre_oid-width
+        point.Y = x_centre_oid-height
         array.add(point)
-        point.X = xCentroid-width
-        point.Y = yCentroid+height
+        point.X = x_centre_oid - width
+        point.Y = x_centre_oid + height
         array.add(point)
         feat = arcpy.Polygon(array,config.spatial_ref_pcs)
         array.removeAll()
@@ -75,7 +76,7 @@ def generate_topo_report(order_obj):
             topo_master_lyr = None
         else:
             cell_ids_selected = []
-            cell_sizes = []
+            infomatrix = []
             # loop through the relevant records, locate the selected cell IDs
             rows = arcpy.SearchCursor(topo_master_lyr)    # loop through the selected records
             
@@ -86,8 +87,7 @@ def generate_topo_report(order_obj):
             del rows
 
             topo_master_lyr = None
-            infomatrix = []
-
+        
             with open(config.topo_csv_file, "rb") as f:
                 reader = csv.reader(f)
                 for row in reader:
@@ -114,154 +114,154 @@ def generate_topo_report(order_obj):
                 df_mm_topo = arcpy.mapping.ListDataFrames(mxd_mm_topo,"*")[0]
                 df_mm_topo.spatialReference =  config.spatial_ref_pcs
 
-        quadrangles = ''
-        for item in infomatrix:
-            pdf_name = item[2]
-            tif_name = pdf_name[0:-4]   # note without .tif part
-            tif_name_bk = tif_name
-            year = item[3]
-            if os.path.exists(os.path.join(config.topo_tif_dir,tif_name+ "_t.tif")):
-                if '.' in tif_name:
-                    tif_name = tif_name.replace('.','')
+            quadrangles = ''
+            for item in infomatrix:
+                pdf_name = item[2]
+                tif_name = pdf_name[0:-4]   # note without .tif part
+                tif_name_bk = tif_name
+                year = item[3]
+                if os.path.exists(os.path.join(config.topo_tif_dir,tif_name+ "_t.tif")):
+                    if '.' in tif_name:
+                        tif_name = tif_name.replace('.','')
 
-                # need to make a local copy of the tif file for fast data source replacement
-                name_comps = tif_name.split('_')
-                name_comps.insert(-2,year)
-                new_tif_name = '_'.join(name_comps)
+                    # need to make a local copy of the tif file for fast data source replacement
+                    name_comps = tif_name.split('_')
+                    name_comps.insert(-2,year)
+                    new_tif_name = '_'.join(name_comps)
 
-                shutil.copyfile(os.path.join(config.topo_tif_dir,tif_name_bk+"_t.tif"),os.path.join(config.scratch_folder,new_tif_name+'.tif'))
+                    shutil.copyfile(os.path.join(config.topo_tif_dir,tif_name_bk+"_t.tif"),os.path.join(config.scratch_folder,new_tif_name+'.tif'))
 
-                topo_layer = arcpy.mapping.Layer(config.topo_white_lyr_file)
-                topo_layer.replaceDataSource(config.scratch_folder, "RASTER_WORKSPACE", new_tif_name)
-                topo_layer.name = new_tif_name
-                arcpy.mapping.AddLayer(df_topo, topo_layer, "BOTTOM")
-                if utility.if_multipage(config.order_geometry_pcs_shp):
-                    arcpy.mapping.AddLayer(df_mm_topo, topo_layer, "BOTTOM")
+                    topo_layer = arcpy.mapping.Layer(config.topo_white_lyr_file)
+                    topo_layer.replaceDataSource(config.scratch_folder, "RASTER_WORKSPACE", new_tif_name)
+                    topo_layer.name = new_tif_name
+                    arcpy.mapping.AddLayer(df_topo, topo_layer, "BOTTOM")
+                    if utility.if_multipage(config.order_geometry_pcs_shp):
+                        arcpy.mapping.AddLayer(df_mm_topo, topo_layer, "BOTTOM")
 
-                comps = pdf_name.split('_')
-                quad_name = " ".join(comps[1:len(comps)-3])+","+comps[0]
+                    comps = pdf_name.split('_')
+                    quad_name = " ".join(comps[1:len(comps)-3])+","+comps[0]
 
-                if quadrangles == '':
-                    quadrangles = quad_name
+                    if quadrangles == '':
+                        quadrangles = quad_name
+                    else:
+                        quadrangles = quadrangles + "; " + quad_name
+                    topo_layer = None
+
                 else:
-                    quadrangles = quadrangles + "; " + quad_name
-                topo_layer = None
+                    arcpy.AddMessage("      - tif file doesn't exist " + tif_name)
+                    if not os.path.exists(config.topo_tif_dir):
+                        arcpy.AddMessage("      - tif dir doesn't exist " + config.topo_tif_dir)
+                    else:
+                        arcpy.AddMessage("      - tif dir does exist " + config.topo_tif_dir)
+            # possibly no topo returned. Seen one for EDR Alaska order. = True even for topoLayer = None
+            # if 'topoLayer' in locals():                 
 
-            else:
-                arcpy.AddMessage("      - tif file doesn't exist " + tif_name)
-                if not os.path.exists(config.topo_tif_dir):
-                     arcpy.AddMessage("      - tif dir doesn't exist " + config.topo_tif_dir)
-                else:
-                     arcpy.AddMessage("      - tif dir does exist " + config.topo_tif_dir)
-        # possibly no topo returned. Seen one for EDR Alaska order. = True even for topoLayer = None
-        # if 'topoLayer' in locals():                 
+            utility.add_layer_to_mxd("order_buffer",df_topo,config.buffer_lyr_file,1.1)
+            utility.add_layer_to_mxd("order_geometry_pcs", df_topo,config.order_geom_lyr_file,1)
 
-        utility.add_layer_to_mxd("order_buffer",df_topo,config.buffer_lyr_file,1.1)
-        utility.add_layer_to_mxd("order_geometry_pcs", df_topo,config.order_geom_lyr_file,1)
+            year_text = arcpy.mapping.ListLayoutElements(mxd_topo, "TEXT_ELEMENT", "year")[0]
+            year_text.text = "Current USGS Topo"
+            year_text.elementPositionX = 0.4959
 
-        year_text = arcpy.mapping.ListLayoutElements(mxd_topo, "TEXT_ELEMENT", "year")[0]
-        year_text.text = "Current USGS Topo"
-        year_text.elementPositionX = 0.4959
+            quadrangle_text = arcpy.mapping.ListLayoutElements(mxd_topo, "TEXT_ELEMENT", "quadrangle")[0]
+            quadrangle_text.text = "Quadrangle(s): " + quadrangles
 
-        quadrangle_text = arcpy.mapping.ListLayoutElements(mxd_topo, "TEXT_ELEMENT", "quadrangle")[0]
-        quadrangle_text.text = "Quadrangle(s): " + quadrangles
+            source_text = arcpy.mapping.ListLayoutElements(mxd_topo, "TEXT_ELEMENT", "source")[0]
+            source_text.text = "Source: USGS 7.5 Minute Topographic Map"
 
-        source_text = arcpy.mapping.ListLayoutElements(mxd_topo, "TEXT_ELEMENT", "source")[0]
-        source_text.text = "Source: USGS 7.5 Minute Topographic Map"
-
-        arcpy.RefreshTOC()
-        if not utility.if_multipage(config.order_geometry_pcs_shp) :
-            arcpy.mapping.ExportToJPEG(mxd_topo, output_jpg_topo, "PAGE_LAYOUT")#, resolution=200, jpeg_quality=90)
-            if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
-                os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-            shutil.copy(output_jpg_topo, os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-            arcpy.AddMessage('      - output jpg image path: %s' % output_jpg_topo)
-            mxd_topo.saveACopy(os.path.join(config.scratch_folder,"mxd_topo.mxd"))
-            del mxd_topo
-            del df_topo
-        else:                           # multipage
-            grid_lyr_shp = os.path.join(config.scratch_folder, 'grid_lyr_topo.shp')
-            arcpy.GridIndexFeatures_cartography(grid_lyr_shp, config.order_buffer_shp, "", "", "", config.grid_size, config.grid_size)
-
-            # part 1: the overview map
-            # add grid layer
-            grid_layer = arcpy.mapping.Layer(config.grid_lyr_file)
-            grid_layer.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE","grid_lyr_topo")
-            arcpy.mapping.AddLayer(df_topo,grid_layer,"Top")
-
-            df_topo.extent = grid_layer.getExtent()
-            df_topo.scale = df_topo.scale * 1.1
-
-            mxd_topo.saveACopy(os.path.join(config.scratch_folder, "mxd_topo.mxd"))
-            arcpy.mapping.ExportToJPEG(mxd_topo, output_jpg_topo, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-            if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
-                os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-            shutil.copy(output_jpg_topo, os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-            arcpy.AddMessage('      - output jpg image : %s' % os.path.join(config.report_path,os.path.basename(output_jpg_topo)))
-            del mxd_topo
-            del df_topo
-
-            # part 2: the data driven pages
-            page = 1
-
-            page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
-            
-            utility.add_layer_to_mxd("order_buffer",df_mm_topo,config.buffer_lyr_file,1.1)
-            utility.add_layer_to_mxd("order_geometry_pcs", df_mm_topo,config.order_geom_lyr_file,1)
-
-            grid_layer_mm = arcpy.mapping.ListLayers(mxd_mm_topo,"Grid" ,df_mm_topo)[0]
-            grid_layer_mm.replaceDataSource(config.scratch_folder, "SHAPEFILE_WORKSPACE","grid_lyr_topo")
-            arcpy.CalculateAdjacentFields_cartography(grid_lyr_shp, "PageNumber")
-            mxd_mm_topo.saveACopy(os.path.join(config.scratch_folder, "mxd_mm_topo.mxd"))
-
-            for i in range(1,int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))+1):
-                arcpy.SelectLayerByAttribute_management(grid_layer_mm, "NEW_SELECTION", ' "PageNumber" =  ' + str(i))
-                df_mm_topo.extent = grid_layer_mm.getSelectedExtent(True)
-                df_mm_topo.scale = df_mm_topo.scale * 1.1
-
-                # might want to select the quad name again
-                quadrangles_mm = ""
-                images = arcpy.mapping.ListLayers(mxd_mm_topo, "*TM_geo", df_mm_topo)
-                for image in images:
-                    if image.getExtent().overlaps(grid_layer_mm.getSelectedExtent(True)) or image.getExtent().contains(grid_layer_mm.getSelectedExtent(True)):
-                        temp = image.name.split('_20')[0]    # e.g. VA_Port_Royal
-                        comps = temp.split('_')
-                        quadname = " ".join(comps[1:len(comps)])+","+comps[0]
-
-                        if quadrangles_mm == "":
-                            quadrangles_mm = quadname
-                        else:
-                            quadrangles_mm = quadrangles_mm + "; " + quadname
-
-                arcpy.SelectLayerByAttribute_management(grid_layer_mm, "CLEAR_SELECTION")
-
-                year_text = arcpy.mapping.ListLayoutElements(mxd_mm_topo, "TEXT_ELEMENT", "year")[0]
-                year_text.text = "Current USGS Topo - Page " + str(i)
-                year_text.elementPositionX = 0.4959
-
-                quadrangle_text = arcpy.mapping.ListLayoutElements(mxd_mm_topo, "TEXT_ELEMENT", "quadrangle")[0]
-                quadrangle_text.text = "Quadrangle(s): " + quadrangles_mm
-
-                quadrangle_text = arcpy.mapping.ListLayoutElements(mxd_mm_topo, "TEXT_ELEMENT", "source")[0]
-                quadrangle_text.text = "Source: USGS 7.5 Minute Topographic Map"
-
-                arcpy.RefreshTOC()
-
-                arcpy.mapping.ExportToJPEG(mxd_mm_topo, output_jpg_topo[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+            arcpy.RefreshTOC()
+            if not utility.if_multipage(config.order_geometry_pcs_shp) :
+                arcpy.mapping.ExportToJPEG(mxd_topo, output_jpg_topo, "PAGE_LAYOUT")#, resolution=200, jpeg_quality=90)
                 if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
                     os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-                shutil.copy(output_jpg_topo[0:-4]+str(i)+".jpg", os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-                arcpy.AddMessage('      - output jpg image: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number, os.path.basename(output_jpg_topo[0:-4]+str(i)+".jpg")))
-            del mxd_mm_topo
-            del df_mm_topo
-            #insert generated .jpg report path into eris_maps_psr table
-            psr_obj = models.PSR()
-            if os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number, order_obj.number + '_US_TOPO.jpg')):
-                psr_obj.insert_map(order_obj.id, 'RELIEF', order_obj.number + '_US_TOPO.jpg', 1)
-                for i in range(1,page):
-                    psr_obj.insert_map(order_obj.id, 'TOPO', order_obj.number + '_US_TOPO' + str(i) + '.jpg', i + 1)
-            else:
-                arcpy.AddMessage('No Relief map is available')
+                shutil.copy(output_jpg_topo, os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+                arcpy.AddMessage('      - output jpg image path: %s' % output_jpg_topo)
+                mxd_topo.saveACopy(os.path.join(config.scratch_folder,"mxd_topo.mxd"))
+                del mxd_topo
+                del df_topo
+            else:                           # multipage
+                grid_lyr_shp = os.path.join(config.scratch_folder, 'grid_lyr_topo.shp')
+                arcpy.GridIndexFeatures_cartography(grid_lyr_shp, config.order_buffer_shp, "", "", "", config.grid_size, config.grid_size)
+
+                # part 1: the overview map
+                # add grid layer
+                grid_layer = arcpy.mapping.Layer(config.grid_lyr_file)
+                grid_layer.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE","grid_lyr_topo")
+                arcpy.mapping.AddLayer(df_topo,grid_layer,"Top")
+
+                df_topo.extent = grid_layer.getExtent()
+                df_topo.scale = df_topo.scale * 1.1
+
+                mxd_topo.saveACopy(os.path.join(config.scratch_folder, "mxd_topo.mxd"))
+                arcpy.mapping.ExportToJPEG(mxd_topo, output_jpg_topo, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+                if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
+                    os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+                shutil.copy(output_jpg_topo, os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+                arcpy.AddMessage('      - output jpg image : %s' % os.path.join(config.report_path,os.path.basename(output_jpg_topo)))
+                del mxd_topo
+                del df_topo
+
+                # part 2: the data driven pages
+                page = 1
+
+                page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
+                
+                utility.add_layer_to_mxd("order_buffer",df_mm_topo,config.buffer_lyr_file,1.1)
+                utility.add_layer_to_mxd("order_geometry_pcs", df_mm_topo,config.order_geom_lyr_file,1)
+
+                grid_layer_mm = arcpy.mapping.ListLayers(mxd_mm_topo,"Grid" ,df_mm_topo)[0]
+                grid_layer_mm.replaceDataSource(config.scratch_folder, "SHAPEFILE_WORKSPACE","grid_lyr_topo")
+                arcpy.CalculateAdjacentFields_cartography(grid_lyr_shp, "PageNumber")
+                mxd_mm_topo.saveACopy(os.path.join(config.scratch_folder, "mxd_mm_topo.mxd"))
+
+                for i in range(1,int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))+1):
+                    arcpy.SelectLayerByAttribute_management(grid_layer_mm, "NEW_SELECTION", ' "PageNumber" =  ' + str(i))
+                    df_mm_topo.extent = grid_layer_mm.getSelectedExtent(True)
+                    df_mm_topo.scale = df_mm_topo.scale * 1.1
+
+                    # might want to select the quad name again
+                    quadrangles_mm = ""
+                    images = arcpy.mapping.ListLayers(mxd_mm_topo, "*TM_geo", df_mm_topo)
+                    for image in images:
+                        if image.getExtent().overlaps(grid_layer_mm.getSelectedExtent(True)) or image.getExtent().contains(grid_layer_mm.getSelectedExtent(True)):
+                            temp = image.name.split('_20')[0]    # e.g. VA_Port_Royal
+                            comps = temp.split('_')
+                            quadname = " ".join(comps[1:len(comps)])+","+comps[0]
+
+                            if quadrangles_mm == "":
+                                quadrangles_mm = quadname
+                            else:
+                                quadrangles_mm = quadrangles_mm + "; " + quadname
+
+                    arcpy.SelectLayerByAttribute_management(grid_layer_mm, "CLEAR_SELECTION")
+
+                    year_text = arcpy.mapping.ListLayoutElements(mxd_mm_topo, "TEXT_ELEMENT", "year")[0]
+                    year_text.text = "Current USGS Topo - Page " + str(i)
+                    year_text.elementPositionX = 0.4959
+
+                    quadrangle_text = arcpy.mapping.ListLayoutElements(mxd_mm_topo, "TEXT_ELEMENT", "quadrangle")[0]
+                    quadrangle_text.text = "Quadrangle(s): " + quadrangles_mm
+
+                    quadrangle_text = arcpy.mapping.ListLayoutElements(mxd_mm_topo, "TEXT_ELEMENT", "source")[0]
+                    quadrangle_text.text = "Source: USGS 7.5 Minute Topographic Map"
+
+                    arcpy.RefreshTOC()
+
+                    arcpy.mapping.ExportToJPEG(mxd_mm_topo, output_jpg_topo[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+                    if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
+                        os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+                    shutil.copy(output_jpg_topo[0:-4]+str(i)+".jpg", os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+                    arcpy.AddMessage('      - output jpg image: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number, os.path.basename(output_jpg_topo[0:-4]+str(i)+".jpg")))
+                del mxd_mm_topo
+                del df_mm_topo
+                #insert generated .jpg report path into eris_maps_psr table
+                psr_obj = models.PSR()
+                if os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number, order_obj.number + '_US_TOPO.jpg')):
+                    psr_obj.insert_map(order_obj.id, 'RELIEF', order_obj.number + '_US_TOPO.jpg', 1)
+                    for i in range(1,page):
+                        psr_obj.insert_map(order_obj.id, 'TOPO', order_obj.number + '_US_TOPO' + str(i) + '.jpg', i + 1)
+                else:
+                    arcpy.AddMessage('No Relief map is available')
     else:
         arcpy.AddWarning('      - There is no topo PSR for this Order!')
     end = timeit.default_timer()

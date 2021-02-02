@@ -101,7 +101,7 @@ def generate_relief_report(order_obj):
     psr_list = order_obj.get_psr()
 
     if len(psr_list) > 0:
-        buffer_radius = next(psr.search_radius for psr in psr_list if psr.type == 'topo')
+        buffer_radius = next(psr.search_radius for psr in psr_list if psr.type.lower() == 'topo')
         order_buffer_dist = str(buffer_radius) + ' MILES'
         point = arcpy.Point()
         array = arcpy.Array()

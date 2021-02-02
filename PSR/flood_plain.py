@@ -22,7 +22,7 @@ def generate_flood_report(order_obj):
     psr_list = order_obj.get_psr()
     page = 1
     if len(psr_list) > 0:
-        buffer_radius = next(psr.search_radius for psr in psr_list if psr.type == 'flood')
+        buffer_radius = next(psr.search_radius for psr in psr_list if psr.type.lower() == 'flood')
        
         order_buffer_dist = str(buffer_radius) + ' MILES'
         arcpy.Buffer_analysis(config.order_geometry_pcs_shp, config.order_buffer_shp, order_buffer_dist) ### create buffer map based on order geometry

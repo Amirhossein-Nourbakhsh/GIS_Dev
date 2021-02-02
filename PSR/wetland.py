@@ -109,7 +109,7 @@ def generate_wetland_report(order_obj):
     psr_list = order_obj.get_psr()
     if len(psr_list) > 0:
         ### Wetland Map
-        wetland_radius = next(psrObj.search_radius for psrObj in psr_list if psrObj.type == 'wetland')
+        wetland_radius = next(psr.search_radius for psr in psr_list if psr.type.lower() == 'wetland')
         bufferDist_wetland = str(wetland_radius) + ' MILES'
         arcpy.Buffer_analysis(order_geometry_pcs_shp, buffer_wetland_shp, bufferDist_wetland)
         mxd_wetland = arcpy.mapping.MapDocument(config.mxdfile_wetland)

@@ -1,4 +1,5 @@
 import arcpy, os,sys, timeit
+from multiprocessing import Pool
 from imp import reload
 file_path =os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(1,os.path.join(os.path.dirname(file_path),'DB_Framework'))
@@ -19,6 +20,7 @@ psr_list = []
 
 if __name__ == "__main__":
    # order_id = '930894' #single pages: 20292800115 - 20200814009
+   # order_id = '884891'
    # order_id = '462873' # no psr ->'354268' ## newyork
    order_id = '932499' # multi page
    arcpy.AddMessage('Start PSR report...')
@@ -32,23 +34,23 @@ if __name__ == "__main__":
    ### isntantiate of order class and set order geometry and buffering
    order_obj = models.Order().get_by_Id(order_id)
    utility.set_order_geometry(order_obj)
-   
-   # # shaded releif map report
-   # relief.generate_relief_report(order_obj)
-   # # topo map report
-   # topo.generate_topo_report(order_obj)
-   # # # Wetland report
-   # wetland.generate_wetland_report(order_obj)
+
+   # shaded releif map report
+   relief.generate_relief_report(order_obj)
+   # topo map report
+   topo.generate_topo_report(order_obj)
+   # # Wetland report
+   wetland.generate_wetland_report(order_obj)
    # # # flood report
-   # flood_plain.generate_flood_report(order_obj)
+   flood_plain.generate_flood_report(order_obj)
    # ## geology report
-   # geology.generate_geology_report(order_obj)
+   geology.generate_geology_report(order_obj)
    # # soil report
-   # soil.generate_soil_report(order_obj)
-   # oil, gas and water wells report
+   soil.generate_soil_report(order_obj)
+   # # oil, gas and water wells report
    ogw.generate_ogw_report(order_obj)
-   # radon report
-   # radon.generate_radon_report(order_obj)
+   # # radon report
+   radon.generate_radon_report(order_obj)
    
    end = timeit.default_timer()
    arcpy.AddMessage(('End PSR report process. Duration:', round(end -start,4)))

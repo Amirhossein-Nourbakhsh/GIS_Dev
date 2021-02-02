@@ -20,7 +20,7 @@ def generate_radon_report(order_obj):
     ### extract buffer size for flood report
     psr_list = order_obj.get_psr()
     if len(psr_list) > 0:
-        buffer_radius = next(psr.search_radius for psr in psr_list if psr.type == 'radon')
+        buffer_radius = next(psr.search_radius for psr in psr_list if psr.type.lower() == 'radon')
         order_buffer_dist = str(buffer_radius) + ' MILES'
         ### create buffer map based on order geometry
         arcpy.Buffer_analysis(config.order_geometry_pcs_shp, config.order_buffer_shp, order_buffer_dist) 

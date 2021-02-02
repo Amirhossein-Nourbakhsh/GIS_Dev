@@ -63,7 +63,7 @@ class Order(object):
                 order_geom = arcpy.Polyline(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]), sr_wgs84)
             elif geometry_type.lower() =='polygon':
                 order_geom = arcpy.Polygon(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]), sr_wgs84)
-        return order_geom.projectAs( sr_wgs84 )
+        return order_geom.projectAs(sr_wgs84)
     @classmethod
     def get_psr(self):
         try:
@@ -78,25 +78,41 @@ class Order(object):
                 psr_obj.omi_id = item[0]
                 psr_obj.ds_oid = item[1]
                 if str(psr_obj.ds_oid) == '10683':
-                    psr_obj.type = 'flood'
+                    psr_obj.type = 'FLOOD'
                 elif str(psr_obj.ds_oid) == '10684':
-                    psr_obj.type = 'wetland'
+                    psr_obj.type = 'WETLAND'
                 elif str(psr_obj.ds_oid) == '10685':
-                    psr_obj.type = 'geology'
+                    psr_obj.type = 'GEOLOGY'
                 elif str(psr_obj.ds_oid) == '9334':
-                    psr_obj.type = 'soil'
-                elif str(psr_obj.ds_oid) == '10689':
-                    psr_obj.type = 'radon'
+                    psr_obj.type = 'SOIL'
+                elif str(psr_obj.ds_oid) in ['10689', '10688']:
+                    psr_obj.type = 'RADON'
                 elif str(psr_obj.ds_oid) == '10695':
-                    psr_obj.type = 'topo'
+                    psr_obj.type = 'TOPO'
                 elif str(psr_obj.ds_oid) == '10093':
-                    psr_obj.type = 'pwsv'
+                    psr_obj.type = 'PWSV'
                 elif str(psr_obj.ds_oid) == '5937':
-                     psr_obj.type = 'pces'
-                elif str(psr_obj.ds_oid) == '10061':
-                     psr_obj.type = 'ogw'
-                elif str(psr_obj.ds_oid) == '15676':
-                     psr_obj.type = 'water wells'
+                     psr_obj.type = 'PCES'
+                elif str(psr_obj.ds_oid) in ['10061', '9154','9340']:
+                     psr_obj.type = 'OGW'
+                elif str(psr_obj.ds_oid) in ['15676', '10202','15312']:
+                     psr_obj.type = 'WATER WELLS'
+                elif str(psr_obj.ds_oid) == '8670':
+                    psr_obj.type = 'FED USGS'
+                elif str(psr_obj.ds_oid) == '8739':
+                    psr_obj.type = 'PWS'
+                elif str(psr_obj.ds_oid) == '10694':
+                    psr_obj.type = 'SDWIS'
+                elif str(psr_obj.ds_oid) == '8734':
+                    psr_obj.type = 'PWSW'
+                elif str(psr_obj.ds_oid) == '11271':
+                    psr_obj.type = 'GWDB'
+                elif str(psr_obj.ds_oid) == '11272':
+                    psr_obj.type = 'SDR WELLS'
+                elif str(psr_obj.ds_oid) == '11282':
+                    psr_obj.type = 'PLUGGED WELLS'
+                elif str(psr_obj.ds_oid) == '15302':
+                    psr_obj.type = 'UIC'
                 if not psr_obj.type == None:
                     psr_obj.search_radius = item[2]
                     psr_obj.report_source = item[3]
@@ -122,12 +138,12 @@ class PSR(object):
         finally:
             cur.close()
             con.close()
-    def insert_order_detail(self,order_id,eris_id, ds_id):
+    def insert_order_detail(self,order_id,eris_id, ds_id, map_unit_key = None, distance = None, direction = None, elev_feet = None, elev_feet_dif = None, map_key_loc = None, map_key_no = None ):
         try:
             con = cx_Oracle.connect(db_connections.connection_string)
             cur = con.cursor()
             ### insert data into order_detail_psr table
-            cur.callproc('eris_psr.InsertOrderDetail', (order_id, eris_id,ds_id))
+            cur.callproc('eris_psr.InsertOrderDetail', (order_id, eris_id,ds_id, map_unit_key, distance, direction, elev_feet, elev_feet_dif, map_key_loc, map_key_no))
         finally:
             cur.close()
             con.close()
