@@ -15,7 +15,6 @@ def generate_flood_report(order_obj):
     ### set scratch folder
     arcpy.env.workspace = config.scratch_folder
     arcpy.env.overwriteOutput = True   
-    arcpy.AddMessage('      - scratch folder: %s' % config.scratch_folder)
     eris_id = 0
     output_jpg_flood = config.output_jpg(order_obj,config.Report_Type.flood)
     ### extract buffer size for flood report
@@ -130,8 +129,8 @@ def generate_flood_report(order_obj):
                 # panel available, just not records in area
                 in_rows = arcpy.SearchCursor(config.flood_panel_selectedby_order_shp)
                 for in_row in in_rows:
-                    arcpy.AddMessage('      - : ' + in_row.FIRM_PAN)    # panel number
-                    arcpy.AddMessage('      - %s' % in_row.EFF_DATE)      # effective date
+                    # arcpy.AddMessage('      - : ' + in_row.FIRM_PAN)    # panel number
+                    # arcpy.AddMessage('      - %s' % in_row.EFF_DATE)      # effective date
                     flood_panels = flood_panels + in_row.FIRM_PAN+'(effective:' + str(in_row.EFF_DATE)[0:10]+') '
                     del in_row
                 del in_rows

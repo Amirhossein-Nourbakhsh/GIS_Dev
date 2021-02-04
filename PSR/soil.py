@@ -75,7 +75,7 @@ def create_map(order_obj, soil_setting):
     
     utility.add_layer_to_mxd("order_buffer",df_soil,config.buffer_lyr_file, 1.1)
     utility.add_layer_to_mxd("order_geometry_pcs", df_soil,config.order_geom_lyr_file,1)
-    arcpy.RefreshActiveView();
+    arcpy.RefreshActiveView()
     arcpy.AddMessage('      - multiple pages: %s' % str(utility.if_multipage(config.order_geometry_pcs_shp)))
     output_jpg_soil = config.output_jpg(order_obj,config.Report_Type.soil)
     if not utility.if_multipage(config.order_geometry_pcs_shp): # single-page
@@ -192,7 +192,6 @@ def generate_soil_report(order_obj):
     ### set scratch folder
     arcpy.env.workspace = config.scratch_folder
     arcpy.env.overwriteOutput = True   
-    arcpy.AddMessage('      - scratch folder: %s' % config.scratch_folder)
     soil_setting = Setting()
     ### extract buffer size for soil report
     psr_list = order_obj.get_psr()
@@ -221,12 +220,11 @@ def generate_soil_report(order_obj):
         table_chorizon = os.path.join(data_path_soil,'chorizon')
         table_chtexturegrp = os.path.join(data_path_soil,'chtexturegrp')
         
-        
         stable_muaggatt = os.path.join(config.temp_gdb,"muaggatt")
         stable_component = os.path.join(config.temp_gdb,"component")
         stable_chorizon = os.path.join(config.temp_gdb,"chorizon")
         stable_chtexture_grp = os.path.join(config.temp_gdb,"chtexturegrp")
-        
+        data_array = []
         if (int(arcpy.GetCount_management('soil_lyr').getOutput(0)) == 0):   # no soil polygons selected
             arcpy.AddMessage('no soil data in order geometry buffer')
             psr_obj = models.PCR()
@@ -271,9 +269,9 @@ def generate_soil_report(order_obj):
             for i in range (0, len(seq_array)):
                 map_unit_data = {}
                 mukey = seq_array['FIRST_MUKE'][i]   #note the column name in the .dbf output was cut off
-                arcpy.AddMessage('      - multiple pages map unit ' + str(i))
-                arcpy.AddMessage('      - musym is ' + str(seq_array['MUSYM'][i]))
-                arcpy.AddMessage('      - mukey is ' + str(mukey))
+                # arcpy.AddMessage('      - multiple pages map unit ' + str(i))
+                # arcpy.AddMessage('      - musym is ' + str(seq_array['MUSYM'][i]))
+                # arcpy.AddMessage('      - mukey is ' + str(mukey))
                 map_unit_data['Seq'] = str(i+1)    # note i starts from 0, but we want labels to start from 1
 
                 if (seq_array['MUSYM'][i].upper() == 'NOTCOM'):
@@ -285,7 +283,7 @@ def generate_soil_report(order_obj):
                         cursor = arcpy.SearchCursor(stable_muaggatt, "mukey = '" + str(mukey) + "'")
                         row = cursor.next()
                         map_unit_data['Map Unit Name'] = row.muname
-                        arcpy.AddMessage('      -  map unit name: ' + row.muname)
+                        # arcpy.AddMessage('      -  map unit name: ' + row.muname)
                         map_unit_data['Mukey'] = mukey          #note
                         map_unit_data['Musym'] = row.musym
                         row = None
@@ -295,7 +293,7 @@ def generate_soil_report(order_obj):
                         cursor = arcpy.SearchCursor(stable_muaggatt, "mukey = '" + str(mukey) + "'")
                         row = cursor.next()
                         map_unit_data['Map Unit Name'] = row.muname
-                        arcpy.AddMessage('      -  map unit name: ' + row.muname)
+                        # arcpy.AddMessage('      -  map unit name: ' + row.muname)
                         map_unit_data['Mukey'] = mukey          #note
                         map_unit_data['Musym'] = row.musym
                         row = None
@@ -314,14 +312,14 @@ def generate_soil_report(order_obj):
                         map_unit_data['component'] = component_data
                 map_unit_data["Soil_Percent"]  ="%s"%round(seq_array['SUM_Shape_'][i]/sum(seq_array['SUM_Shape_'])*100,2)+r'%'
                 soil_setting.report_data.append(map_unit_data)
-            for map_unit in soil_setting.report_data:
-                arcpy.AddMessage('      - mapunit name: ' + map_unit['Map Unit Name'])
-                if 'component' in map_unit.keys():
-                    arcpy.AddMessage('      -  Major component info are printed below')
-                    for comp in map_unit['component']:
-                        arcpy.AddMessage('      - component name is ' + comp[0][0])
-                        for i in range(1,len(comp)):
-                            arcpy.AddMessage('      - ' + comp[i][0] +': '+ comp[i][1])
+            # for map_unit in soil_setting.report_data:
+            #     arcpy.AddMessage('      - mapunit name: ' + map_unit['Map Unit Name'])
+            #     if 'component' in map_unit.keys():
+            #         arcpy.AddMessage('      -  Major component info are printed below')
+            #         for comp in map_unit['component']:
+            #             arcpy.AddMessage('      - component name is ' + comp[0][0])
+            #             for i in range(1,len(comp)):
+            #                 arcpy.AddMessage('      - ' + comp[i][0] +': '+ comp[i][1])
             # create the map
             create_map(order_obj, soil_setting)
     else:

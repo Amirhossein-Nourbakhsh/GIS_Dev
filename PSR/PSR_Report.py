@@ -22,11 +22,12 @@ if __name__ == "__main__":
    # order_id = '930894' #single pages: 20292800115 - 20200814009
    # order_id = '884891'
    # order_id = '462873' # no psr ->'354268' ## newyork
-   order_id = '932499' # multi page
+   order_id = '968933' #'932499' # multi page
    arcpy.AddMessage('Start PSR report...')
    start = timeit.default_timer() 
    ### set workspace
    arcpy.env.workspace = config.scratch_folder
+   arcpy.AddMessage('   -- scratch folder: %s' % config.scratch_folder)
    arcpy.env.overwriteOutput = True   
 
    if not os.path.exists(config.temp_gdb):
@@ -34,23 +35,41 @@ if __name__ == "__main__":
    ### isntantiate of order class and set order geometry and buffering
    order_obj = models.Order().get_by_Id(order_id)
    utility.set_order_geometry(order_obj)
-
+   
+   ### determine which report is goint to be generated
+   if_relief_report = True
+   if_topo_report = False #True
+   if_wetland_report = False #True
+   if_flood_report = False #True
+   if_geology_report = False #True
+   if_soil_report = False #True
+   if_ogw_report = False #True
+   if_radon_report = False #True
+      
    # shaded releif map report
-   relief.generate_relief_report(order_obj)
+   if if_relief_report:
+      relief.generate_relief_report(order_obj)
    # topo map report
-   topo.generate_topo_report(order_obj)
-   # # Wetland report
-   wetland.generate_wetland_report(order_obj)
-   # # # flood report
-   flood_plain.generate_flood_report(order_obj)
-   # ## geology report
-   geology.generate_geology_report(order_obj)
-   # # soil report
-   soil.generate_soil_report(order_obj)
-   # # oil, gas and water wells report
-   ogw.generate_ogw_report(order_obj)
-   # # radon report
-   radon.generate_radon_report(order_obj)
+   if if_topo_report:
+      topo.generate_topo_report(order_obj)
+   # Wetland report
+   if if_wetland_report:
+      wetland.generate_wetland_report(order_obj)
+   # flood report
+   if if_flood_report:
+      flood_plain.generate_flood_report(order_obj)
+   # geology report
+   if if_geology_report:
+      geology.generate_geology_report(order_obj)
+   # soil report
+   if if_soil_report:
+      soil.generate_soil_report(order_obj)
+   # oil, gas and water wells report
+   if if_ogw_report:
+      ogw.generate_ogw_report(order_obj)
+   # radon report
+   if if_radon_report:
+      radon.generate_radon_report(order_obj)
    
    end = timeit.default_timer()
    arcpy.AddMessage(('End PSR report process. Duration:', round(end -start,4)))

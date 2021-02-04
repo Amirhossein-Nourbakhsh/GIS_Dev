@@ -94,7 +94,6 @@ def generate_relief_report(order_obj):
 
     arcpy.env.workspace = config.scratch_folder
     arcpy.env.overwriteOutput = True   
-    arcpy.AddMessage('      - scratch folder: %s' %config.scratch_folder)
     ### set paths
     output_jpg_relief = config.output_jpg(order_obj,config.Report_Type.relief)
     ### extract buffer size for topo report

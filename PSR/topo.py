@@ -16,7 +16,6 @@ def generate_topo_report(order_obj):
     ### set scratch folder
     arcpy.env.workspace = config.scratch_folder
     arcpy.env.overwriteOutput = True   
-    arcpy.AddMessage('      - scratch folder: %s' %config.scratch_folder)
     ### set paths
     output_jpg_topo = config.output_jpg(order_obj,config.Report_Type.topo)
     ### extract buffer size for topo report

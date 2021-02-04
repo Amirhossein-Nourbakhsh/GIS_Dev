@@ -90,7 +90,6 @@ def generate_ogw_report(order_obj):
     ### set scratch folder
     arcpy.env.workspace = config.scratch_folder
     arcpy.env.overwriteOutput = True   
-    arcpy.AddMessage('      - scratch folder: %s' % config.scratch_folder)
     centre_point = order_obj.geometry.trueCentroid
     elevation = psr_utility.get_elevation(centre_point.X, centre_point.Y)
     if elevation != None:

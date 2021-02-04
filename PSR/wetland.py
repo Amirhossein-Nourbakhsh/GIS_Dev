@@ -92,7 +92,6 @@ def generate_wetland_report(order_obj):
     ### set scratch folder
     arcpy.env.workspace = config.scratch_folder
     arcpy.env.overwriteOutput = True   
-    arcpy.AddMessage('      - scratch folder: %s' % config.scratch_folder)
     ### set paths
     orderGeo_GCS_shp= os.path.join(config.scratch_folder,"orderGeo_GCS_shp.shp")
     order_geometry_pcs_shp = os.path.join(config.scratch_folder,"orderGeometry_PCS.shp")

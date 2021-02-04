@@ -14,7 +14,6 @@ def generate_geology_report(order_obj):
     ### set scratch folder
     arcpy.env.workspace = config.scratch_folder
     arcpy.env.overwriteOutput = True   
-    arcpy.AddMessage('      - scratch folder: %s' % config.scratch_folder)
     output_jpg_geology = config.output_jpg(order_obj,config.Report_Type.geology)
     
     psr_list = order_obj.get_psr()
