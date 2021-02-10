@@ -273,11 +273,11 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '968955'#arcpy.GetParameterAsText(0)#'968634'#arcpy.GetParameterAsText(0)
-    UserMapScale = '500'#arcpy.GetParameterAsText(1)
-    scratch = r'C:\Users\JLoucks\Documents\JL\test4'#arcpy.env.scratchFolder
+    orderID = arcpy.GetParameterAsText(0)#'968634'#arcpy.GetParameterAsText(0)
+    UserMapScale = arcpy.GetParameterAsText(1)
+    scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test4'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
-    mxdexport_template = r'\\CABCVAN1GIS007\gptools\Aerial_US\mxd\Aerial_US_Export_new.mxd'
+    mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export_new.mxd'
     wgs84_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\wgs84_template.mxd'
     arcpy.env.overwriteOutput=True
 

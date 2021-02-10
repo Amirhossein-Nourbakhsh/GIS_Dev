@@ -14,7 +14,7 @@ import urllib, contextlib
 
 US_DEM = r"US_DEM"
 class Machine:
-    data_server = r"\\cabcvan1gis009"
+    data_server = r"\\cabcvan1fpr009"
 class DEM():
     def __init__(self):
         self.imgdir_dem = os.path.join(Machine.data_server,US_DEM,"DEM13")
