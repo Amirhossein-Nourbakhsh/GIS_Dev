@@ -205,8 +205,8 @@ if __name__ == '__main__':
     ### set input parameters
     order_id = arcpy.GetParameterAsText(0)
     auid = arcpy.GetParameterAsText(1)
-    # order_id = '968784'
-    # auid = '3286257'
+    # order_id = '1014715'
+    # auid = '7245290'
     # order_id = '968839' 
     # auid = '1907586' 
     env = 'test'
@@ -278,7 +278,7 @@ if __name__ == '__main__':
                             arcpy.CreateFileGDB_management(scratchFolder,r"temp.gdb")
                         ## get order geometry 
                         order_geometry = createGeometry(eval(orderInfo[u'ORDER_GEOMETRY'][u'GEOMETRY'])[0],orderInfo['ORDER_GEOMETRY']['GEOMETRY_TYPE'],tempGDB,'OrderGeometry')
-                        gcpPoints = CoordToString(aerial_georefjson['envelope'])
+                        gcpPoints = CoordToString(aerial_georefjson['envelope']) # footPrint
                         ### Source point from input extent
                         TOP = str(arcpy.GetRasterProperties_management(input_image,"TOP").getOutput(0))
                         LEFT = str(arcpy.GetRasterProperties_management(input_image,"LEFT").getOutput(0))
@@ -289,7 +289,7 @@ if __name__ == '__main__':
                         img_georeferenced = apply_georeferencing(scratchFolder,input_image, srcPoints, gcpPoints,OutputDirectory.georef_images, out_img_name, TransformationType.POLYORDER2, ResamplingType.BILINEAR)
                         ### ExportToOutputs
                         ExportToOutputs(env,img_georeferenced, jpg_image_folder,out_img_name,order_geometry)
-                        ### Update image path in DB if image is not in house
+                        ### Update image path in DB if image is not in hose
                         file_size = get_file_size(img_georeferenced)
                         strprod_update_path = str({"PROCEDURE":Oracle.erisapi_procedures["UpdateInventoryImagePath"],"AUI_ID": str(auid), "ORIGINAL_IMAGEPATH":img_georeferenced, "FILE_SIZE":file_size})
                         message_return = Oracle(env).call_erisapi(strprod_update_path.replace('u','')) ## remove unicode chrachter u from json before calling strprod

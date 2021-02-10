@@ -19,6 +19,8 @@ class Order(object):
             cursor = con.cursor()
             cursor.execute("select order_num, address1, city, provstate from orders where order_id =" + str(order_id))
             row = cursor.fetchone()
+            if row is None:
+                return None
             order_obj = Order
             order_obj.id = order_id
             order_obj.number = str(row[0])
@@ -122,11 +124,28 @@ class Order(object):
         finally:
             cur.close()
             con.close()
+    @classmethod
+    def get_search_radius(self):
+        try:
+            con = cx_Oracle.connect(db_connections.connection_string)
+            cur = con.cursor()
+            cur.execute("select OMR_OID, DS_OID, SEARCH_RADIUS, REPORT_SOURCE from order_radius_psr where order_id =" + str(self.id))
+            items = cur.fetchall()
+            psr_obj = PSR()
+            psr_obj.order_id = self.id
+            for t in items:
+                dso_id = t[1]
+                radius = t[2]
+                psr_obj.search_radius[str(dso_id)] = float(radius)
+            self.psr = psr_obj
+        finally:
+            cur.close()
+            con.close()
 class PSR(object):
     order_id = ''
     omi_id = ''
     ds_oid = ''
-    search_radius = ''
+    search_radius = {}
     report_source = ''
     type = None
     def insert_map(self,order_id,psr_type, psr_filename, p_seq_no):

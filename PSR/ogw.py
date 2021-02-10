@@ -61,7 +61,7 @@ def elevation_ranking():
         cur.updateRow(row)
     # release the layer from locks
     del row, cur
-def store_wells_to_db(order_obj, page):
+def save_wells_to_db(order_obj, page):
     psr_obj = models.PSR()
     if (int(arcpy.GetCount_management(config.wells_sja).getOutput(0))== 0):
         arcpy.AddMessage('      - No well records are selected.')
@@ -80,7 +80,7 @@ def store_wells_to_db(order_obj, page):
             psr_obj.insert_order_detail(order_obj.id,eris_id, ds_oid, '', distance, direction, elevation, site_elevation, map_key_loc,map_key_no )
         #note type 'SOIL' or 'GEOL' is used internally
         psr_obj.insert_map(order_obj.id, 'WELLS', order_obj.number + '_US_WELLS.jpg', 1)
-        if not psr_utility.if_multipage(config.order_geometry_pcs_shp):
+        if not config.if_multi_page:
             for i in range(1,page):
                 psr_obj.insert_map(order_obj.id, 'WELLS', order_obj.number +'_US_WELLS'+str(i)+'.jpg', i + 1)
 def generate_ogw_report(order_obj):
@@ -123,154 +123,139 @@ def generate_ogw_report(order_obj):
     del order_rows
     del point
     del array
+    
     output_jpg_wells = config.output_jpg(order_obj,config.Report_Type.wells)
-    ### extract buffer size for ogw report
-    psr_list = order_obj.get_psr()
-    if len(psr_list) > 0:
-        buffer_radius = next(psr.search_radius for psr in psr_list if psr.type.lower() == order_obj.psr.type.lower())
-        
-        ds_oid_wells = []
-        ds_oid_wells_max_radius = '10093'     # 10093 is a federal source, PWSV
-        psr_10093_radius = next(psr.search_radius for psr in psr_list if str(psr.ds_oid) == '10093')
-        for psr in psr_list:
-            if psr.ds_oid not in ['9334', '10683', '10684', '10685', '10688','10689', '10695', '10696']:       #10695 is US topo, 10696 is HTMC, 10688 and 10689 are radons
-                ds_oid_wells.append(psr.ds_oid )
-                if (psr.search_radius > psr_10093_radius):
-                    ds_oid_wells_max_radius = psr.ds_oid
-        merge_list = []
-        for ds_oid in ds_oid_wells:
-            psr_radius = 0
-            buffer_wells = os.path.join(config.scratch_folder,"order_buffer_" + str(ds_oid) + ".shp")
-            psr_radius = next(p.search_radius for p in psr_list if str(p.ds_oid) == str(ds_oid))
-            if psr_radius != '' and psr_radius > 0 :
-                arcpy.Buffer_analysis(config.order_geometry_pcs_shp, buffer_wells, str(psr_radius) + " MILES")
-                wells_clip = os.path.join(config.scratch_folder,'wells_clip_' + str(ds_oid) + '.shp')
-                arcpy.Clip_analysis(config.eris_wells, buffer_wells, wells_clip)
-                arcpy.Select_analysis(wells_clip, os.path.join(config.scratch_folder,'wells_selected_' + str(ds_oid) + '.shp'), "DS_OID =" + str(ds_oid))
-                merge_list.append(os.path.join(config.scratch_folder,'wells_selected_' + str(ds_oid) + '.shp'))
-        arcpy.Merge_management(merge_list, config.wells_merge)
-        del config.eris_wells
-        
-        # Calculate Distance with integration and spatial join- can be easily done with Distance tool along with direction if ArcInfo or Advanced license
-        wells_merge_pcs= os.path.join(config.scratch_folder,"wells_merge_pcs.shp")
-        arcpy.Project_management(config.wells_merge, wells_merge_pcs, config.spatial_ref_pcs)
-        arcpy.Integrate_management(wells_merge_pcs, ".5 Meters")
-        
-        # Add distance to selected wells
-        arcpy.SpatialJoin_analysis(wells_merge_pcs, config.order_geometry_pcs_shp, config.wells_sj, "JOIN_ONE_TO_MANY", "KEEP_ALL","#", "CLOSEST","5000 Kilometers", "Distance")   # this is the reported distance
-        arcpy.SpatialJoin_analysis(config.wells_sj, config.order_center_pcs, config.wells_sja, "JOIN_ONE_TO_MANY", "KEEP_ALL","#", "CLOSEST","5000 Kilometers", "Dist_cent")  # this is used for mapkey calculation
-        if int(arcpy.GetCount_management(os.path.join(config.wells_merge)).getOutput(0)) != 0:
-            arcpy.AddMessage('      - Water Wells section, exists water wells')
-            add_fields()
-            with arcpy.da.UpdateCursor(config.wells_sja, ['X','Y','Elevation']) as update_cursor:
-                for row in update_cursor:
-                    row[2] = psr_utility.get_elevation(row[0],row[1])
-                    update_cursor.updateRow(row)
-            # generate map key
-            gis_utility.generate_map_key(config.wells_sja)
-            # Add Direction to ERIS sites
-            add_direction()
-           
-            arcpy.Select_analysis(config.wells_sja, config.wells_final, '"MapKeyTot" = 1')
-            arcpy.Sort_management(config.wells_final, config.wells_display, [["MapKeyLoc", "ASCENDING"]])
+    config.buffer_dist_ogw =  str(order_obj.psr.search_radius['10685']) + ' MILES'
+    
+    ds_oid_wells = []
+    dsoid_wells_maxradius = '10093'     # 10093 is a federal source, PWSV
+    for key in order_obj.psr.search_radius:
+        if key not in ['9334', '10683', '10684', '10685', '10688','10689', '10695', '10696']:       #10695 is US topo, 10696 is HTMC, 10688 and 10689 are radons
+            ds_oid_wells.append(key)
+            if (order_obj.psr.search_radius[key] > order_obj.psr.search_radius[dsoid_wells_maxradius]):
+                ds_oid_wells = key
 
-            arcpy.AddField_management(config.wells_display, "Ele_Diff", "DOUBLE", "12", "6", "", "", "NULLABLE", "NON_REQUIRED", "")
-            arcpy.CalculateField_management(config.wells_display, 'Ele_Diff', '!Elevation!-!Site_z!', "PYTHON_9.3", "")
-            
-            arcpy.AddField_management(config.wells_display, "Elev_Rank", "SHORT", "12", "6", "", "", "NULLABLE", "NON_REQUIRED", "")
-            # categorize elevation for symbology
-            elevation_ranking()
-            ## create a map with water wells and ogw wells
-            mxd_wells = arcpy.mapping.MapDocument(config.mxd_file_wells)
-            df_wells = arcpy.mapping.ListDataFrames(mxd_wells,"*")[0]
-            df_wells.spatialReference = config.spatial_ref_pcs
-            
-            lyr = arcpy.mapping.ListLayers(mxd_wells, "wells", df_wells)[0]
-            lyr.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE", "wells_display")
-        else:
-            arcpy.AddMessage('  - WaterWells section, no water wells exists')
-            mxd_wells = arcpy.mapping.MapDocument(config.mxd_file_wells)
-            df_wells = arcpy.mapping.ListDataFrames(mxd_wells,"*")[0]
-            df_wells.spatialReference = config.spatial_ref_pcs
+    merge_list = []
+    for ds_oid in ds_oid_wells:
+        buffer_wells_fc = os.path.join(config.scratch_folder,"order_buffer_" + str(ds_oid) + ".shp")
+        print (buffer_wells_fc)
+        arcpy.Buffer_analysis(config.order_geometry_pcs_shp, buffer_wells_fc, str(order_obj.psr.search_radius[ds_oid]) + " MILES")
+        wells_clip = os.path.join(config.scratch_folder,'wells_clip_' + str(ds_oid) + '.shp')
+        arcpy.Clip_analysis(config.eris_wells, buffer_wells_fc, wells_clip)
+        arcpy.Select_analysis(wells_clip, os.path.join(config.scratch_folder,'wells_selected_' + str(ds_oid) + '.shp'), "DS_OID =" + str(ds_oid))
+        merge_list.append(os.path.join(config.scratch_folder,'wells_selected_' + str(ds_oid) + '.shp'))
+    arcpy.Merge_management(merge_list, config.wells_merge)
+    del config.eris_wells
+    
+    # Calculate Distance with integration and spatial join- can be easily done with Distance tool along with direction if ArcInfo or Advanced license
+    wells_merge_pcs= os.path.join(config.scratch_folder,"wells_merge_pcs.shp")
+    arcpy.Project_management(config.wells_merge, wells_merge_pcs, config.spatial_ref_pcs)
+    arcpy.Integrate_management(wells_merge_pcs, ".5 Meters")
+    
+    # Add distance to selected wells
+    arcpy.SpatialJoin_analysis(wells_merge_pcs, config.order_geometry_pcs_shp, config.wells_sj, "JOIN_ONE_TO_MANY", "KEEP_ALL","#", "CLOSEST","5000 Kilometers", "Distance")   # this is the reported distance
+    arcpy.SpatialJoin_analysis(config.wells_sj, config.order_center_pcs, config.wells_sja, "JOIN_ONE_TO_MANY", "KEEP_ALL","#", "CLOSEST","5000 Kilometers", "Dist_cent")  # this is used for mapkey calculation
+    if int(arcpy.GetCount_management(os.path.join(config.wells_merge)).getOutput(0)) != 0:
+        arcpy.AddMessage('      - Water Wells section, exists water wells')
+        add_fields()
+        with arcpy.da.UpdateCursor(config.wells_sja, ['X','Y','Elevation']) as update_cursor:
+            for row in update_cursor:
+                row[2] = psr_utility.get_elevation(row[0],row[1])
+                update_cursor.updateRow(row)
+        # generate map key
+        gis_utility.generate_map_key(config.wells_sja)
+        # Add Direction to ERIS sites
+        add_direction()
+        
+        arcpy.Select_analysis(config.wells_sja, config.wells_final, '"MapKeyTot" = 1')
+        arcpy.Sort_management(config.wells_final, config.wells_display, [["MapKeyLoc", "ASCENDING"]])
+
+        arcpy.AddField_management(config.wells_display, "Ele_Diff", "DOUBLE", "12", "6", "", "", "NULLABLE", "NON_REQUIRED", "")
+        arcpy.CalculateField_management(config.wells_display, 'Ele_Diff', '!Elevation!-!Site_z!', "PYTHON_9.3", "")
+        
+        arcpy.AddField_management(config.wells_display, "Elev_Rank", "SHORT", "12", "6", "", "", "NULLABLE", "NON_REQUIRED", "")
+        # categorize elevation for symbology
+        elevation_ranking()
+        ## create a map with water wells and ogw wells
+        mxd_wells = arcpy.mapping.MapDocument(config.mxd_file_wells)
+        df_wells = arcpy.mapping.ListDataFrames(mxd_wells,"*")[0]
+        df_wells.spatialReference = config.spatial_ref_pcs
+        
+        lyr = arcpy.mapping.ListLayers(mxd_wells, "wells", df_wells)[0]
+        lyr.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE", "wells_display")
+    else:
+        arcpy.AddMessage('  - WaterWells section, no water wells exists')
+        mxd_wells = arcpy.mapping.MapDocument(config.mxd_file_wells)
+        df_wells = arcpy.mapping.ListDataFrames(mxd_wells,"*")[0]
+        df_wells.spatialReference = config.spatial_ref_pcs
+    for item in ds_oid_wells:
+        psr_utility.add_layer_to_mxd("order_buffer_" + str(item), df_wells, config.buffer_lyr_file,1.1)
+    psr_utility.add_layer_to_mxd("order_geometry_pcs", df_wells,config.order_geom_lyr_file,1)
+    # create single-page
+    if not config.if_multi_page or int(arcpy.GetCount_management(config.wells_sja).getOutput(0))== 0: 
+        mxd_wells.saveACopy(os.path.join(config.scratch_folder, "mxd_wells.mxd"))
+        arcpy.mapping.ExportToJPEG(mxd_wells, output_jpg_wells, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+        if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
+            os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+        shutil.copy(output_jpg_wells, os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+        arcpy.AddMessage('      - output jpg image: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number,os.path.basename(output_jpg_wells)))
+        del mxd_wells
+        del df_wells
+    else: # multipage
+        grid_lyr_shp = os.path.join(config.scratch_folder, 'grid_lyr_wells.shp')
+        #note the tool takes featureclass name only, not the full path
+        arcpy.GridIndexFeatures_cartography(grid_lyr_shp, os.path.join(config.scratch_folder,"order_buffer_"+ ds_oid_wells_max_radius + '.shp'), "", "", "",config.grid_size, config.grid_size)  
+        # part 1: the overview map
+        #add grid layer
+        grid_layer = arcpy.mapping.Layer(config.grid_lyr_file)
+        grid_layer.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE","grid_lyr_wells")
+        arcpy.mapping.AddLayer(df_wells,grid_layer,"Top")
+        # turn the site label off
+        well_lyr = arcpy.mapping.ListLayers(mxd_wells, "wells", df_wells)[0]
+        well_lyr.showLabels = False
+        df_wells.extent = grid_layer.getExtent()
+        df_wells.scale = df_wells.scale * 1.1
+        mxd_wells.saveACopy(os.path.join(config.scratch_folder, "mxd_wells.mxd"))
+        arcpy.mapping.ExportToJPEG(mxd_wells, output_jpg_wells, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+        if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
+            os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+        shutil.copy(output_jpg_wells, os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+        arcpy.AddMessage('      - output jpg image page 1: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number,os.path.basename(output_jpg_wells)))
+        del mxd_wells
+        del df_wells
+        # part 2: the data driven pages
+        page = 1
+        page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
+        mxd_mm_wells = arcpy.mapping.MapDocument(config.mxd_mm_file_wells)
+        df_mm_wells = arcpy.mapping.ListDataFrames(mxd_mm_wells)[0]
+        df_mm_wells.spatialReference = config.spatial_ref_pcs
         for item in ds_oid_wells:
-            psr_utility.add_layer_to_mxd("order_buffer_" + str(item), df_wells, config.buffer_lyr_file,1.1)
-        psr_utility.add_layer_to_mxd("order_geometry_pcs", df_wells,config.order_geom_lyr_file,1)
-        # create single-page
-        if not psr_utility.if_multipage(config.order_geometry_pcs_shp) or int(arcpy.GetCount_management(config.wells_sja).getOutput(0))== 0: 
-            mxd_wells.saveACopy(os.path.join(config.scratch_folder, "mxd_wells.mxd"))
-            arcpy.mapping.ExportToJPEG(mxd_wells, output_jpg_wells, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-            if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
-                os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-            shutil.copy(output_jpg_wells, os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-            arcpy.AddMessage('      - output jpg image: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number,os.path.basename(output_jpg_wells)))
-            del mxd_wells
-            del df_wells
-        else: # multipage
-            grid_lyr_shp = os.path.join(config.scratch_folder, 'grid_lyr_wells.shp')
-            #note the tool takes featureclass name only, not the full path
-            arcpy.GridIndexFeatures_cartography(grid_lyr_shp, os.path.join(config.scratch_folder,"order_buffer_"+ ds_oid_wells_max_radius + '.shp'), "", "", "",config.grid_size, config.grid_size)  
-            # part 1: the overview map
-            #add grid layer
-            grid_layer = arcpy.mapping.Layer(config.grid_lyr_file)
-            grid_layer.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE","grid_lyr_wells")
-            arcpy.mapping.AddLayer(df_wells,grid_layer,"Top")
-            # turn the site label off
-            well_lyr = arcpy.mapping.ListLayers(mxd_wells, "wells", df_wells)[0]
-            well_lyr.showLabels = False
-            df_wells.extent = grid_layer.getExtent()
-            df_wells.scale = df_wells.scale * 1.1
-            mxd_wells.saveACopy(os.path.join(config.scratch_folder, "mxd_wells.mxd"))
-            arcpy.mapping.ExportToJPEG(mxd_wells, output_jpg_wells, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-            if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
-                os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-            shutil.copy(output_jpg_wells, os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-            arcpy.AddMessage('      - output jpg image page 1: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number,os.path.basename(output_jpg_wells)))
-            del mxd_wells
-            del df_wells
-            # part 2: the data driven pages
-            page = 1
-            page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
-            mxd_mm_wells = arcpy.mapping.MapDocument(config.mxd_mm_file_wells)
-            df_mm_wells = arcpy.mapping.ListDataFrames(mxd_mm_wells)[0]
-            df_mm_wells.spatialReference = config.spatial_ref_pcs
-            for item in ds_oid_wells:
-                psr_utility.add_layer_to_mxd("order_buffer_" + str(item), df_mm_wells, config.buffer_lyr_file,1.1)
-            psr_utility.add_layer_to_mxd("order_geometry_pcs", df_mm_wells, config.order_geom_lyr_file,1)
-            
-            grid_layer_mm = arcpy.mapping.ListLayers(mxd_mm_wells,"Grid" ,df_mm_wells)[0]
-            grid_layer_mm.replaceDataSource(config.scratch_folder, "SHAPEFILE_WORKSPACE","grid_lyr_wells")
-            arcpy.CalculateAdjacentFields_cartography(grid_lyr_shp, 'PageNumber')
-            lyr = arcpy.mapping.ListLayers(mxd_mm_wells, "wells", df_mm_wells)[0]   #"wells" or "Wells" doesn't seem to matter
-            lyr.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE", "wells_display")
-            
-            for i in range(1,int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))+1):
-                arcpy.SelectLayerByAttribute_management(grid_layer_mm, "NEW_SELECTION", ' "PageNumber" =  ' + str(i))
-                df_mm_wells.extent = grid_layer_mm.getSelectedExtent(True)
-                df_mm_wells.scale = df_mm_wells.scale * 1.1
-                arcpy.SelectLayerByAttribute_management(grid_layer_mm, "CLEAR_SELECTION")
-                title_text = arcpy.mapping.ListLayoutElements(mxd_mm_wells, "TEXT_ELEMENT", "MainTitleText")[0]
-                title_text.text = "Wells & Additional Sources - Page " + str(i)
-                title_text.elementPositionX = 0.6438
-                arcpy.RefreshTOC()
-                arcpy.mapping.ExportToJPEG(mxd_mm_wells, output_jpg_wells[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-                if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
-                    os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-                shutil.copy(output_jpg_wells[0:-4]+str(i)+".jpg", os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-            del mxd_mm_wells
-            del df_mm_wells
-            ### Save wells data in database
-            store_wells_to_db(order_obj, page)
-                
-                    
-           
+            psr_utility.add_layer_to_mxd("order_buffer_" + str(item), df_mm_wells, config.buffer_lyr_file,1.1)
+        psr_utility.add_layer_to_mxd("order_geometry_pcs", df_mm_wells, config.order_geom_lyr_file,1)
         
-
-
-    
-    
- 
-
-    
-    
+        grid_layer_mm = arcpy.mapping.ListLayers(mxd_mm_wells,"Grid" ,df_mm_wells)[0]
+        grid_layer_mm.replaceDataSource(config.scratch_folder, "SHAPEFILE_WORKSPACE","grid_lyr_wells")
+        arcpy.CalculateAdjacentFields_cartography(grid_lyr_shp, 'PageNumber')
+        lyr = arcpy.mapping.ListLayers(mxd_mm_wells, "wells", df_mm_wells)[0]   #"wells" or "Wells" doesn't seem to matter
+        lyr.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE", "wells_display")
+        
+        for i in range(1,int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))+1):
+            arcpy.SelectLayerByAttribute_management(grid_layer_mm, "NEW_SELECTION", ' "PageNumber" =  ' + str(i))
+            df_mm_wells.extent = grid_layer_mm.getSelectedExtent(True)
+            df_mm_wells.scale = df_mm_wells.scale * 1.1
+            arcpy.SelectLayerByAttribute_management(grid_layer_mm, "CLEAR_SELECTION")
+            title_text = arcpy.mapping.ListLayoutElements(mxd_mm_wells, "TEXT_ELEMENT", "MainTitleText")[0]
+            title_text.text = "Wells & Additional Sources - Page " + str(i)
+            title_text.elementPositionX = 0.6438
+            arcpy.RefreshTOC()
+            arcpy.mapping.ExportToJPEG(mxd_mm_wells, output_jpg_wells[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+            if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
+                os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+            shutil.copy(output_jpg_wells[0:-4]+str(i)+".jpg", os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+        del mxd_mm_wells
+        del df_mm_wells
+        ### Save wells data in database
+        save_wells_to_db(order_obj, page)
+            
     end = timeit.default_timer()
     arcpy.AddMessage((' -- End generating PSR Oil, Gas and Water wells report. Duration:', round(end -start,4)))
