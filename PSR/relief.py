@@ -94,102 +94,91 @@ def generate_relief_report(order_obj):
 
     arcpy.env.workspace = config.scratch_folder
     arcpy.env.overwriteOutput = True   
-    arcpy.AddMessage('      - scratch folder: %s' %config.scratch_folder)
     ### set paths
     output_jpg_relief = config.output_jpg(order_obj,config.Report_Type.relief)
-    ### extract buffer size for topo report
-    psr_list = order_obj.get_psr()
 
-    if len(psr_list) > 0:
-        buffer_radius = next(psr.search_radius for psr in psr_list if psr.type.lower() == 'topo')
-        order_buffer_dist = str(buffer_radius) + ' MILES'
-        point = arcpy.Point()
-        array = arcpy.Array()
-        feature_list = []
-        ### set mxd variable
-        mxd_relief = arcpy.mapping.MapDocument(config.mxd_file_relief)
-        df_relief = arcpy.mapping.ListDataFrames(mxd_relief,"*")[0]
-        df_relief.spatialReference = config.spatial_ref_pcs
-        
-        ### create buffer map based on order geometry and topo redius
-        arcpy.Buffer_analysis(config.order_geometry_pcs_shp, config.order_buffer_shp, order_buffer_dist) 
-
-        ### add order geometry and it's bugger to mxd
-        utility.add_layer_to_mxd("order_buffer",df_relief,config.buffer_lyr_file,1.1)
-        utility.add_layer_to_mxd("order_geometry_pcs", df_relief,config.order_geom_lyr_file,1)
-
-        # locate and add relevant shadedrelief tiles
-        width = arcpy.Describe(config.order_buffer_shp).extent.width/2
-        height = arcpy.Describe(config.order_buffer_shp).extent.height/2
-
-        if (width/height > 5/4.4): # wider shape
-            height = width/5*4.4
-        else: # longer shape
-            width = height/4.4*5
-
-        x_centr_oid = (arcpy.Describe(config.order_buffer_shp).extent.XMax + arcpy.Describe(config.order_buffer_shp).extent.XMin)/2
-        y_centr_oid = (arcpy.Describe(config.order_buffer_shp).extent.YMax + arcpy.Describe(config.order_buffer_shp).extent.YMin)/2
-        width = width + 6400     # add 2 miles to each side, for multipage
-        height = height + 6400   # add 2 miles to each side, for multipage
-
-        point.X = x_centr_oid - width
-        point.Y = y_centr_oid + height
-        array.add(point)
-        point.X = x_centr_oid + width
-        point.Y = y_centr_oid + height
-        array.add(point)
-        point.X = x_centr_oid + width
-        point.Y = y_centr_oid - height
-        array.add(point)
-        point.X = x_centr_oid - width
-        point.Y = y_centr_oid - height
-        array.add(point)
-        point.X = x_centr_oid - width
-        point.Y = y_centr_oid + height
-        array.add(point)
-        feat = arcpy.Polygon(array,config.spatial_ref_pcs)
-        array.removeAll()
-        feature_list.append(feat)
-
-        frame_relief = os.path.join(config.scratch_folder, "frame_relief.shp")
-        arcpy.CopyFeatures_management(feature_list, frame_relief)
-
-        master_layer_relief = arcpy.mapping.Layer(config.master_lyr_dem)
-        arcpy.SelectLayerByLocation_management(master_layer_relief,'intersect',frame_relief)
-
-        cellids_selected = []
-        if(int((arcpy.GetCount_management(master_layer_relief).getOutput(0))) ==0):
-            arcpy.AddMessage ("NO records selected")
-            master_layer_relief = None
-        else:
-            cellid = ''
-            # loop through the relevant records, locate the selected cell IDs
-            rows = arcpy.SearchCursor(master_layer_relief)    # loop through the selected records
-            for row in rows:
-                cellid = str(row.getValue("image_name")).strip()
-                if cellid !='':
-                    cellids_selected.append(cellid)
-                del row
-            del rows
-            master_layer_relief = None
-
-            for item in cellids_selected:
-                item =item[:-4]
-                relief_layer = arcpy.mapping.Layer(config.relief_lyr_file)
-                shutil.copyfile(os.path.join(config.path_shaded_relief,item+'_hs.img'),os.path.join(config.scratch_folder,item+'_hs.img'))
-                relief_layer.replaceDataSource(config.scratch_folder,"RASTER_WORKSPACE",item+'_hs.img')
-                relief_layer.name = item
-                arcpy.mapping.AddLayer(df_relief, relief_layer, "BOTTOM")
-                relief_layer = None
-
-                arcpy.RefreshActiveView()
-            if not utility.if_multipage(config.order_geometry_pcs_shp,config.Report_Type.relief):
-                generate_singlepage_report (order_obj, mxd_relief, output_jpg_relief)
-            else:
-                generate_multipage_report (order_obj,cellids_selected, mxd_relief,df_relief, output_jpg_relief)
+    point = arcpy.Point()
+    array = arcpy.Array()
+    feature_list = []
+    ### set mxd variable
+    mxd_relief = arcpy.mapping.MapDocument(config.mxd_file_relief)
+    df_relief = arcpy.mapping.ListDataFrames(mxd_relief,"*")[0]
+    df_relief.spatialReference = config.spatial_ref_pcs
     
+    ### create buffer map based on order geometry and topo redius
+    arcpy.Buffer_analysis(config.order_geometry_pcs_shp, config.order_buffer_shp, config.buffer_dist_relief) 
+
+    ### add order geometry and it's bugger to mxd
+    utility.add_layer_to_mxd("order_buffer",df_relief,config.buffer_lyr_file,1.1)
+    utility.add_layer_to_mxd("order_geometry_pcs", df_relief,config.order_geom_lyr_file,1)
+
+    # locate and add relevant shadedrelief tiles
+    width = arcpy.Describe(config.order_buffer_shp).extent.width/2
+    height = arcpy.Describe(config.order_buffer_shp).extent.height/2
+
+    if (width/height > 5/4.4): # wider shape
+        height = width/5*4.4
+    else: # longer shape
+        width = height/4.4*5
+
+    x_centr_oid = (arcpy.Describe(config.order_buffer_shp).extent.XMax + arcpy.Describe(config.order_buffer_shp).extent.XMin)/2
+    y_centr_oid = (arcpy.Describe(config.order_buffer_shp).extent.YMax + arcpy.Describe(config.order_buffer_shp).extent.YMin)/2
+    width = width + 6400     # add 2 miles to each side, for multipage
+    height = height + 6400   # add 2 miles to each side, for multipage
+
+    point.X = x_centr_oid - width
+    point.Y = y_centr_oid + height
+    array.add(point)
+    point.X = x_centr_oid + width
+    point.Y = y_centr_oid + height
+    array.add(point)
+    point.X = x_centr_oid + width
+    point.Y = y_centr_oid - height
+    array.add(point)
+    point.X = x_centr_oid - width
+    point.Y = y_centr_oid - height
+    array.add(point)
+    point.X = x_centr_oid - width
+    point.Y = y_centr_oid + height
+    array.add(point)
+    feat = arcpy.Polygon(array,config.spatial_ref_pcs)
+    array.removeAll()
+    feature_list.append(feat)
+
+    arcpy.CopyFeatures_management(feature_list, config.relief_frame)
+    master_layer_relief = arcpy.mapping.Layer(config.master_lyr_dem)
+    arcpy.SelectLayerByLocation_management(master_layer_relief,'intersect',config.relief_frame)
+
+    cellids_selected = []
+    if(int((arcpy.GetCount_management(master_layer_relief).getOutput(0))) ==0):
+        arcpy.AddMessage ("NO records selected")
+        master_layer_relief = None
     else:
-        arcpy.AddWarning('      - There is no Relief PSR  for this Order!')
+        cellid = ''
+        # loop through the relevant records, locate the selected cell IDs
+        rows = arcpy.SearchCursor(master_layer_relief)    # loop through the selected records
+        for row in rows:
+            cellid = str(row.getValue("image_name")).strip()
+            if cellid !='':
+                cellids_selected.append(cellid)
+            del row
+        del rows
+        master_layer_relief = None
+
+        for item in cellids_selected:
+            item =item[:-4]
+            relief_layer = arcpy.mapping.Layer(config.relief_lyr_file)
+            shutil.copyfile(os.path.join(config.path_shaded_relief,item+'_hs.img'),os.path.join(config.scratch_folder,item+'_hs.img'))
+            relief_layer.replaceDataSource(config.scratch_folder,"RASTER_WORKSPACE",item+'_hs.img')
+            relief_layer.name = item
+            arcpy.mapping.AddLayer(df_relief, relief_layer, "BOTTOM")
+            relief_layer = None
+
+            arcpy.RefreshActiveView()
+        if not utility.if_multipage(config.order_geometry_pcs_shp,config.Report_Type.relief):
+            generate_singlepage_report (order_obj, mxd_relief, output_jpg_relief)
+        else:
+            generate_multipage_report (order_obj,cellids_selected, mxd_relief,df_relief, output_jpg_relief)
     end = timeit.default_timer()
     arcpy.AddMessage(('-- End generating PSR shaded relief report. Duration:', round(end -start,4)))
     

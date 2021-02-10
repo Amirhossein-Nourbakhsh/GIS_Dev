@@ -55,6 +55,7 @@ buffer_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\buffer.lyr"
 grid_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\Grid_hollow.lyr"
 
 
+
 # data_flood = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\S_Fld_Haz_Ar_merged2018'
 data_flood = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\flood_map_wgs84'
 
@@ -75,8 +76,7 @@ mxdfile_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland.mxd"
 mxdfile_wetlandNY = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandNY_CC.mxd"
 mxdMMfile_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandMM.mxd"
 mxdMMfile_wetlandNY = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandMMNY.mxd"
-mxd_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.mxd"
-mxd_mm_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\floodMM.mxd"
+
 
 
 
@@ -106,7 +106,6 @@ def output_jpg(order_obj, report_type):
     elif report_type == Report_Type.wells:
         return os.path.join(scratch_folder, order_obj.number + '_US_WELLS.jpg')
     
-    
 ### Basemaps
 imgdir_demCA = r"\\Cabcvan1fpr009\US_DEM\DEM1"
 master_lyr_dem_CA = r"\\Cabcvan1fpr009\US_DEM\Canada_DEM_edited.shp"
@@ -117,6 +116,8 @@ master_lyr_counties = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USCounties.lyr"
 master_lyr_cities = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USCities.lyr"
 master_lyr_nh_towns = r"\\cabcvan1gis005\GISData\PSR\python\mxd\NHTowns.lyr"
 master_lyr_zip_codes = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USZipcodes.lyr"
+# Common Variables
+if_multi_page = None
 ### order geometry paths config
 order_geometry_pcs_shp =  os.path.join(scratch_folder,'order_geometry_pcs.shp')
 order_geometry_gcs_shp =  os.path.join(scratch_folder,'order_geometry_gcs.shp')
@@ -124,14 +125,19 @@ order_buffer_shp =  os.path.join(scratch_folder,'order_buffer.shp')
 order_geom_lyr_file = None
 spatial_ref_pcs = None
 spatial_ref_gcs = arcpy.SpatialReference(4283)
+### wetland report config
+buffer_dist_wetland = None
 ### relief report paths config
+buffer_dist_relief = '1 MILES'
 mxd_file_relief =  r"\\cabcvan1gis005\GISData\PSR\python\mxd\shadedrelief.mxd"
 mxd_mm_file_relief =  r"\\cabcvan1gis005\GISData\PSR\python\mxd\shadedreliefMM.mxd"
 path_shaded_relief = r"\\cabcvan1fpr009\US_DEM\hillshade13"
 relief_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\relief.lyr"
 data_shaded_relief = r"\\cabcvan1fpr009\US_DEM\CellGrid_1X1Degree_NW.shp"
+relief_frame = os.path.join(scratch_folder, "relief_frame.shp")
 
 ### topo report paths config
+buffer_dist_topo = '1 MILES'
 mxd_file_topo = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo.mxd"
 mxd_file_topo_Tacoma = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo_tacoma.mxd"
 mxd_mm_file_topo = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topoMM.mxd"
@@ -144,17 +150,22 @@ topo_tif_dir = r"\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff"
 topo_frame = os.path.join(scratch_folder, "topo_frame.shp")
 
 ### flood report paths config
+buffer_dist_flood = None
+mxd_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.mxd"
+mxd_mm_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\floodMM.mxd"
 order_buffer_flood_shp = os.path.join(scratch_folder,'order_buffer_flood.shp')
 flood_selectedby_order_shp = os.path.join(scratch_folder,"flood_selectedby_order.shp")
 flood_panel_selectedby_order_shp = os.path.join(scratch_folder,"flood_panel_selectedby_order.shp")
 
 ### geology report paths config
+buffer_dist_geology = None
 data_geology = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\GEOL_DD_MERGE' ## WGS84
 geology_selectedby_order_shp = os.path.join(scratch_folder,"geology_selectedby_order.shp")
 mxd_file_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.mxd"
 mxd_mm_file_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geologyMM.mxd"
 
 ### soil report paths config
+buffer_dist_soil = None
 # data_path_soil_HI =r'\\cabcvan1gis005\GISData\Data\CONUS_2015\gSSURGO_HI.gdb'  ## WGS84
 # data_path_soil_AK =r'\\cabcvan1gis005\GISData\Data\CONUS_2015\gSSURGO_AK.gdb'  ## WGS84
 # data_path_soil_CONUS =r'\\cabcvan1gis005\GISData\Data\CONUS_2015\gSSURGO_CONUS_10m.gdb'  ## WGS84
@@ -198,11 +209,13 @@ master_lyr_dem_ca = os.path.join(dem_server, us_dem,"DEM1.shp")
 google_key = r'AIzaSyBmub_p_nY5jXrFMawPD8jdU0DgSrWfBic'
 
 ### Rado report config
+buffer_dist_radon = None
 states_selectedby_order = os.path.join(scratch_folder,"states_selectedby_order.shp")
 counties_selectedby_order = os.path.join(scratch_folder,"counties_selectedby_order.shp")
 cities_selectedby_order = os.path.join(scratch_folder,"cities_selectedby_order.shp")
 
 ### OGW report config
+buffer_dist_ogw= None
 order_center_pcs = os.path.join(scratch_folder, "order_center_pcs.shp")
 eris_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\ErisWellSites.lyr"   #which contains water, oil/gas wells etc.
 wells_merge = os.path.join(scratch_folder, "wells_merge.shp")
