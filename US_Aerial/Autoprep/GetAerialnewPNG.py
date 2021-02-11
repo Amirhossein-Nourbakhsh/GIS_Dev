@@ -122,10 +122,10 @@ class Oracle:
             self.close_connection()
 
 if __name__ == '__main__':
-    OrderID = '983883'#arcpy.GetParameterAsText(0)
-    AUI_ID = '7367074'#arcpy.GetParameterAsText(1)#''#arcpy.GetParameterAsText(1)
-    ee_oid = ''#arcpy.GetParameterAsText(2)#'408212'#arcpy.GetParameterAsText(2)
-    scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
+    OrderID = arcpy.GetParameterAsText(0)#'983883'
+    AUI_ID = arcpy.GetParameterAsText(1)#''#arcpy.GetParameterAsText(1)'7367074'
+    ee_oid = arcpy.GetParameterAsText(2)#'408212'#arcpy.GetParameterAsText(2)
+    scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     arcpy.env.OverwriteOutput = True
     Image.MAX_IMAGE_PIXELS = 10000000000
@@ -162,7 +162,7 @@ if __name__ == '__main__':
                     """PNG is copied to gc folder for FE with new naming convention"""
                     if os.path.exists(os.path.join(job_folder,'gc',job_image_name)):
                         os.remove(os.path.join(job_folder,'gc',job_image_name))
-                    if imageuploadpath[-3:] in ['jpg','png','tif']
+                    if imageuploadpath[-3:] in ['jpg','png','tif']:
                         im = Image.open(imageuploadpath)
                         subject_im = im.convert("RGB")
                         subject_im.save(os.path.join(job_folder,'gc',job_image_name))

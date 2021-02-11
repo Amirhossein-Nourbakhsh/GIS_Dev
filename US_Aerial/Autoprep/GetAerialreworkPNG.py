@@ -1,6 +1,7 @@
 import os, arcpy, shutil
 import cx_Oracle
 import json
+from PIL import Image
 
 class Machine:
     machine_test = r"\\cabcvan1gis006"
@@ -127,6 +128,7 @@ if __name__ == '__main__':
     scratch = arcpy.env.scratchFolder#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     arcpy.env.OverwriteOutput = True
+    Image.MAX_IMAGE_PIXELS = 10000000000
 
     orderInfo = Oracle('test').call_function('getorderinfo',OrderID)
     OrderNumText = str(orderInfo['ORDER_NUM'])
@@ -158,7 +160,7 @@ if __name__ == '__main__':
                     """Two copies are performed, 1 to convert the raster into a PNG for the application.
                     the other to only copy the image without spatial information to the job folder"""
                     #arcpy.CopyRaster_management(originalpath,os.path.join(scratch,job_image_name),colormap_to_RGB='ColormapToRGB',pixel_type='8_BIT_UNSIGNED',format='PNG',transform='NONE')
-                    if imageuploadpath[-3:] in ['jpg','png','tif']
+                    if imageuploadpath[-3:] in ['jpg','png','tif']:
                         im = Image.open(imageuploadpath)
                         subject_im = im.convert("RGB")
                         subject_im.save(os.path.join(job_folder,'gc',job_image_name))
