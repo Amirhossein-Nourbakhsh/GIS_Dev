@@ -198,7 +198,7 @@ def generate_ogw_report(order_obj):
         if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
             os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
         shutil.copy(output_jpg_wells, os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-        arcpy.AddMessage('      - output jpg image: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number,os.path.basename(output_jpg_wells)))
+        # arcpy.AddMessage('      - output jpg image: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number,os.path.basename(output_jpg_wells)))
         del mxd_wells
         del df_wells
     else: # multipage

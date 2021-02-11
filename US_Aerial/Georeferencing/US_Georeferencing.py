@@ -204,13 +204,13 @@ def ExportToOutputs(env,geroref_Image,outputImage_jpg,out_img_name,orderGeometry
     output_image_jpg = os.path.join(outputImage_jpg,out_img_name + '.jpg')
     export_to_jpg(env,geroref_Image,output_image_jpg,orderGeometry,str(auid))
     arcpy.AddMessage('Output Image(.jpg): %s' % output_image_jpg)
-    # set_raster_background(output_image_jpg)
+    set_raster_background(output_image_jpg)
 if __name__ == '__main__':
     ### set input parameters
     order_id = arcpy.GetParameterAsText(0)
     auid = arcpy.GetParameterAsText(1)
-    # order_id = '1014715'
-    # auid = '7245290'
+    order_id = '1014808'
+    auid = '874411'
     # order_id = '1014719' 
     # auid = '7321895' 
     env = 'test'
@@ -267,12 +267,6 @@ if __name__ == '__main__':
                     if len(image_input_path) == 0 or not os.path.exists(image_input_path):
                         arcpy.AddWarning(image_input_path +' DOES NOT EXIST')
                     else:
-                        # make a copy of raw image in the local folder beacuse the TAB file along with image format on server make arcgis confused
-                        # parts = os.path.basename(image_input_path).split('.')
-                        # input_raw_image_name = "".join(parts[:-1]) + '_raw' + '.' + parts[-1]
-                        # shutil.copy(image_input_path, os.path.join(arcpy.env.scratchFolder,input_raw_image_name))
-                        # input_image = os.path.join(arcpy.env.scratchFolder,input_raw_image_name)
-                        
                         year = aerial_inventoryjson[0]['AERIAL_YEAR'] 
                         img_source = aerial_inventoryjson[0]['IMAGE_SOURCE']
                         ## setup image custom name year_DOQQ_AUI_ID
@@ -309,8 +303,6 @@ if __name__ == '__main__':
                         img_georeferenced = apply_georeferencing(scratchFolder,input_image, srcPoints, gcpPoints,OutputDirectory.georef_images, out_img_name, TransformationType.POLYORDER2, ResamplingType.BILINEAR)
                         ### ExportToOutputs
                         ExportToOutputs(env,img_georeferenced, jpg_image_folder,out_img_name,order_geometry)
-
-                       
                         
                         ### Update image path in DB if image is not in hose
                         file_size = get_file_size(img_georeferenced)
