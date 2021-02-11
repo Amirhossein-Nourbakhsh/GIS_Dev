@@ -166,9 +166,14 @@ def get_spatialres(imagepath,ext):
             return str(cellsizeX)
     except Exception:
         return '0'
+def get_state(netpath):
+    state = netpath.split('\\')[5].upper()
+    return state
+def get_county(netpath):
+    county = netpath.split('\\')[6].upper()
+    return county
 
-
-master_xl = r"C:\Users\JLoucks\Desktop\FULLOSA\osa_20210107.csv"
+master_xl = r"C:\Users\JLoucks\Desktop\historical\historical_02072021.csv"
 data = []
 v = open(master_xl)
 r = csv.reader(v)
@@ -188,6 +193,8 @@ row0.append('length')
 row0.append('filesize')
 row0.append('imagepath')
 row0.append('spatial_resolution')
+row0.append('state')
+row0.append('county')
 data.append(row0)
 for item in r:
     netpath = item[0].replace('U:',r'\\cabcvan1nas003\historical')
@@ -210,6 +217,8 @@ for item in r:
         item.append(get_filesize(netpath,get_extension(netpath)))
         item.append(get_imagepath(netpath,get_extension(netpath)))
         item.append(get_spatialres(netpath,get_extension(netpath)))
+        item.append(get_state(netpath))
+        item.append(get_county(netpath))
     else:
         item.append('NA')
         item.append('NA')
@@ -219,9 +228,11 @@ for item in r:
         item.append('NA')
         item.append('NO IMAGE')
         item.append('No readable spatial res')
+        item.append('NA')
+        item.append('NA')
     print item
     data.append(item)
-with open(r"C:\Users\JLoucks\Desktop\historical\meta_historical_01162021.csv",'wb') as result_file:
+with open(r"C:\Users\JLoucks\Desktop\historical\meta_historical_02072021.csv",'wb') as result_file:
     wr = csv.writer(result_file,dialect='excel')
     wr.writerows(data)
 result_file.close()
