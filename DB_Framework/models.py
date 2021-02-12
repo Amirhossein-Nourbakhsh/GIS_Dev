@@ -13,17 +13,29 @@ class Order(object):
     province = ''
     psr = None
     geometry = arcpy.Geometry()
-    def get_by_Id(self,order_id):
+    def get_order(self,id):
         try:
+            order_obj = Order
             con = cx_Oracle.connect(db_connections.connection_string)
             cursor = con.cursor()
-            cursor.execute("select order_num, address1, city, provstate from orders where order_id =" + str(order_id))
+            cursor.execute("select order_num, address1, city, provstate from orders where order_id =" + str(id))
             row = cursor.fetchone()
-            if row is None:
-                return None
-            order_obj = Order
-            order_obj.id = order_id
-            order_obj.number = str(row[0])
+           
+            if row is not None:
+                order_obj.id = id
+                order_obj.number = str(row[0])
+            else:
+                del cursor 
+                del row
+                cursor = con.cursor()
+                # cur.execute("select order_id, address1, city, provstate from orders where order_num = '" + str(id) + "'")
+                cursor.execute("select order_id, address1, city, provstate from orders where order_num = '" + str(id) + "'")
+                row = cursor.fetchone()
+                if row is not None:
+                    order_obj.number = str(id)
+                    order_obj.id = str(row[0])
+                else:
+                     return None           
             order_obj.address = str(row[1])+","+str(row[2])+","+str(row[3])
             order_obj.province = str(row[3])
             order_obj.geometry = order_obj.__getGeometry()

@@ -22,7 +22,7 @@ if __name__ == "__main__":
    # order_id = '930894' #single pages: 20292800115 - 20200814009
    # order_id = '884891'
    # order_id = '462873' # no psr ->'354268' ## newyork
-   order_id = '968934' #'932499' # multi page
+   order_id = 21021100004 #'932499' # multi page
    arcpy.AddMessage('Start PSR report...')
    start = timeit.default_timer() 
    ### set workspace
@@ -33,7 +33,8 @@ if __name__ == "__main__":
    if not os.path.exists(config.temp_gdb):
       arcpy.CreateFileGDB_management(config.scratch_folder,r"temp") 
    ### isntantiate of order class and set order geometry and buffering
-   order_obj = models.Order().get_by_Id(order_id)
+   order_obj = models.Order().get_order(int(order_id))
+   # order_obj = models.Order().getbyNumber(order_id)
    if order_obj is not None:
       utility.set_order_geometry(order_obj)
       config.if_multi_page = utility.if_multipage(config.order_geometry_pcs_shp)
