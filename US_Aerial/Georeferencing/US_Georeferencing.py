@@ -139,13 +139,15 @@ def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef
         cursor.insertRow([arcpy.Polygon(arcpy.Array([arcpy.Point(*coords) for coords in pntCoords]),spatialRef)])
     del cursor
     return outputFC
-def apply_georeferencing(scratchFolder,inputRaster,srcPoints,gcpPoints,output_folder,out_img_name,transformation_type, resampling_type):
+def apply_georeferencing(inputRaster,srcPoints,gcpPoints,output_folder,out_img_name,transformation_type, resampling_type):
     arcpy.AddMessage('Start Georeferencing...')
     sr_wgs_84 = arcpy.SpatialReference(4326)
     # georeference to WGS84
-    # gcsImage_wgs84 = arcpy.Warp_management(inputRaster, srcPoints,gcpPoints,os.path.join(scratchFolder,'image_gc.tif'), transformation_type, resampling_type)
     output_geo_ref_image = os.path.join(output_folder,out_img_name + '.tif')
-    arcpy.Warp_management(inputRaster, srcPoints,gcpPoints,output_geo_ref_image)
+    
+    arcpy.Warp_management(inputRaster, srcPoints,gcpPoints, output_geo_ref_image, transformation_type, resampling_type)
+    # arcpy.Warp_management(inputRaster, srcPoints,gcpPoints,output_geo_ref_image)
+    
     arcpy.DefineProjection_management(output_geo_ref_image,sr_wgs_84)
     set_raster_background(output_geo_ref_image)
     arcpy.AddMessage('Output Image(.tif): %s' % output_geo_ref_image)
@@ -218,6 +220,7 @@ if __name__ == '__main__':
     scratchFolder = arcpy.env.scratchFolder
     arcpy.env.workspace = scratchFolder
     arcpy.env.overwriteOutput = True 
+    arcpy.env.pyramid = 'NONE'
     if str(order_id) != '' and str(auid) != '':
         mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
         MapScale = 6000
@@ -300,7 +303,7 @@ if __name__ == '__main__':
                         BOTTOM = str(arcpy.GetRasterProperties_management(input_image,"BOTTOM").getOutput(0))
                         srcPoints = "'" + LEFT + " " + BOTTOM + "';" + "'" + RIGHT + " " + BOTTOM + "';" + "'" + RIGHT + " " + TOP + "';" + "'" + LEFT + " " + TOP + "'"
                         ### Georeferencing
-                        img_georeferenced = apply_georeferencing(scratchFolder,input_image, srcPoints, gcpPoints,OutputDirectory.georef_images, out_img_name, TransformationType.POLYORDER2, ResamplingType.BILINEAR)
+                        img_georeferenced = apply_georeferencing(input_image, srcPoints, gcpPoints,OutputDirectory.georef_images, out_img_name, '', ResamplingType.BILINEAR)
                         ### ExportToOutputs
                         ExportToOutputs(env,img_georeferenced, jpg_image_folder,out_img_name,order_geometry)
                         
