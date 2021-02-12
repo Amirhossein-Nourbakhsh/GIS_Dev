@@ -43,21 +43,6 @@ class Order(object):
         finally:
             cursor.close()
             con.close()
-    def getbyNumber(self,order_num):
-        try:
-            con = cx_Oracle.connect(db_connections.connection_string)
-            cur = con.cursor()
-            cur.execute("select order_id, address1, city, provstate from orders where order_num = '" + str(order_num) + "'")
-            row = cur.fetchone()
-            order_obj = Order
-            order_obj.id = str(row[0])
-            order_obj.number = order_num
-            order_obj.address = str(row[1])+","+str(row[2])+","+str(row[3])
-            order_obj.geometry = order_obj.__getGeometry()
-            return order_obj
-        finally:
-            cur.close()
-            con.close()   
     @classmethod
     def __getGeometry(self): # return geometry in WGS84 (GCS) / private function
         sr_wgs84 = arcpy.SpatialReference(4326)
