@@ -133,7 +133,8 @@ def myFirstPage(canvas, doc):
     canvas.line(50,100,int(PAGE_WIDTH-30),100)
     Footer = []
     style = styles["Normal"]
-    Disclaimer = []
+
+    # Disclaimer = []
     # style = styles["Italic"]
     # p1 = Paragraph('<para alignment="justify"><font name=Helvetica size = 8>Topographic Maps included in this report are produced by the USGS and are to be used for research purposes including a phase I report.  Maps are not to be resold as commercial property.</font></para>', style)
     # Disclaimer.append(p1)
@@ -141,15 +142,36 @@ def myFirstPage(canvas, doc):
     # p2 = Paragraph("<para alignment='justify'><font name=Helvetica-Bold size=8>No warranty of Accuracy or Liability for ERIS: </font><font name=Helvetica size=8>The information contained in this report has been produced by ERIS Information Inc. (in the US) and ERIS Information Limited Partnership (in Canada), both doing business as 'ERIS', using Topographic Maps produced by the USGS. This maps contained herein does not purport to be and does not constitute a guarantee of the accuracy of the information contained herein. Although ERIS has endeavored to present you with information that is accurate, ERIS disclaims, any and all liability for any errors, omissions, or inaccuracies in such information and data, whether attributable to inadvertence, negligence or otherwise, and for any consequences arising therefrom. Liability on the part of ERIS is limited to the monetary value paid for this report.</font></para>",style)
     # Disclaimer.append(p2)
     # Frame(65,70,int(PAGE_WIDTH-130),155).addFromList(Disclaimer,canvas)
+
+    # SET HYPERLINKS        https://www.usgs.gov/faqs/where-can-i-find-a-topographic-map-symbol-sheet?qt-news_science_products=0#qt-news_science_products
+    canvas.linkURL(r"https://pubs.usgs.gov/unnumbered/70039569/report.pdf", (60,247,220,257), thickness=0, relative=1)
+    canvas.linkURL(r"https://pubs.usgs.gov/bul/0788e/report.pdf", (60,237,220,247), thickness=0, relative=1)
+    canvas.linkURL(r"https://pubs.usgs.gov/gip/TopographicMapSymbols/topomapsymbols.pdf", (60,217,220,227), thickness=0, relative=1)
+
+    canvas.setFont('Helvetica-Bold', 8)
+    canvas.drawString(54, 270, "Topographic Map Symbology for the maps may be available in the following documents:")
+
+    canvas.setFont('Helvetica-Oblique', 8)
+    canvas.drawString(54, 260, "Pre-1947")
+    canvas.drawString(54, 230, "1947-2009")
+    canvas.drawString(54, 210, "2009-present")
+
     canvas.setFont('Helvetica', 8)
     canvas.drawString(54, 180, "Topographic Maps included in this report are produced by the USGS and are to be used for research purposes including a phase I report.")
-    canvas.drawString(54, 170,"Maps are not to be resold as commercial property.")
-    canvas.drawString(54, 160,"No warranty of Accuracy or Liability for ERIS: The information contained in this report has been produced by ERIS Information Inc.(in the US)")
-    canvas.drawString(54, 150,"and ERIS Information Limited Partnership (in Canada), both doing business as 'ERIS', using Topographic Maps produced by the USGS.")
-    canvas.drawString(54, 140,"This maps contained herein does not purport to be and does not constitute a guarantee of the accuracy of the information contained herein.")
-    canvas.drawString(54,130,"Although ERIS has endeavored to present you with information that is accurate, ERIS disclaims, any and all liability for any errors, omissions, ")
-    canvas.drawString(54,120,"or inaccuracies in such information and data, whether attributable to inadvertence, negligence or otherwise, and for any consequences")
-    canvas.drawString(54,110,"arising therefrom. Liability on the part of ERIS is limited to the monetary value paid for this report.")
+    canvas.drawString(54, 170, "Maps are not to be resold as commercial property.")
+    canvas.drawString(54, 160, "No warranty of Accuracy or Liability for ERIS: The information contained in this report has been produced by ERIS Information Inc.(in the US)")
+    canvas.drawString(54, 150, "and ERIS Information Limited Partnership (in Canada), both doing business as 'ERIS', using Topographic Maps produced by the USGS.")
+    canvas.drawString(54, 140, "This maps contained herein does not purport to be and does not constitute a guarantee of the accuracy of the information contained herein.")
+    canvas.drawString(54, 130, "Although ERIS has endeavored to present you with information that is accurate, ERIS disclaims, any and all liability for any errors, omissions, ")
+    canvas.drawString(54, 120, "or inaccuracies in such information and data, whether attributable to inadvertence, negligence or otherwise, and for any consequences")
+    canvas.drawString(54, 110, "arising therefrom. Liability on the part of ERIS is limited to the monetary value paid for this report.")
+    
+    canvas.setFillColorRGB(0,0,255)
+    canvas.drawString(54, 250, "    Page 223 of 1918 Topographic Instructions")
+    canvas.drawString(54, 240, "    Page 130 of 1928 Topographic Instructions")
+    canvas.drawString(54, 220, "    Topographic Map Symbols")
+    canvas.drawString(54, 200, "    US Topo Map Symbols (see attached document in this report)")
+    
     canvas.restoreState()
     p=None
     Footer = None
@@ -571,17 +593,29 @@ def createPDF(seriesText,diction,diction_s,outpdfname):
         else:
             yearTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "year")[0]
             yearTextE.text = year
-            yearTextE.elementPositionX = 0.4959
+            # yearTextE.elementPositionX = 0.4959
+
+            yearlist = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "yearlist")[0]
+            y = yearalldict.get(year)
+            if y != None:
+                yearlisttext = " "                  # must include blank space if blank to write text element
+                for k,v in y.items():               # for now we only want to include "aerial photo year","photo revision year" out of 8 years
+                    if k in ["aerial photo year","photo revision year"]:
+                        x = "".join((str(k).title() + ": " + v + "\r\n"))
+                        yearlisttext += x
+                yearlist.text = yearlisttext
+            else:
+                yearlist.text = " "                 # must include blank space if blank to write text element
 
             quadrangleTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "quadrangle")[0]
             quadrangleTextE.text = "Quadrangle(s): " + quadrangles
-            quadrangleTextE.elementPositionX = 0.44
-            quadrangleTextE.elementPositionY = 0.3875
+            # quadrangleTextE.elementPositionX = 0.44
+            # quadrangleTextE.elementPositionY = 0.3875
 
             sourceTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "source")[0]
             # sourceTextE.text = "Source: USGS " + seriesText + " Minute Topographic Map"  + "   -- scale is " + str(df.scale)
             sourceTextE.text = "Source: USGS " + seriesText + " Minute Topographic Map"
-            sourceTextE.elementPositionX = 0.4959
+            # sourceTextE.elementPositionX = 0.4959
 
             ordernoTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "orderno")[0]
             ordernoTextE.text = "Order No. "+ OrderNumText
@@ -650,10 +684,12 @@ logger.addHandler(handler)
 # scratch = arcpy.env.scratchWorkspace#r"C:\Users\JLoucks\Documents\JL\Topo_USA_scratch8"#
 
 OrderIDText = ""
-OrderNumText = r"20200626202"
+OrderNumText = r"21011500003"
 BufsizeText = "2.4"
-yesBoundary = ""
-scratch = os.path.join(r"W:\Data Analysts\Alison\_GIS\TOPO_SCRATCHY", OrderNumText)
+yesBoundary = "yes"
+scratch = os.path.join(r"\\cabcvan1gis005\MISC_DataManagement\_AW\TOPO_SCRATCHY", "test_test")
+if not os.path.exists(scratch):
+    os.mkdir(scratch)
 
 # Deployment parameters
 server_environment = 'test'
@@ -672,7 +708,7 @@ csvfile_c = r'\\cabcvan1gis005\GISData\Topo_USA\masterfile\All_USTopo_T_7.5_gda_
 tifdir_h = r'\\cabcvan1fpr009\USGS_Topo\USGS_HTMC_Geotiff'
 # tifdir_c = r"Y:\TOPO_DATA_USA\USGS_currentTopo_Geotiff"
 tifdir_c = r'\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff'
-mxdfile = os.path.join(filepath,"template.mxd")
+mxdfile = os.path.join(filepath,"template - Copy.mxd")
 mxdfile_nova = os.path.join(filepath,'template_nova_t.mxd')
 topolyrfile_none = os.path.join(filepath,"topo.lyr")
 topolyrfile_b = os.path.join(filepath,"topo_black.lyr")
@@ -690,8 +726,8 @@ annot_poly = os.path.join(filepath,"annot_poly.pdf")
 annot_line = os.path.join(filepath,"annot_line.pdf")
 logopath = os.path.join(filepath,"logos")
 coverPic = os.path.join(filepath,"ERIS_2018_ReportCover_Topographic Maps_F.jpg")
+pdfsymbolfile = os.path.join(filepath, "US Topo Map Symbols v7.4.pdf")
 arcpy.env.overwriteOutput = True
-arcpy.env.OverWriteOutput = True
 # -----------------------------------------------------------------------------------------------------------------------------------------------
 
 try:
@@ -702,12 +738,14 @@ try:
 
         # GET ORDER_ID AND BOUNDARY FROM ORDER_NUM
         if OrderIDText == "":
-            cur.execute("SELECT * FROM ERIS.TOPO_AUDIT WHERE ORDER_ID IN (select order_id from orders where order_num = '" + str(OrderNumText) + "')")
+            # cur.execute("SELECT * FROM ERIS.TOPO_AUDIT WHERE ORDER_ID IN (select order_id from orders where order_num = '" + str(OrderNumText) + "')")
+            cur.execute("select order_id from orders where order_num = '" + str(OrderNumText) + "'")
             result = cur.fetchall()
             OrderIDText = str(result[0][0]).strip()
-            yesBoundaryqry = str([row[3] for row in result if row[2]== "URL"][0])
-            yesBoundary = re.search('(yesBoundary=)(\w+)(&)', yesBoundaryqry).group(2).strip()
             print("Order ID: " + OrderIDText)
+        elif yesBoundary == "":
+            yesBoundaryqry = str([row[3] for row in result if row[2]== "URL"][0])
+            yesBoundary = re.search('(yesBoundary=)(\w+)(&)', yesBoundaryqry).group(2).strip()            
             print("Yes Boundary: " + yesBoundary)
 
         cur.execute("select order_num from orders where order_id='%s'"%(OrderIDText))
@@ -915,6 +953,7 @@ try:
         # cellids are found, need to find corresponding map .pdf by reading the .csv file
         # also get the year info from the corresponding .xml
         print ("#1 " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
+        yearalldict = {}
         with open(csvfile_h, "rb") as f:
             print("___All USGS HTMC Topo List.")
             reader = csv.reader(f)
@@ -934,35 +973,47 @@ try:
                         if procdate != None:
                             procdesc = procstep.find("./procdesc")
                             yeardict[procdesc.text.lower()] = procdate.text
-                    # print yeardict
-                    year2use = ""
-                    yearcandidates = []
-                    if "edit year" in yeardict.keys():
-                        yearcandidates.append(int(yeardict["edit year"]))
+                    
+                    # yearcandidates = []
+                    # if "date on map" in yeardict.keys():
+                    #     # print "date on  map " + yeardict["date on map"]
+                    #     yearcandidates.append(int(yeardict["date on map"]))
 
-                    if "aerial photo year" in yeardict.keys():
-                        yearcandidates.append(int(yeardict["aerial photo year"]))
+                    # if "aerial photo year" in yeardict.keys():
+                    #     yearcandidates.append(int(yeardict["aerial photo year"]))
 
-                    if "photo revision year" in yeardict.keys():
-                        yearcandidates.append(int(yeardict["photo revision year"]))
+                    # if "photo revision year" in yeardict.keys():
+                    #     yearcandidates.append(int(yeardict["photo revision year"]))
 
-                    if "field check year" in yeardict.keys():
-                        yearcandidates.append(int(yeardict["field check year"]))
+                    # if "edit year" in yeardict.keys():
+                    #     yearcandidates.append(int(yeardict["edit year"]))
 
-                    if "photo inspection year" in yeardict.keys():
-                        # print "photo inspection year is " + yeardict["photo inspection year"]
-                        yearcandidates.append(int(yeardict["photo inspection year"]))
+                    # if "field check year" in yeardict.keys():
+                    #     yearcandidates.append(int(yeardict["field check year"]))
 
-                    if "date on map" in yeardict.keys():
-                        # print "date on  map " + yeardict["date on map"]
-                        yearcandidates.append(int(yeardict["date on map"]))
+                    # if "photo inspection year" in yeardict.keys():
+                    #     # print "photo inspection year is " + yeardict["photo inspection year"]
+                    #     yearcandidates.append(int(yeardict["photo inspection year"]))
 
-                    if len(yearcandidates) > 0:
-                        # print "***** length of yearcnadidates is " + str(len(yearcandidates))
-                        year2use = str(max(yearcandidates))
+                    # if "imprint year" in yeardict.keys():
+                    #     # print "date on  map " + yeardict["date on map"]
+                    #     yearcandidates.append(int(yeardict["imprint year"]))
+
+                    # if "survey year" in yeardict.keys():
+                    #     # print "date on  map " + yeardict["date on map"]
+                    #     yearcandidates.append(int(yeardict["survey year"]))
+
+                    year2use = yeardict.get("date on map")
+                    # year2use = ""
+                    # if len(yearcandidates) > 0:
+                    #     # print "***** length of yearcnadidates is " + str(len(yearcandidates))
+                    #     year2use = str(max(yearcandidates))
 
                     if year2use == "":
-                        print ("################### cannot determine the year of the map!!")
+                        print ("################### cannot determine year of the map from xml...get from csv instead")
+                        year2use = row[11].strip()
+
+                    yearalldict[year2use] = yeardict
 
                     # logger.debug(row[9] + " " + row[5] + "  " + row[15] + "  " + year2use)
                     infomatrix.append([row[9],row[5],row[15],year2use])  # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963]
@@ -972,18 +1023,17 @@ try:
             reader = csv.reader(f)
             for row in reader:
                 if row[9] in cellids:
-                    # print "#2 " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
                     pdfname = row[15].strip()
 
                     # for current topos, read the year from the geopdf file name
                     templist = pdfname.split("_")
                     year2use = templist[len(templist)-3][0:4]
 
-                    if year2use[0:2] != "20":
-                        print ("################### Error in the year of the map!!")
+                    if year2use[0:2] != "20" or year2use == "" or year2use == None:
+                        print ("################### Error in the year of the map!!!" + year2use)
 
                     # print (row[9] + " " + row[5] + "  " + row[15] + "  " + year2use)
-                    infomatrix.append([row[9],row[5],row[15],year2use])
+                    infomatrix.append([row[9],row[5],pdfname,year2use])
 
         logger.debug("#3")
         print ("#3 " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
@@ -999,10 +1049,8 @@ try:
             else:
                 if row[1] == "7.5X7.5 GRID":
                     maps7575.append(row)
-                    print(row)
                 elif row[1] == "15X15 GRID":
                     maps1515.append(row)
-                    print(row)
                 elif row[1] == "30X60 GRID":
                     maps3060.append(row)
                 elif row[1] == "1X2 GRID":
@@ -1036,15 +1084,22 @@ try:
         (dict12,dict12_s) = reorgByYear(maps12)
 
         # -----------------------------------------------------------------------------------------------------------
-        # UNCOMMENT TO REMOVE BLANK MAPS
-        # del dict7575['1975']
-        # del dict7575_s['1975']
-        # del dict1515['1938']
-        # del dict1515_s['1938']
-        # del dict1515['1930']
-        # del dict1515_s['1930']
+        # REMOVE BLANK MAPS
+        yeardel7575 = []    #include quotes
+        yeardel1515 = []    #include quotes
+        if yeardel7575:
+            for y in yeardel7575:
+                del dict7575[y]
+                del dict7575_s[y]
+        if yeardel1515:
+            for y in yeardel1515:
+                del dict1515[y]
+                del dict1515_s[y]
+        
         # del dict1515['1929']
         # del dict1515_s['1929']
+        # del dict1515['1931']
+        # del dict1515_s['1931']
         # -----------------------------------------------------------------------------------------------------------
 
         logger.debug("#5")
@@ -1123,8 +1178,9 @@ try:
         summaryPages=None
         output.addBookmark("Cover Page",0)
         output.addBookmark("Summary",1)
+        output.addAttachment("US Topo Map Symbols.pdf", open(pdfsymbolfile,"rb").read())
 
-# Save Summary ##########################################################
+# Save Summary #######################################################################################################
         summarylist = {"ORDER_ID":OrderIDText,"FILENAME":pdfreport,"SUMMARY":summarydata}
         # print (summarylist)
         topassorc = json.dumps(summarylist,ensure_ascii=False)
