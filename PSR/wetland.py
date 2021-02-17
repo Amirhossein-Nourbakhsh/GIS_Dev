@@ -42,13 +42,14 @@ def generate_multipage_report(order_obj,mxd_wetland,outputjpg_wetland,buffer_wet
     ### part 2: the data driven pages
     page = 1
     page = int(arcpy.GetCount_management(gridlrshp).getOutput(0))  + page
-    mxdMM_wetland = arcpy.mapping.MapDocument(config.mxdMMfile_wetland)
-    dfMM_wetland = arcpy.mapping.ListDataFrames(mxdMM_wetland,"big")[0]
-    dfMM_wetland.spatialReference = spatial_ref
-    addBuffertoMxd("buffer_wetland",dfMM_wetland,scratchfolder)
-    addOrdergeomtoMxd("orderGeometry_PCS", dfMM_wetland,orderGeomlyrfile, scratchfolder)
-    gridlayerMM = arcpy.mapping.ListLayers(mxdMM_wetland,"Grid" ,dfMM_wetland)[0]
-    gridlayerMM.replaceDataSource(scratchfolder, "SHAPEFILE_WORKSPACE","gridlr_wetland")
+    mxd_mm_wetland = arcpy.mapping.MapDocument(config.mxdMMfile_wetland)
+    df_mm_wetland = arcpy.mapping.ListDataFrames(mxd_mm_wetland,"big")[0]
+    df_mm_wetland.spatialReference = spatial_ref
+    utility.add_layer_to_mxd("order_buffer",df_mm_wetland,config.buffer_lyr_file, 1.1)
+    utility.add_layer_to_mxd("order_geometry_pcs", df_mm_wetland,config.order_geom_lyr_file,1)
+    
+    grid_layerM_mm= arcpy.mapping.ListLayers(mxd_mm_wetland,"Grid" ,df_mm_wetland)[0]
+    grid_layerM_mm.replaceDataSource(config.scratch_folder, "SHAPEFILE_WORKSPACE","gridlr_wetland")
     arcpy.CalculateAdjacentFields_cartography(gridlrshp, "PageNumber")
     mxdMM_wetland.saveACopy(os.path.join(scratchfolder, "mxdMM_wetland.mxd"))
 

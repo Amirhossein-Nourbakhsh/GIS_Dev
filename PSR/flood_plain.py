@@ -37,15 +37,14 @@ def generate_flood_report(order_obj):
     df_flood = arcpy.mapping.ListDataFrames(mxd_flood,"Flood*")[0]
     df_flood.spatialReference = config.spatial_ref_pcs
     
-    df_floodsmall = arcpy.mapping.ListDataFrames(mxd_flood,"Study*")[0]
-    df_floodsmall.spatialReference = config.spatial_ref_pcs
-    del df_floodsmall
+    df_flood_small = arcpy.mapping.ListDataFrames(mxd_flood,"Study*")[0]
+    df_flood_small.spatialReference = config.spatial_ref_pcs
+    del df_flood_small
     
     utility.add_layer_to_mxd("order_buffer",df_flood,config.buffer_lyr_file, 1.1)
     utility.add_layer_to_mxd("order_geometry_pcs", df_flood,config.order_geom_lyr_file,1)
     arcpy.RefreshActiveView()
-    arcpy.AddMessage('      - multiple pages: %s' % str(utility.if_multipage(config.order_geometry_pcs_shp)))
-    if not utility.if_multipage(config.order_geometry_pcs_shp): # single-page
+    if not config.if_multi_page: # single-page
         mxd_flood.saveACopy(os.path.join(config.scratch_folder, "mxd_flood.mxd"))  
         arcpy.mapping.ExportToJPEG(mxd_flood, output_jpg_flood, "PAGE_LAYOUT", resolution=75, jpeg_quality=40)
         if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
@@ -90,28 +89,29 @@ def generate_flood_report(order_obj):
         arcpy.CalculateAdjacentFields_cartography(grid_lyr_shp, "PageNumber")
         mxd_multi_flood.saveACopy(os.path.join(config.scratch_folder, "mxd_mm_flood.mxd"))
         
-        for i in range(1,int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0)) + 1):
+        for i in range(1,page):
+            if i > 10 :
+                break
             arcpy.SelectLayerByAttribute_management(grid_layer_mm, "NEW_SELECTION", ' "PageNumber" =  ' + str(i))
             df_mm_flood.extent = grid_layer_mm.getSelectedExtent(True)
             df_mm_flood.scale = df_mm_flood.scale * 1.1
             arcpy.SelectLayerByAttribute_management(grid_layer_mm, "CLEAR_SELECTION")
 
-            titleTextE = arcpy.mapping.ListLayoutElements(mxd_multi_flood, "TEXT_ELEMENT", "title")[0]
-            titleTextE.text = '      - Flood Hazard Zones - Page ' + str(i)
-            titleTextE.elementPositionX = 0.5946
+            title_text = arcpy.mapping.ListLayoutElements(mxd_multi_flood, "TEXT_ELEMENT", "title")[0]
+            title_text.text = '      - Flood Hazard Zones - Page ' + str(i)
+            title_text.elementPositionX = 0.5946
             arcpy.RefreshTOC()
 
             arcpy.mapping.ExportToJPEG(mxd_multi_flood, output_jpg_flood[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 75, "False", "24-BIT_TRUE_COLOR", 40)
             if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
                 os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
             shutil.copy(output_jpg_flood[0:-4]+str(i)+".jpg", os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-            ### update tables in DB
-            page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
-            psr_obj = models.PSR()
-            for i in range(1,page):
-                psr_obj.insert_map(order_obj.id, 'FLOOD', order_obj.number + '_US_FLOOD' + str(i) + '.jpg', i + 1)
         del mxd_multi_flood
         del df_mm_flood
+        ### update tables in DB
+        psr_obj = models.PSR()
+        for i in range(1,page):
+            psr_obj.insert_map(order_obj.id, 'FLOOD', order_obj.number + '_US_FLOOD' + str(i) + '.jpg', i + 1)
         
     flood_panels = ''
     psr_obj = models.PSR()

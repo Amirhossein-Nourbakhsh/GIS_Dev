@@ -22,7 +22,7 @@ if __name__ == "__main__":
    # order_id = '930894' #single pages: 20292800115 - 20200814009
    # order_id = '884891'
    # order_id = '462873' # no psr ->'354268' ## newyork
-   order_id = 21021100004 #'932499' # multi page
+   id = 21021100004 #'932499' # multi page
    arcpy.AddMessage('Start PSR report...')
    start = timeit.default_timer() 
    ### set workspace
@@ -33,7 +33,7 @@ if __name__ == "__main__":
    if not os.path.exists(config.temp_gdb):
       arcpy.CreateFileGDB_management(config.scratch_folder,r"temp") 
    ### isntantiate of order class and set order geometry and buffering
-   order_obj = models.Order().get_order(int(order_id))
+   order_obj = models.Order().get_order(int(id))
    # order_obj = models.Order().getbyNumber(order_id)
    if order_obj is not None:
       utility.set_order_geometry(order_obj)
@@ -43,14 +43,14 @@ if __name__ == "__main__":
       order_obj.get_search_radius() # populate search radius
       if len(order_obj.psr.search_radius) > 0:
       ### set type of reports
-         if_relief_report = True
-         if_topo_report = True
-         if_wetland_report = True 
+         if_relief_report = False
+         if_topo_report = False
+         if_wetland_report = False 
          if_flood_report = True
-         if_geology_report = True
-         if_soil_report = True
-         if_ogw_report = True
-         if_radon_report = True
+         if_geology_report = False
+         if_soil_report = False
+         if_ogw_report = False
+         if_radon_report = False
             
          # shaded releif map report
          if if_relief_report:

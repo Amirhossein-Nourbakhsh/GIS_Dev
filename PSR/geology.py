@@ -35,7 +35,7 @@ def generate_geology_report(order_obj):
     utility.add_layer_to_mxd("order_buffer",df_geology,config.buffer_lyr_file, 1.1)
     utility.add_layer_to_mxd("order_geometry_pcs", df_geology,config.order_geom_lyr_file,1)
     
-    if not utility.if_multipage(config.order_geometry_pcs_shp): # single-page
+    if not config.if_multi_page: # single-page
         #df.scale = 5000
         mxd_geology.saveACopy(os.path.join(config.scratch_folder, "mxd_geology.mxd"))
         arcpy.mapping.ExportToJPEG(mxd_geology, output_jpg_geology, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
