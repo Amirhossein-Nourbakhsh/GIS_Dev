@@ -132,10 +132,10 @@ def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef
     del cursor
     return outputSHP
 
-OrderID = '1014745'#arcpy.GetParameterAsText(0)#'968849'#arcpy.GetParameterAsText(0)
-scale = '1200'#arcpy.GetParameterAsText(1)#'2000'#arcpy.GetParameterAsText(1)
-unit = 'ft'#arcpy.GetParameterAsText(2)#'ft'#arcpy.GetParameterAsText(2)
-scratch = r'C:\Users\JLoucks\Documents\JL\test9'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test9'
+OrderID = arcpy.GetParameterAsText(0)#'968849'#arcpy.GetParameterAsText(0)'1014745'
+scale = arcpy.GetParameterAsText(1)#'2000'#arcpy.GetParameterAsText(1)'1200'
+unit = arcpy.GetParameterAsText(2)#'ft'#arcpy.GetParameterAsText(2)'ft'
+scratch = arcpy.env.scratchF0older#r'C:\Users\JLoucks\Documents\JL\test9'
 init_env = 'test'
 jobfolder = os.path.join(r'\\cabcvan1eap003\v2_usaerial\JobData', init_env)
 mxdtemplate = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export_new.mxd'

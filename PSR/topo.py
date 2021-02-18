@@ -38,7 +38,7 @@ def generate_topo_report(order_obj):
     x_centre_oid = (arcpy.Describe(config.order_buffer_shp).extent.XMax + arcpy.Describe(config.order_buffer_shp).extent.XMin)/2
     y_centre_oid = (arcpy.Describe(config.order_buffer_shp).extent.YMax + arcpy.Describe(config.order_buffer_shp).extent.YMin)/2
     
-    if utility.if_multipage(config.order_geometry_pcs_shp,config.Report_Type.topo):
+    if config.if_multi_page:
         width = width + 6400     # add 2 miles to each side, for multipage
         height = height + 6400   # add 2 miles to each side, for multipage
         
@@ -95,7 +95,7 @@ def generate_topo_report(order_obj):
                     if year_to_use[0:2] != "20":
                         arcpy.AddMessage('      - Error in the year of the map!!')
 
-                    arcpy.AddMessage('      -%s' % row[9] + " " + row[5] + "  " + row[15] + "  " + year_to_use)
+                    # arcpy.AddMessage('      -%s' % row[9] + " " + row[5] + "  " + row[15] + "  " + year_to_use)
                     infomatrix.append([row[9],row[5],row[15],year_to_use])
 
         mxd_topo = arcpy.mapping.MapDocument(config.mxd_file_topo) if order_obj.province !='WA' else arcpy.mapping.MapDocument(config.mxd_file_topo_Tacoma)#mxdfile_topo_Tacoma
@@ -103,7 +103,7 @@ def generate_topo_report(order_obj):
         df_topo.spatialReference = config.spatial_ref_pcs
         mxd_mm_topo = None
         df_mm_topo = None
-        if utility.if_multipage(config.order_geometry_pcs_shp):
+        if config.if_multi_page:
             mxd_mm_topo = arcpy.mapping.MapDocument(config.mxd_mm_file_topo) if order_obj.province !='WA' else arcpy.mapping.MapDocument(config.mxd_mm_file_topo_Tacoma)
             df_mm_topo = arcpy.mapping.ListDataFrames(mxd_mm_topo,"*")[0]
             df_mm_topo.spatialReference =  config.spatial_ref_pcs
@@ -129,7 +129,7 @@ def generate_topo_report(order_obj):
                 topo_layer.replaceDataSource(config.scratch_folder, "RASTER_WORKSPACE", new_tif_name)
                 topo_layer.name = new_tif_name
                 arcpy.mapping.AddLayer(df_topo, topo_layer, "BOTTOM")
-                if utility.if_multipage(config.order_geometry_pcs_shp):
+                if config.if_multi_page:
                     arcpy.mapping.AddLayer(df_mm_topo, topo_layer, "BOTTOM")
 
                 comps = pdf_name.split('_')
@@ -163,12 +163,12 @@ def generate_topo_report(order_obj):
         source_text.text = "Source: USGS 7.5 Minute Topographic Map"
 
         arcpy.RefreshTOC()
-        if not utility.if_multipage(config.order_geometry_pcs_shp) :
+        if not config.if_multi_page :
             arcpy.mapping.ExportToJPEG(mxd_topo, output_jpg_topo, "PAGE_LAYOUT")#, resolution=200, jpeg_quality=90)
             if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
                 os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
             shutil.copy(output_jpg_topo, os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-            arcpy.AddMessage('      - output jpg image path: %s' % output_jpg_topo)
+            # arcpy.AddMessage('      - output jpg image path: %s' % output_jpg_topo)
             mxd_topo.saveACopy(os.path.join(config.scratch_folder,"mxd_topo.mxd"))
             del mxd_topo
             del df_topo
@@ -244,7 +244,7 @@ def generate_topo_report(order_obj):
                 if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
                     os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
                 shutil.copy(output_jpg_topo[0:-4]+str(i)+".jpg", os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-                arcpy.AddMessage('      - output jpg image: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number, os.path.basename(output_jpg_topo[0:-4]+str(i)+".jpg")))
+                # arcpy.AddMessage('      - output jpg image: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number, os.path.basename(output_jpg_topo[0:-4]+str(i)+".jpg")))
             del mxd_mm_topo
             del df_mm_topo
             #insert generated .jpg report path into eris_maps_psr table

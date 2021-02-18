@@ -76,9 +76,8 @@ def create_map(order_obj, soil_setting):
     utility.add_layer_to_mxd("order_buffer",df_soil,config.buffer_lyr_file, 1.1)
     utility.add_layer_to_mxd("order_geometry_pcs", df_soil,config.order_geom_lyr_file,1)
     arcpy.RefreshActiveView()
-    arcpy.AddMessage('      - multiple pages: %s' % str(utility.if_multipage(config.order_geometry_pcs_shp)))
     output_jpg_soil = config.output_jpg(order_obj,config.Report_Type.soil)
-    if not utility.if_multipage(config.order_geometry_pcs_shp): # single-page
+    if not config.if_multi_page: # single-page
         mxd_soil.saveACopy(os.path.join(config.scratch_folder, "mxd_soil.mxd"))
         arcpy.mapping.ExportToJPEG(mxd_soil, output_jpg_soil, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
         if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):

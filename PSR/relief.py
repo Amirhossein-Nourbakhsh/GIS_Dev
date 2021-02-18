@@ -175,7 +175,7 @@ def generate_relief_report(order_obj):
             relief_layer = None
 
             arcpy.RefreshActiveView()
-        if not utility.if_multipage(config.order_geometry_pcs_shp,config.Report_Type.relief):
+        if not config.if_multi_page:
             generate_singlepage_report (order_obj, mxd_relief, output_jpg_relief)
         else:
             generate_multipage_report (order_obj,cellids_selected, mxd_relief,df_relief, output_jpg_relief)
