@@ -13,14 +13,15 @@ class Order(object):
     province = ''
     psr = None
     geometry = arcpy.Geometry()
+    radius_type = None
     def get_order(self,input_id):
         try:
             order_obj = Order
             con = cx_Oracle.connect(db_connections.connection_string)
             cursor = con.cursor()
+            ### fetch order info from order table by order id
             cursor.execute("select order_num, address1, city, provstate from orders where order_id =" + str(input_id))
             row = cursor.fetchone()
-           
             if row is not None:
                 self.id = input_id
                 self.number = str(row[0])
@@ -30,7 +31,7 @@ class Order(object):
                 del cursor 
                 del row
                 cursor = con.cursor()
-                # cur.execute("select order_id, address1, city, provstate from orders where order_num = '" + str(id) + "'")
+                ### fetch order info from order table by order number
                 cursor.execute("select order_id, address1, city, provstate from orders where order_num = '" + str(input_id) + "'")
                 row = cursor.fetchone()
                 if row is not None:
@@ -39,7 +40,7 @@ class Order(object):
                     order_obj.id = str(row[0])
                     order_obj.number = str(input_id)
                 else:
-                     return None           
+                     return None  
             order_obj.address = str(row[1])+","+str(row[2])+","+str(row[3])
             order_obj.province = str(row[3])
             order_obj.geometry = order_obj.__getGeometry()
@@ -56,75 +57,18 @@ class Order(object):
         if order_geom == None:
             order_geom = arcpy.Geometry()
             where = 'order_id = ' + str(self.id)
-            row = arcpy.da.SearchCursor(order_fc,("GEOMETRY_TYPE","GEOMETRY"),where).next()
+            row = arcpy.da.SearchCursor(order_fc,("GEOMETRY_TYPE","GEOMETRY", "RADIUS_TYPE"),where).next()
             coord_string = ((row[1])[1:-1])
             coordinates = np.array(literal_eval(coord_string))
             geometry_type = row[0]
+            self.radius_type = row[2]
             if geometry_type.lower()== 'point':
                 order_geom = arcpy.Multipoint(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]), sr_wgs84)
             elif geometry_type.lower() =='polyline':        
                 order_geom = arcpy.Polyline(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]), sr_wgs84)
             elif geometry_type.lower() =='polygon':
                 order_geom = arcpy.Polygon(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]), sr_wgs84)
-        return order_geom.projectAs(sr_wgs84)
-    @classmethod
-    def get_psr(self):
-        try:
-            con = cx_Oracle.connect(db_connections.connection_string)
-            cur = con.cursor()
-            cur.execute("select OMR_OID, DS_OID, SEARCH_RADIUS, REPORT_SOURCE from order_radius_psr where order_id =" + str(self.id))
-            items = cur.fetchall()
-            PSR_list = [] 
-            for item in items:
-                psr_obj = PSR()
-                psr_obj.order_id = self.id
-                psr_obj.omi_id = item[0]
-                psr_obj.ds_oid = item[1]
-                if str(psr_obj.ds_oid) == '10683':
-                    psr_obj.type = 'FLOOD'
-                elif str(psr_obj.ds_oid) == '10684':
-                    psr_obj.type = 'WETLAND'
-                elif str(psr_obj.ds_oid) == '10685':
-                    psr_obj.type = 'GEOLOGY'
-                elif str(psr_obj.ds_oid) == '9334':
-                    psr_obj.type = 'SOIL'
-                elif str(psr_obj.ds_oid) in ['10689', '10688']:
-                    psr_obj.type = 'RADON'
-                elif str(psr_obj.ds_oid) == '10695':
-                    psr_obj.type = 'TOPO'
-                elif str(psr_obj.ds_oid) == '10093':
-                    psr_obj.type = 'PWSV'
-                elif str(psr_obj.ds_oid) == '5937':
-                     psr_obj.type = 'PCES'
-                elif str(psr_obj.ds_oid) in ['10061', '9154','9340']:
-                     psr_obj.type = 'OGW'
-                elif str(psr_obj.ds_oid) in ['15676', '10202','15312']:
-                     psr_obj.type = 'WATER WELLS'
-                elif str(psr_obj.ds_oid) == '8670':
-                    psr_obj.type = 'FED USGS'
-                elif str(psr_obj.ds_oid) == '8739':
-                    psr_obj.type = 'PWS'
-                elif str(psr_obj.ds_oid) == '10694':
-                    psr_obj.type = 'SDWIS'
-                elif str(psr_obj.ds_oid) == '8734':
-                    psr_obj.type = 'PWSW'
-                elif str(psr_obj.ds_oid) == '11271':
-                    psr_obj.type = 'GWDB'
-                elif str(psr_obj.ds_oid) == '11272':
-                    psr_obj.type = 'SDR WELLS'
-                elif str(psr_obj.ds_oid) == '11282':
-                    psr_obj.type = 'PLUGGED WELLS'
-                elif str(psr_obj.ds_oid) == '15302':
-                    psr_obj.type = 'UIC'
-                if not psr_obj.type == None:
-                    psr_obj.search_radius = item[2]
-                    psr_obj.report_source = item[3]
-                self.psr = psr_obj
-                PSR_list.append(psr_obj)
-            return PSR_list
-        finally:
-            cur.close()
-            con.close()
+        return order_geom.projectAs(sr_wgs84)          
     @classmethod
     def get_search_radius(self):
         try:

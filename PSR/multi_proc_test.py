@@ -1,3 +1,5 @@
+from multiprocessing import Process, Queue, Pool, cpu_count, current_process, Manager
+import arcpy
 from imp import reload
 import arcpy, os, sys
 from datetime import datetime
@@ -15,32 +17,58 @@ class Setting:
     mxd_multi_flood = None
     output_jpg_flood = None
     order_obj = None
-def export_to_jpg(page_num):
-    arcpy.SelectLayerByAttribute_management(Setting.grid_layer_mm, "NEW_SELECTION", ' "PageNumber" =  ' + str(page_num))
-    Setting.df_mm_flood.extent = Setting.grid_layer_mm.getSelectedExtent(True)
-    Setting.df_mm_flood.scale = Setting.df_mm_flood.scale * 1.1
-    arcpy.SelectLayerByAttribute_management(Setting.grid_layer_mm, "CLEAR_SELECTION")
 
-    title_text = arcpy.mapping.ListLayoutElements(Setting.mxd_multi_flood, "TEXT_ELEMENT", "title")[0]
+def simpleFunction(arg): 
+    return arg*2 
+def export_to_jpg(param_dic):
+    page_num = param_dic[0]
+    mxd_mm_file_flood = param_dic[1][0]
+    output_jpg_flood = param_dic[1][1]
+    mxd_multi_flood = arcpy.mapping.MapDocument(mxd_mm_file_flood)
+    df_mm_flood = arcpy.mapping.ListDataFrames(mxd_multi_flood,"Flood*")[0]
+    grid_layer_mm = arcpy.mapping.ListLayers(mxd_multi_flood,"Grid" ,df_mm_flood)[0]
+    arcpy.SelectLayerByAttribute_management(grid_layer_mm, "NEW_SELECTION", ' "PageNumber" =  ' + str(page_num))
+    df_mm_flood.extent = grid_layer_mm.getSelectedExtent(True)
+    df_mm_flood.scale = df_mm_flood.scale * 1.1
+    arcpy.SelectLayerByAttribute_management(grid_layer_mm, "CLEAR_SELECTION")
+
+    title_text = arcpy.mapping.ListLayoutElements(mxd_multi_flood, "TEXT_ELEMENT", "title")[0]
     title_text.text = '      - Flood Hazard Zones - Page ' + str(page_num)
     title_text.elementPositionX = 0.5946
     arcpy.RefreshTOC()
-
-    arcpy.mapping.ExportToJPEG(Setting.mxd_multi_flood, Setting.output_jpg_flood[0:-4]+str(page_num)+".jpg", "PAGE_LAYOUT", 480, 640, 75, "False", "24-BIT_TRUE_COLOR", 40)
+    arcpy.mapping.ExportToJPEG(mxd_multi_flood, output_jpg_flood[0:-4]+str(page_num)+".jpg", "PAGE_LAYOUT", 480, 640, 75, "False", "24-BIT_TRUE_COLOR", 40)
+    # shutil.copy(output_jpg_flood[0:-4]+str(page_num)+".jpg", os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+    return output_jpg_flood[0:-4]+str(page_num)+".jpg"
+def execute_multi_task():
+    list = [1, 2, 3, 4]
+    arcpy.AddMessage(" Multiprocessing test...") 
+    pool = Pool(processes=cpu_count())
+    result = pool.map(simpleFunction, list)
+    pool.close()
+    pool.join()
+    print(result)
     
-    shutil.copy(Setting.output_jpg_flood[0:-4]+str(page_num)+".jpg", os.path.join(config.report_path, 'PSRmaps', Setting.order_obj.number))
-
-
+def generate_multi_page_multi_processing(param_dic):
+    arcpy.AddMessage(" Multiprocessing test...") 
+    for itm in param_dic:
+        export_to_jpg(itm)
+    # pool = Pool(processes=cpu_count())
+    # pool = Pool(processes=10)
+    # result = pool.map(export_to_jpg, param_dic)
+    # pool.close()
+    # pool.join()
+    # return  result
+    
 def generate_flood_report(order_obj):
     arcpy.AddMessage('  -- Start generating PSR flood report...')
-    start = timeit.default_timer()   
-  
+    start = timeit.default_timer() 
     eris_id = 0
     Setting.output_jpg_flood = config.output_jpg(order_obj,config.Report_Type.flood)
     page = 1
     
     config.buffer_dist_flood = str(order_obj.psr.search_radius['10683']) + ' MILES'
-    arcpy.Buffer_analysis(config.order_geometry_pcs_shp, config.order_buffer_shp, config.buffer_dist_flood) ### create buffer map based on order geometry
+    ### create buffer map based on order geometry
+    arcpy.Buffer_analysis(config.order_geometry_pcs_shp, config.order_buffer_shp, config.buffer_dist_flood) 
     
     arcpy.MakeFeatureLayer_management(config.data_flood, 'flood_lyr') 
     arcpy.SelectLayerByLocation_management('flood_lyr', 'intersect',  config.order_buffer_shp)
@@ -64,6 +92,7 @@ def generate_flood_report(order_obj):
     utility.add_layer_to_mxd("order_buffer",df_flood,config.buffer_lyr_file, 1.1)
     utility.add_layer_to_mxd("order_geometry_pcs", df_flood,config.order_geom_lyr_file,1)
     arcpy.RefreshActiveView()
+    
     if not config.if_multi_page: # single-page
         mxd_flood.saveACopy(os.path.join(config.scratch_folder, "mxd_flood.mxd"))  
         arcpy.mapping.ExportToJPEG(mxd_flood, Setting.output_jpg_flood, "PAGE_LAYOUT", resolution=75, jpeg_quality=40)
@@ -94,7 +123,8 @@ def generate_flood_report(order_obj):
         arcpy.AddMessage('      - output jpg image page 1: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number,os.path.basename(Setting.output_jpg_flood)))
         del mxd_flood
         del df_flood
-        # part 2: the data driven pages
+        
+        ### part 2: the data driven pages
         
         page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
         Setting.mxd_multi_flood = arcpy.mapping.MapDocument(config.mxd_mm_file_flood)
@@ -111,85 +141,13 @@ def generate_flood_report(order_obj):
        
         if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
             os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-            
+        
+        ### execute multi-page report bu multi-task processing
         page = 10
-
+        parameter_dic = {}
+        path_list = [os.path.join(config.scratch_folder, "mxd_mm_flood.mxd"), Setting.output_jpg_flood]
         for i in range(1,page):
-            arcpy.SelectLayerByAttribute_management(Setting.grid_layer_mm, "NEW_SELECTION", ' "PageNumber" =  ' + str(i))
-            Setting.df_mm_flood.extent = Setting.grid_layer_mm.getSelectedExtent(True)
-            Setting.df_mm_flood.scale = Setting.df_mm_flood.scale * 1.1
-            arcpy.SelectLayerByAttribute_management(Setting.grid_layer_mm, "CLEAR_SELECTION")
-
-            title_text = arcpy.mapping.ListLayoutElements(Setting.mxd_multi_flood, "TEXT_ELEMENT", "title")[0]
-            title_text.text = '      - Flood Hazard Zones - Page ' + str(i)
-            title_text.elementPositionX = 0.5946
-            arcpy.RefreshTOC()
-
-            arcpy.mapping.ExportToJPEG(Setting.mxd_multi_flood, Setting.output_jpg_flood[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 75, "False", "24-BIT_TRUE_COLOR", 40)
-          
-            shutil.copy(Setting.output_jpg_flood[0:-4]+str(i)+".jpg", os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-        
-        del Setting.mxd_multi_flood
-        del Setting.df_mm_flood
-        
-        ### update tables in DB
-        psr_obj = models.PSR()
-        for i in range(1,page):
-            psr_obj.insert_map(order_obj.id, 'FLOOD', order_obj.number + '_US_FLOOD' + str(i) + '.jpg', i + 1)
-        
-    flood_panels = ''
-    if (int(arcpy.GetCount_management(os.path.join(config.scratch_folder,"summary_flood.dbf")).getOutput(0))== 0):
-        # no floodplain records selected....
-        arcpy.AddMessage('      - No floodplain records are selected....')
-        if (int(arcpy.GetCount_management(config.flood_panel_selectedby_order_shp).getOutput(0))== 0):
-            # no panel available, means no data
-            arcpy.AddMessage('      - no panels available in the area')
-        else:
-            # panel available, just not records in area
-            in_rows = arcpy.SearchCursor(config.flood_panel_selectedby_order_shp)
-            for in_row in in_rows:
-                # arcpy.AddMessage('      - : ' + in_row.FIRM_PAN)    # panel number
-                # arcpy.AddMessage('      - %s' % in_row.EFF_DATE)      # effective date
-                flood_panels = flood_panels + in_row.FIRM_PAN+'(effective:' + str(in_row.EFF_DATE)[0:10]+') '
-                del in_row
-            del in_rows
-        
-        if len(flood_panels) > 0:
-            eris_id += 1
-            # arcpy.AddMessage('      - erisid for flood_panels is ' + str(eris_id))
-            psr_obj.insert_order_detail(order_obj.id,eris_id, '10683')   
-            psr_obj.insert_flex_rep(order_obj, eris_id, '10683', 2, 'N', 1, 'Available FIRM Panels in area: ', flood_panels)
-        psr_obj.insert_map(order_obj.id, 'FLOOD', order_obj.number + '_US_FLOOD.jpg', 1)
-    else:
-        in_rows = arcpy.SearchCursor(config.flood_panel_selectedby_order_shp)
-        for in_row in in_rows:
-            # arcpy.AddMessage('      : ' + in_row.FIRM_PAN)      # panel number
-            # arcpy.AddMessage('      - %s' %in_row.EFF_DATE)             # effective date
-            flood_panels = flood_panels + in_row.FIRM_PAN+'(effective:' + str(in_row.EFF_DATE)[0:10]+') '
-            del in_row
-        del in_rows
-
-        flood_IDs =[]
-        in_rows = arcpy.SearchCursor(os.path.join(config.scratch_folder,"summary_flood.dbf"))
-        eris_id += 1
-        psr_obj.insert_order_detail(order_obj.id , eris_id, '10683')
-        psr_obj.insert_flex_rep(order_obj.id, eris_id, '10683', 2, 'N', 1, 'Available FIRM Panels in area: ', flood_panels)
-        
-        for in_row in in_rows:
-            # note the column changed in summary dbf
-            # arcpy.AddMessage('      : ' + in_row.ERIS_CLASS)    # eris label
-            # arcpy.AddMessage('      : ' + (in_row.FIRST_FLD_))           # zone type
-            # arcpy.AddMessage('      : '+ (in_row.FIRST_ZONE))           # subtype
-
-            eris_id += 1
-            flood_IDs.append([in_row.ERIS_CLASS,eris_id])
+            parameter_dic[i] = path_list
             
-            psr_obj.insert_order_detail(order_obj.id,eris_id, '10683')   
-            psr_obj.insert_flex_rep(order_obj.id, eris_id, '10683', 2, 'S1', 1, 'Flood Zone ' + in_row.ERIS_CLASS, '')
-            psr_obj.insert_flex_rep(order_obj.id, eris_id, '10683', 2, 'N', 2, 'Zone: ', in_row.FIRST_FLD_)
-            psr_obj.insert_flex_rep(order_obj.id, eris_id, '10683', 2, 'N', 3, 'Zone subtype: ', in_row.FIRST_ZONE)
-            del in_row
-        del in_rows
-        psr_obj.insert_map(order_obj.id, 'FLOOD', order_obj.number + '_US_FLOOD.jpg'+'.jpg', 1)
-    end = timeit.default_timer()
-    arcpy.AddMessage((' -- End generating PSR flood report. Duration:', round(end -start,4)))
+        # execute_multi_task()
+        result = generate_multi_page_multi_processing(parameter_dic.items())

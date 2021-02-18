@@ -99,7 +99,7 @@ def generate_geology_report(order_obj):
             if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
                 os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
             shutil.copy(output_jpg_geology[0:-4]+str(i)+".jpg", os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-            arcpy.AddMessage('      - output jpg image: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number, os.path.basename(output_jpg_geology[0:-4]+str(i)+".jpg")))
+            # arcpy.AddMessage('      - output jpg image: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number, os.path.basename(output_jpg_geology[0:-4]+str(i)+".jpg")))
         del mxd_mm_geology
         del df_mm_geology
         psr_obj = models.PSR()
