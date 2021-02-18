@@ -12,15 +12,22 @@ class Order(object):
     address = ''
     province = ''
     psr = None
-    geometry = arcpy.Geometry()
+    site_name = None
+    customer_id = None
     radius_type = None
+    company_id = None
+    company_desc = None
+    geometry = arcpy.Geometry()
+   
     def get_order(self,input_id):
         try:
             order_obj = Order
             con = cx_Oracle.connect(db_connections.connection_string)
             cursor = con.cursor()
             ### fetch order info from order table by order id
-            cursor.execute("select order_num, address1, city, provstate from orders where order_id =" + str(input_id))
+            sql_statment = "select ord.order_num, ord.address1, ord.city, ord.provstate, ord.site_name , ord.site_name, cus.customer_id, cus.company_id, comp.company_desc from orders ord, customer cus, company comp  where ord.customer_id = cus.customer_id and cus.company_id = comp.company_id and order_id = " + str(input_id)
+            cursor.execute(sql_statment)
+            # cursor.execute("select order_num, address1, city, provstate, site_name, customer_id from orders where order_id =" + str(input_id))
             row = cursor.fetchone()
             if row is not None:
                 self.id = input_id
@@ -32,7 +39,9 @@ class Order(object):
                 del row
                 cursor = con.cursor()
                 ### fetch order info from order table by order number
-                cursor.execute("select order_id, address1, city, provstate from orders where order_num = '" + str(input_id) + "'")
+                sql_statment = sql_statment = "select ord.order_id, ord.address1, ord.city, ord.provstate, ord.site_name , ord.site_name, cus.customer_id, cus.company_id, comp.company_desc from orders ord, customer cus, company comp  where ord.customer_id = cus.customer_id and cus.company_id = comp.company_id and  order_num = '" + str(input_id) + "'"
+                cursor.execute(sql_statment)
+                # cursor.execute("select order_id, address1, city, provstate, site_name, customer_id from orders where order_num = '" + str(input_id) + "'")
                 row = cursor.fetchone()
                 if row is not None:
                     self.id =  str(row[0])
@@ -43,6 +52,10 @@ class Order(object):
                      return None  
             order_obj.address = str(row[1])+","+str(row[2])+","+str(row[3])
             order_obj.province = str(row[3])
+            order_obj.site_name = row[4]
+            order_obj.customer_id = row[5]
+            order_obj.company_id = row[6]
+            order_obj.company_desc = row[7]
             order_obj.geometry = order_obj.__getGeometry()
             return order_obj
         finally:
