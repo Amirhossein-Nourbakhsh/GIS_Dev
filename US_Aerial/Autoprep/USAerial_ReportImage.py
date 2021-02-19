@@ -185,12 +185,7 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
         image_lyr = arcpy.mapping.Layer(lyrpath)
         arcpy.mapping.AddLayer(df,image_lyr,'TOP')
     sr = arcpy.GetUTMFromLocation(centroidX,centroidY)
-    #UTMzone = sr.name
-    #print UTMzone
-    #sr = arcpy.SpatialReference('NAD 1983 UTM Zone %s'%(UTMzone.split('_')[-1]))
     df.spatialReference = sr
-    mxd.saveACopy(os.path.join(scratch,image_year+'.mxd'))
-    #arcpy.env.outputCoordinateSystem = sr
     geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
     geometry_layer.visible = False
     geo_extent = geometry_layer.getExtent(True)
@@ -210,23 +205,8 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
         export_width = 5100
         export_height = 6600
     arcpy.RefreshActiveView()
-            #if image_extent.width < 0 and image_extent.height < 0:
-                #w_res=int((image_extent.width*1000)*3)
-                #h_res=int((image_extent.height*1000)*3)
-            #elif image_extent.width > 1000 and image_extent.height > 1000:
-                #w_res=int((image_extent.width/1000)*3)
-                #h_res=int((image_extent.height/1000)*3)
-            #else:
-                #w_res = 5100
-                #h_res = 5100
-        ###############################
-        ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
-        #sr = arcpy.SpatialReference(3857)
-        #df.SpatialReference = sr
-        #mxd.save()
     arcpy.overwriteOutput = True
     sr2 = arcpy.SpatialReference(4326)
-    ###############################
     ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
     scale = df.scale
     if scale == 6000:
@@ -244,15 +224,12 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
     arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_fin,report_image_name),df,df_export_width=export_width,df_export_height=export_height,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 80)
     arcpy.DefineProjection_management(os.path.join(job_fin,report_image_name),sr)
     print "projecting"
-    #arcpy.ProjectRaster_management(os.path.join(job_fin,report_image_name),os.path.join(scratch,image_year+'wgs84.jpg'),4326)
-    #df.SpatialReference = sr2
     wgs84mxd = arcpy.mapping.MapDocument(wgs84_template)
     image_report = arcpy.mapping.Layer(os.path.join(job_fin,report_image_name))
     df = arcpy.mapping.ListDataFrames(wgs84mxd,'*')[0]
     arcpy.mapping.AddLayer(df,image_report,'TOP')
     imagetodesc = arcpy.mapping.ListLayers(wgs84mxd,'*',df)[0]
     extent =arcpy.Describe(imagetodesc).extent
-    #extent =arcpy.Describe(os.path.join(scratch,image_year+'wgs84.jpg')).extent
     print "done projecting" 
     NW_corner= str(extent.XMin) + ',' +str(extent.YMax)
     NE_corner= str(extent.XMax) + ',' +str(extent.YMax)
@@ -279,9 +256,9 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '1014916'#arcpy.GetParameterAsText(0)#'968634'#arcpy.GetParameterAsText(0)
-    UserMapScale = '500'#arcpy.GetParameterAsText(1)
-    scratch = r'C:\Users\JLoucks\Documents\JL\test1'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test4'#arcpy.env.scratchFolder
+    orderID = arcpy.GetParameterAsText(0)#'968634'#arcpy.GetParameterAsText(0)
+    UserMapScale = arcpy.GetParameterAsText(1)
+    scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test4'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export_new.mxd'
     wgs84_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\wgs84_template.mxd'
