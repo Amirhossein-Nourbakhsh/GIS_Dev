@@ -17,19 +17,18 @@ import multi_proc_test
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-if __name__ == "__main__": 
-    id = 21021100004 
+if __name__ == "__main__":
+    id = 21021100006
     arcpy.AddMessage('Start PSR report...')
-    start = timeit.default_timer() 
+    start = timeit.default_timer()
     # ### set workspace
     arcpy.env.workspace = config.scratch_folder
     arcpy.AddMessage('  -- scratch folder: %s' % config.scratch_folder)
-    arcpy.env.overwriteOutput = True   
-    
+    arcpy.env.overwriteOutput = True
     if not os.path.exists(config.temp_gdb):
         arcpy.CreateFileGDB_management(config.scratch_folder,r"temp")
-        
-    ### isntantiate of order class and set order geometry and buffering    
+
+    ### isntantiate of order class and set order geometry and buffering
     order_obj = models.Order().get_order(int(id))
     if order_obj is not None:
         utility.set_order_geometry(order_obj)
@@ -41,13 +40,13 @@ if __name__ == "__main__":
         ### set type of reports
             if_relief_report = False
             if_topo_report = False
-            if_wetland_report = False 
+            if_wetland_report = False
             if_flood_report = False
             if_geology_report = False
             if_soil_report = False
             if_ogw_report = False
             if_radon_report = False
-            
+
             # shaded releif map report
             if if_relief_report:
                 relief.generate_relief_report(order_obj)
@@ -72,9 +71,7 @@ if __name__ == "__main__":
             # radon report
             if if_radon_report:
                 radon.generate_radon_report(order_obj)
-            
             multi_proc_test.generate_flood_report(order_obj)
-          
         else:
             arcpy.AddMessage('No PSR is availabe for this order')
     else:

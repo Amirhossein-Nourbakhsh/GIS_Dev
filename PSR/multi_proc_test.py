@@ -50,14 +50,14 @@ def execute_multi_task():
     
 def generate_multi_page_multi_processing(param_dic):
     arcpy.AddMessage(" Multiprocessing test...") 
-    for itm in param_dic:
-        export_to_jpg(itm)
+    # for itm in param_dic:
+    #     export_to_jpg(itm)
     # pool = Pool(processes=cpu_count())
-    # pool = Pool(processes=10)
-    # result = pool.map(export_to_jpg, param_dic)
-    # pool.close()
-    # pool.join()
-    # return  result
+    pool = Pool(processes=10)
+    result = pool.map(export_to_jpg, param_dic)
+    pool.close()
+    pool.join()
+    return  result
     
 def generate_flood_report(order_obj):
     arcpy.AddMessage('  -- Start generating PSR flood report...')
@@ -127,6 +127,7 @@ def generate_flood_report(order_obj):
         ### part 2: the data driven pages
         
         page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
+        arcpy.AddMessage('  -- number of pages: %s' % str(page))
         Setting.mxd_multi_flood = arcpy.mapping.MapDocument(config.mxd_mm_file_flood)
 
         Setting.df_mm_flood = arcpy.mapping.ListDataFrames(Setting.mxd_multi_flood,"Flood*")[0]
@@ -143,7 +144,7 @@ def generate_flood_report(order_obj):
             os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
         
         ### execute multi-page report bu multi-task processing
-        page = 10
+        # page = 10
         parameter_dic = {}
         path_list = [os.path.join(config.scratch_folder, "mxd_mm_flood.mxd"), Setting.output_jpg_flood]
         for i in range(1,page):
