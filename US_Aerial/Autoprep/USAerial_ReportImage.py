@@ -167,9 +167,6 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
     arcpy.AddMessage("Adding to template: "+str(imagedict))
     mxd = arcpy.mapping.MapDocument(mxdexport_template)
     df = arcpy.mapping.ListDataFrames(mxd,'*')[0]
-    sr = arcpy.GetUTMFromLocation(centroidX,centroidY)
-    df.spatialReference = sr
-    mxd.save()
     geo_lyr = arcpy.mapping.Layer(ordergeometry)
     arcpy.mapping.AddLayer(df,geo_lyr,'TOP')
     ordered_all_values = imagedict.keys()
@@ -187,6 +184,8 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
         arcpy.MakeRasterLayer_management(imagepath,lyrpath)
         image_lyr = arcpy.mapping.Layer(lyrpath)
         arcpy.mapping.AddLayer(df,image_lyr,'TOP')
+    sr = arcpy.GetUTMFromLocation(centroidX,centroidY)
+    df.spatialReference = sr
     geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
     geometry_layer.visible = False
     geo_extent = geometry_layer.getExtent(True)
@@ -206,23 +205,8 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
         export_width = 5100
         export_height = 6600
     arcpy.RefreshActiveView()
-            #if image_extent.width < 0 and image_extent.height < 0:
-                #w_res=int((image_extent.width*1000)*3)
-                #h_res=int((image_extent.height*1000)*3)
-            #elif image_extent.width > 1000 and image_extent.height > 1000:
-                #w_res=int((image_extent.width/1000)*3)
-                #h_res=int((image_extent.height/1000)*3)
-            #else:
-                #w_res = 5100
-                #h_res = 5100
-        ###############################
-        ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
-        #sr = arcpy.SpatialReference(3857)
-        #df.SpatialReference = sr
-        #mxd.save()
     arcpy.overwriteOutput = True
     sr2 = arcpy.SpatialReference(4326)
-    ###############################
     ## NEED TO EXPORT DF EXTENT TO ORACLE HERE
     scale = df.scale
     if scale == 6000:
@@ -237,10 +221,9 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
         report_image_name = image_year + '_' + image_source  + '_'+filescale +'.jpg'
     arcpy.AddMessage("Exporting: "+report_image_name)
     arcpy.env.pyramid = "NONE"
-    arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_fin,report_image_name),df,df_export_width=export_width,df_export_height=export_height,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
+    arcpy.mapping.ExportToJPEG(mxd,os.path.join(job_fin,report_image_name),df,df_export_width=export_width,df_export_height=export_height,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 80)
     arcpy.DefineProjection_management(os.path.join(job_fin,report_image_name),sr)
     print "projecting"
-    df.SpatialReference = sr2
     wgs84mxd = arcpy.mapping.MapDocument(wgs84_template)
     image_report = arcpy.mapping.Layer(os.path.join(job_fin,report_image_name))
     df = arcpy.mapping.ListDataFrames(wgs84mxd,'*')[0]
