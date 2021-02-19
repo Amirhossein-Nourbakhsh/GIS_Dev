@@ -10,7 +10,7 @@ class Order(object):
     id = ''
     number = ''
     address = ''
-    province = ''
+    provstate = ''
     psr = None
     site_name = None
     customer_id = None
@@ -18,6 +18,9 @@ class Order(object):
     company_id = None
     company_desc = None
     project_num = None
+    postal_code = None
+    addr = None
+    city = None
     geometry = arcpy.Geometry()
    
     def get_order(self,input_id):
@@ -26,7 +29,7 @@ class Order(object):
             con = cx_Oracle.connect(db_connections.connection_string)
             cursor = con.cursor()
             ### fetch order info from order table by order id
-            sql_statment = "select ord.order_num, ord.address1, ord.city, ord.provstate , ord.site_name, cus.customer_id, cus.company_id, comp.company_desc, ord.pobox  from orders ord, customer cus, company comp  where ord.customer_id = cus.customer_id and cus.company_id = comp.company_id and order_id = " + str(input_id)
+            sql_statment = "select ord.order_num, ord.address1, ord.city, ord.provstate , ord.site_name, cus.customer_id, cus.company_id, comp.company_desc, ord.pobox, ord.postal_code from orders ord, customer cus, company comp  where ord.customer_id = cus.customer_id and cus.company_id = comp.company_id and order_id = " + str(input_id)
             cursor.execute(sql_statment)
             # cursor.execute("select order_num, address1, city, provstate, site_name, customer_id from orders where order_id =" + str(input_id))
             row = cursor.fetchone()
@@ -40,7 +43,7 @@ class Order(object):
                 del row
                 cursor = con.cursor()
                 ### fetch order info from order table by order number
-                sql_statment = sql_statment = "select ord.order_id, ord.address1, ord.city, ord.provstate, ord.site_name, cus.customer_id, cus.company_id, comp.company_desc, ord.pobox from orders ord, customer cus, company comp  where ord.customer_id = cus.customer_id and cus.company_id = comp.company_id and  order_num = '" + str(input_id) + "'"
+                sql_statment = sql_statment = "select ord.order_id, ord.address1, ord.city, ord.provstate, ord.site_name, cus.customer_id, cus.company_id, comp.company_desc, ord.pobox, ord.postal_code from orders ord, customer cus, company comp  where ord.customer_id = cus.customer_id and cus.company_id = comp.company_id and order_num = '" + str(input_id) + "'"
                 cursor.execute(sql_statment)
                 # cursor.execute("select order_id, address1, city, provstate, site_name, customer_id from orders where order_num = '" + str(input_id) + "'")
                 row = cursor.fetchone()
@@ -51,13 +54,16 @@ class Order(object):
                     order_obj.number = str(input_id)
                 else:
                      return None  
-            order_obj.address = str(row[1])+","+str(row[2])+","+str(row[3])
-            order_obj.province = str(row[3])
+            order_obj.address = str(row[1])+", "+str(row[2])+", "+str(row[3])
+            order_obj.addr = str(row[1])
+            order_obj.city = str(row[2])
+            order_obj.provstate = str(row[3])
             order_obj.site_name = row[4]
             order_obj.customer_id = row[5]
             order_obj.company_id = row[6]
             order_obj.company_desc = row[7]
             order_obj.project_num = row[8]
+            order_obj.postal_code = row[9]
             order_obj.geometry = order_obj.__getGeometry()
             return order_obj
         finally:
