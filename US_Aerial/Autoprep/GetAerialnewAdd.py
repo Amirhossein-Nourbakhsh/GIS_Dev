@@ -161,10 +161,10 @@ if __name__ == '__main__':
     AUI_ID = arcpy.GetParameterAsText(1)
     ee_oid = arcpy.GetParameterAsText(2)#'408212'#arcpy.GetParameterAsText(2)
     scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test1'#arcpy.env.scratchFolder
-    CreateFileGDB_management(scratch, 'temp.gdb')
+    arcpy.CreateFileGDB_management(scratch, 'temp.gdb')
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     georeferenced_historical = r'\\cabcvan1nas003\historical\Georeferenced_Aerial_test'
-    georeferenced_doqq = r'\\cabcvan1nas003\historical\Georeferenced_DOQQ_test'
+    georeferenced_doqq = r'\\cabcvan1nas003\doqq\Georeferenced_DOQQ_test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
     arcpy.env.OverwriteOutput = True
 
@@ -199,12 +199,8 @@ if __name__ == '__main__':
             if imagecollection == 'DOQQ':
                 mosaicfp = os.path.join(scratch,'image_boundary.shp')
                 arcpy.CreateMosaicDataset_management(os.path.join(scratch,'temp.gdb'), 'doqq', 4326)
-                AddRastersToMosaicDataset_management (os.path.join(scratch,'temp.gdb','doqq'), "Raster Dataset", imageuploadpath, 'NO_CELL_SIZES', True, False)
-                ExportMosaicDatasetGeometry_management (os.path.join(scratch,'temp.gdb','doqq'), mosaicfp,geometry_type = 'BOUNDARY')
-                SR = arcpy.Describe(imageuploadpath).spatialReference
-                #if SR.name != 'GCS_WGS_1984':
-                    #arcpy.ProjectRaster_management(imageuploadpath,os.path.join(scratch,'temp.tif'),4326)
-                    #imageuploadpath =  os.path.join(scratch,'temp.tif')
+                arcpy.AddRastersToMosaicDataset_management (os.path.join(scratch,'temp.gdb','doqq'), "Raster Dataset", imageuploadpath, 'NO_CELL_SIZES', True, False)
+                arcpy.ExportMosaicDatasetGeometry_management (os.path.join(scratch,'temp.gdb','doqq'), mosaicfp,geometry_type = 'BOUNDARY')
                 cellsizeX = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEX')
                 cellsizeY = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEY')
                 if cellsizeY > cellsizeX:
@@ -212,14 +208,14 @@ if __name__ == '__main__':
                 else:
                     spatial_res = cellsizeX
                 desc = arcpy.Describe(mosaicfp)
-                #result_top = arcpy.GetRasterProperties_management(imageuploadpath, "TOP")  
-                #result_bot = arcpy.GetRasterProperties_management(imageuploadpath, "BOTTOM")  
-                #result_left = arcpy.GetRasterProperties_management(imageuploadpath, "LEFT")  
-                #result_right = arcpy.GetRasterProperties_management(imageuploadpath, "RIGHT")
                 result_top = desc.extent.YMax
                 result_bot = desc.extent.YMin
                 result_left = desc.extent.XMin
                 result_right = desc.extent.XMax
+                arcpy.AddMessage(result_top)
+                arcpy.AddMessage(result_bot)
+                arcpy.AddMessage(result_left)
+                arcpy.AddMessage(result_right)
                 #Rename image and TAB
                 if os.path.exists(TAB_upload_path):
                     shutil.copy(os.path.join(uploaded_dir,TAB_image_name),os.path.join(georeferenced_doqq,TAB_image_name)) #copy TAB if exists
@@ -230,20 +226,25 @@ if __name__ == '__main__':
                 arcpy.Copy_management(os.path.join(scratch,job_image_name),os.path.join(georeferenced_doqq,job_image_name))
                 image_inv_path = os.path.join(georeferenced_doqq,job_image_name)
             else:
-                SR = arcpy.Describe(imageuploadpath).spatialReference
-                if SR.name != 'GCS_WGS_1984':
-                    arcpy.ProjectRaster_management(imageuploadpath,os.path.join(scratch,'temp.tif'),4326)
-                    imageuploadpath =  os.path.join(scratch,'temp.tif')
+                mosaicfp = os.path.join(scratch,'image_boundary.shp')
+                arcpy.CreateMosaicDataset_management(os.path.join(scratch,'temp.gdb'), 'raster', 4326)
+                arcpy.AddRastersToMosaicDataset_management (os.path.join(scratch,'temp.gdb','raster'), "Raster Dataset", imageuploadpath, 'NO_CELL_SIZES', True, False)
+                arcpy.ExportMosaicDatasetGeometry_management (os.path.join(scratch,'temp.gdb','raster'), mosaicfp,geometry_type = 'BOUNDARY')
                 cellsizeX = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEX')
                 cellsizeY = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEY')
                 if cellsizeY > cellsizeX:
                     spatial_res = cellsizeY
                 else:
                     spatial_res = cellsizeX
-                result_top = arcpy.GetRasterProperties_management(imageuploadpath, "TOP")  
-                result_bot = arcpy.GetRasterProperties_management(imageuploadpath, "BOTTOM")  
-                result_left = arcpy.GetRasterProperties_management(imageuploadpath, "LEFT")  
-                result_right = arcpy.GetRasterProperties_management(imageuploadpath, "RIGHT")
+                desc = arcpy.Describe(mosaicfp)
+                result_top = desc.extent.YMax
+                result_bot = desc.extent.YMin
+                result_left = desc.extent.XMin
+                result_right = desc.extent.XMax
+                arcpy.AddMessage(result_top)
+                arcpy.AddMessage(result_bot)
+                arcpy.AddMessage(result_left)
+                arcpy.AddMessage(result_right)
                 #Rename image and TAB
                 if os.path.exists(TAB_upload_path):
                     shutil.copy(os.path.join(uploaded_dir,TAB_image_name),os.path.join(georeferenced_historical,TAB_image_name)) #copy TAB if exists

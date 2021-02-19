@@ -360,7 +360,6 @@ if __name__ == '__main__':
                 arcpy.AddError('JSON missing key: ' + k.message)
         except NoAvailableImage:
             arcpy.AddError('No available images for location')
-            sys.exit()
     else:
         AUI_IDtext = str(AUI_ID)
         oracle_singleprep = str({"PROCEDURE":Oracle.erisapi_procedures['getaeriallist'],"ORDER_NUM":OrderNumText,"AUI_ID":AUI_IDtext})
@@ -373,7 +372,6 @@ if __name__ == '__main__':
 
         if os.path.exists(job_folder) == False:
             arcpy.AddError('Job Folder does not exist - Reinitialize order')
-            sys.exit()
 
         org_image_folder = os.path.join(job_folder,'org')
         jpg_image_folder = os.path.join(job_folder,'jpg')
