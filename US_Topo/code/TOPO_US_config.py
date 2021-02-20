@@ -79,8 +79,10 @@ pdfsymbolfile = os.path.join(mxdpath, "US Topo Map Symbols v7.4.pdf")
 
 # logos
 logopath = os.path.join(mxdpath,"logos")
-coverPic = os.path.join(mxdpath,"ERIS_2018_ReportCover_Topographic Maps_F.jpg")
-summarypage = os.path.join(mxdpath, "ERIS_2018_ReportCover_Second Page_F.jpg")
+
+# covers
+coverPic = os.path.join(mxdpath, "coverPic", "ERIS_2018_ReportCover_Topographic Maps_F.jpg")
+summarypage = os.path.join(mxdpath, "coverPic", "ERIS_2018_ReportCover_Second Page_F.jpg")
 
 # other
 logfile = os.path.join(testpath, r"log\USTopoSearch_Log.txt")
