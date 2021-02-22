@@ -18,23 +18,26 @@ def generate_singlepage_report(order_obj,mxd_wetland,outputjpg_wetland,scratch_f
     shutil.copy(outputjpg_wetland, os.path.join(config.report_path, 'PSRmaps', str(order_obj.number)))
     arcpy.AddMessage('      - Wetland Output: %s' % os.path.join(config.report_path, 'PSRmaps', str(order_obj.number)))
     del mxd_wetland
-def generate_multipage_report(order_obj,mxd_wetland,outputjpg_wetland,buffer_wetland_shp,df_wetland,orderGeomlyrfile,scratchfolder):
-    grid_layer = "gridlr_wetland"   # gdb feature class doesn't work, could be a bug. So use .shp
-    grid_lyr_shp = os.path.join(scratchfolder, grid_layer)
-    grid_lyr_shp = arcpy.GridIndexFeatures_cartography(grid_lyr_shp, buffer_wetland_shp, "", "", "", "2 MILES", "2 MILES")  #note the tool takes featureclass name only, not the full path
-    spatial_ref = arcpy.Describe(buffer_wetland_shp).spatialReference
+def generate_multipage_report(order_obj,mxd_wetland,output_jpg_wetland,df_wetland):
+    grid_lyr_shp = os.path.join(config.scratch_folder, 'grid_lyr_wetland.shp')
+    arcpy.GridIndexFeatures_cartography(grid_lyr_shp, config.order_buffer_shp, "", "", "", config.grid_size, config.grid_size)
+
     # part 1: the overview map
     # add grid layer
     grid_layer = arcpy.mapping.Layer(config.grid_lyr_file)
-    grid_layer.replaceDataSource(scratchfolder,"SHAPEFILE_WORKSPACE",grid_layer)
+    grid_layer.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE","grid_lyr_wetland")
     arcpy.mapping.AddLayer(df_wetland,grid_layer,"Top")
+    
     df_wetland.extent = grid_layer.getExtent()
     df_wetland.scale = df_wetland.scale * 1.1
-    mxd_wetland.saveACopy(os.path.join(scratchfolder, "mxd_wetland.mxd"))
-    arcpy.mapping.ExportToJPEG(mxd_wetland, outputjpg_wetland, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+    
+    mxd_wetland.saveACopy(os.path.join(config.scratch_folder, "mxd_wetland.mxd"))
+    arcpy.mapping.ExportToJPEG(mxd_wetland, output_jpg_wetland, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+    
+    
     if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
         os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-    shutil.copy(outputjpg_wetland, os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+    shutil.copy(output_jpg_wetland, os.path.join(config.report_path, 'PSRmaps', order_obj.number))
     arcpy.AddMessage('      - Wetland Output: %s' % os.path.join(config.report_path, 'PSRmaps', str(order_obj.number)))
     del mxd_wetland
     del df_wetland
@@ -42,16 +45,17 @@ def generate_multipage_report(order_obj,mxd_wetland,outputjpg_wetland,buffer_wet
     ### part 2: the data driven pages
     page = 1
     page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
-    mxd_mm_wetland = arcpy.mapping.MapDocument(config.mxdMMfile_wetland)
+    mxd_mm_wetland = arcpy.mapping.MapDocument(config.mxd_mm_file_wetland)
     df_mm_wetland = arcpy.mapping.ListDataFrames(mxd_mm_wetland,"big")[0]
-    df_mm_wetland.spatialReference = spatial_ref
+    df_mm_wetland.spatialReference = config.spatial_ref_pcs
+    
     utility.add_layer_to_mxd("order_buffer",df_mm_wetland,config.buffer_lyr_file, 1.1)
     utility.add_layer_to_mxd("order_geometry_pcs", df_mm_wetland,config.order_geom_lyr_file,1)
     
     grid_layer_mm= arcpy.mapping.ListLayers(mxd_mm_wetland,"Grid" ,df_mm_wetland)[0]
-    grid_layer_mm.replaceDataSource(config.scratch_folder, "SHAPEFILE_WORKSPACE","gridlr_wetland")
+    grid_layer_mm.replaceDataSource(config.scratch_folder, "SHAPEFILE_WORKSPACE","grid_lyr_wetland")
     arcpy.CalculateAdjacentFields_cartography(grid_lyr_shp, "PageNumber")
-    mxd_mm_wetland.saveACopy(os.path.join(scratchfolder, "grid_layer_mm.mxd"))
+    mxd_mm_wetland.saveACopy(os.path.join(config.scratch_folder, "grid_layer_mm.mxd"))
 
     for i in range(1,int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))+1):
         arcpy.SelectLayerByAttribute_management(grid_layer_mm, "NEW_SELECTION", ' "PageNumber" =  ' + str(i))
@@ -64,10 +68,10 @@ def generate_multipage_report(order_obj,mxd_wetland,outputjpg_wetland,buffer_wet
         titleTextE.elementPositionX = 0.468
         arcpy.RefreshTOC()
 
-        arcpy.mapping.ExportToJPEG(mxd_mm_wetland, outputjpg_wetland[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+        arcpy.mapping.ExportToJPEG(mxd_mm_wetland, output_jpg_wetland[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
         if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
             os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-        shutil.copy(outputjpg_wetland[0:-4]+str(i)+".jpg", os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+        shutil.copy(output_jpg_wetland[0:-4]+str(i)+".jpg", os.path.join(config.report_path, 'PSRmaps', order_obj.number))
     del mxd_mm_wetland
     del df_mm_wetland
     
@@ -84,7 +88,7 @@ def generate_wetland_report(order_obj):
     ### Wetland Map
     config.buffer_dist_wetland = str(order_obj.psr.search_radius['10684']) + ' MILES'
     arcpy.Buffer_analysis(config.order_geometry_pcs_shp, config.order_buffer_shp,  config.buffer_dist_wetland)
-    mxd_wetland = arcpy.mapping.MapDocument(config.mxdfile_wetland)
+    mxd_wetland = arcpy.mapping.MapDocument(config.mxd_file_wetland)
     df_wetland = arcpy.mapping.ListDataFrames(mxd_wetland,"big")[0]
     df_wetland.spatialReference =config.spatial_ref_pcs
     df_wetland_small = arcpy.mapping.ListDataFrames(mxd_wetland,"small")[0]
@@ -98,13 +102,12 @@ def generate_wetland_report(order_obj):
     if not config.if_multi_page:  # sinle page report
         generate_singlepage_report(order_obj,mxd_wetland,output_jpg_wetland,config.scratch_folder)
     else:                           # multipage report
-        generate_multipage_report(order_obj,mxd_wetland,output_jpg_wetland,config.order_buffer_shp, df_wetland,config.order_geom_lyr_file,config.scratch_folder)
-   
+        generate_multipage_report(order_obj,mxd_wetland,output_jpg_wetland, df_wetland)
    ### Create wetland report for Newyork province
     if order_obj.province =='NY':
         arcpy.AddMessage ("      - Starting NY wetland section: " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
         buffer_wetland_shp = os.path.join(config.scratch_folder,"buffer_wetland.shp")
-        mxd_wetland_ny = arcpy.mapping.MapDocument(config.mxdfile_wetlandNY)
+        mxd_wetland_ny = arcpy.mapping.MapDocument(config.mxd_file_wetlandNY)
         df_wetland_ny = arcpy.mapping.ListDataFrames(mxd_wetland_ny,"big")[0]
         df_wetland_ny.spatialReference = config.spatial_ref_pcs
         ### add order and order_buffer layers to wetland Newyork mxd file
@@ -126,11 +129,11 @@ def generate_wetland_report(order_obj):
 
             # part 1: the overview map
             # add grid layer
-            gridLayer = arcpy.mapping.Layer(config.gridlyrfile)
-            gridLayer.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE","gridlr_wetland")
-            arcpy.mapping.AddLayer(df_wetland_ny,gridLayer,"Top")
+            grid_layer = arcpy.mapping.Layer(config.grid_lyr_file)
+            grid_layer.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE","grid_lyr_wetland")
+            arcpy.mapping.AddLayer(df_wetland_ny,grid_layer,"Top")
 
-            df_wetland_ny.extent = gridLayer.getExtent()
+            df_wetland_ny.extent = grid_layer.getExtent()
             df_wetland_ny.scale = df_wetland_ny.scale * 1.1
 
             mxd_wetland_ny.saveACopy(os.path.join(config.scratch_folder, "mxd_wetland_ny.mxd"))
