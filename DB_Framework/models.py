@@ -7,10 +7,11 @@ import arcpy, os
 from ast import literal_eval
 
 class Order(object):
-    id = ''
-    number = ''
-    address = ''
-    provstate = ''
+    id = None
+    number = None
+    full_address = None
+    address = None
+    province = ''
     psr = None
     site_name = None
     customer_id = None
@@ -19,7 +20,6 @@ class Order(object):
     company_desc = None
     project_num = None
     postal_code = None
-    addr = None
     city = None
     geometry = arcpy.Geometry()
    
@@ -54,10 +54,10 @@ class Order(object):
                     order_obj.number = str(input_id)
                 else:
                      return None  
-            order_obj.address = str(row[1])+", "+str(row[2])+", "+str(row[3])
-            order_obj.addr = str(row[1])
+            order_obj.full_address = str(row[1])+", "+str(row[2])+", "+str(row[3])
+            order_obj.address = str(row[1])
             order_obj.city = str(row[2])
-            order_obj.provstate = str(row[3])
+            order_obj.province = str(row[3])
             order_obj.site_name = row[4]
             order_obj.customer_id = row[5]
             order_obj.company_id = row[6]

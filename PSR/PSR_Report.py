@@ -40,7 +40,7 @@ if __name__ == "__main__":
         ### set type of reports
             if_relief_report = False
             if_topo_report = False
-            if_wetland_report = False
+            if_wetland_report = True
             if_flood_report = False
             if_geology_report = False
             if_soil_report = False
@@ -71,7 +71,7 @@ if __name__ == "__main__":
             # radon report
             if if_radon_report:
                 radon.generate_radon_report(order_obj)
-            multi_proc_test.generate_flood_report(order_obj)
+            # multi_proc_test.generate_flood_report(order_obj)
         else:
             arcpy.AddMessage('No PSR is availabe for this order')
     else:

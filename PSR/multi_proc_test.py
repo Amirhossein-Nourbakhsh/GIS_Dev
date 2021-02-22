@@ -52,8 +52,8 @@ def generate_multi_page_multi_processing(param_dic):
     arcpy.AddMessage(" Multiprocessing test...") 
     # for itm in param_dic:
     #     export_to_jpg(itm)
-    # pool = Pool(processes=cpu_count())
-    pool = Pool(processes=10)
+    pool = Pool(processes=cpu_count())
+    # pool = Pool(processes=10)
     result = pool.map(export_to_jpg, param_dic)
     pool.close()
     pool.join()
