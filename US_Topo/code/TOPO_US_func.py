@@ -1,13 +1,21 @@
-import time,json
-import arcpy, os, sys
+import time
+import json
+import arcpy
+import os
+import sys
 import csv
 import operator
-import shutil, zipfile
+import shutil
+import zipfile
 import logging
 import traceback
-import cx_Oracle, glob, urllib
+import cx_Oracle
+import glob
+import urllib
 import re
+import time
 import xml.etree.ElementTree as ET
+import utm-zone
 import TOPO_US_config as cfg
 
 from PyPDF2 import PdfFileReader, PdfFileWriter
@@ -17,7 +25,6 @@ from reportlab.lib.styles import getSampleStyleSheet,ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib.pagesizes import portrait, letter
 from reportlab.pdfgen import canvas
-from time import strftime
 
 class topo_us_rpt():
     def __init__(self,order_obj,yesBoundary):
@@ -77,8 +84,8 @@ class topo_us_rpt():
         page= pdf_intermediate.getPage(0)
 
         pdf = PdfFileReader(open(myAnnotPdf,'rb'))
-        FIMpage = pdf.getPage(0)
-        page.mergePage(FIMpage)
+        getpdf = pdf.getPage(0)
+        page.mergePage(getpdf)
 
         output = PdfFileWriter()
         output.addPage(page)
@@ -208,7 +215,10 @@ class topo_us_rpt():
         self.PAGE_WIDTH=int(self.PAGE_WIDTH)
         self.PAGE_HEIGHT=int(self.PAGE_HEIGHT)
 
-        AddressText = '%s\n%s %s %s'%(self.order_obj.addr, self.order_obj.city, self.order_obj.provstate, self.order_obj.postal_code)
+        if len(self.order_obj.site_name) > 40:
+                self.order_obj.site_name = self.order_obj.site_name[0: self.order_obj.site_name[0:40].rfind(' ')] + '\n' + self.order_obj.site_name[self.order_obj.site_name[0:40].rfind(' ')+1:]
+
+        AddressText = '%s\n%s %s %s'%(self.order_obj.address, self.order_obj.city, self.order_obj.province, self.order_obj.postal_code)
 
         canvas.drawImage(cfg.coverPic,0,0, self.PAGE_WIDTH,self.PAGE_HEIGHT)
         leftsw= 54
@@ -218,9 +228,9 @@ class topo_us_rpt():
 
         canvas.setFont('Helvetica-Bold', 13)
         canvas.drawString(leftsw, heights, "Project Property:")
-        canvas.drawString(leftsw, heights-3*space,"Project No.:")
+        canvas.drawString(leftsw, heights-3*space,"Project No:")
         canvas.drawString(leftsw, heights-4*space,"Requested By:")
-        canvas.drawString(leftsw, heights-5*space,"Order No.:")
+        canvas.drawString(leftsw, heights-5*space,"Order No:")
         canvas.drawString(leftsw, heights-6*space,"Date Completed:")
         canvas.setFont('Helvetica', 13)
         canvas.drawString(rightsw,heights-0*space, self.order_obj.site_name)
@@ -274,13 +284,13 @@ class topo_us_rpt():
 
     # reorganize the pdf dictionary based on years
     # filter out irrelevant background years (which doesn't have a centre selected map)
-    def reorgByYear(self, mapslist, cellids_selected):      # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963]
-        diction_pdf_inPresentationBuffer = {}               # {1975: [geopdf1.pdf, geopdf2.pdf...], 1968: [geopdf11.pdf, ...]}
+    def reorgByYear(self, mapslist, cellids_selected):              # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963]
+        diction_pdf_inPresentationBuffer = {}                       # {1975: [geopdf1.pdf, geopdf2.pdf...], 1968: [geopdf11.pdf, ...]}
         diction_pdf_inSearchBuffer = {}
-        diction_cellids = {}                                # {1975:[cellid1,cellid2...], 1968:[cellid11,cellid12,...]}
+        diction_cellids = {}                                        # {1975:[cellid1,cellid2...], 1968:[cellid11,cellid12,...]}
 
         for row in mapslist:
-            if row[3] in diction_pdf_inPresentationBuffer.keys():  #{1963:LA_Zachary_335142_1963_62500_geo.pdf, 1975:....}
+            if row[3] in diction_pdf_inPresentationBuffer.keys():   #{1963:LA_Zachary_335142_1963_62500_geo.pdf, 1975:....}
                 diction_pdf_inPresentationBuffer[row[3]].append(row[2])
                 diction_cellids[row[3]].append(row[0])
             else:
@@ -302,9 +312,8 @@ class topo_us_rpt():
         return (diction_pdf_inPresentationBuffer,diction_pdf_inSearchBuffer)
 
     # create PDF and also make a copy of the geotiff files if the scale is too small
-    def createPDF(self,seriesText,diction,diction_s,outpdfname,yearalldict,copydirs):
-        
-        if self.order_obj.geometry.type.lower() == 'point':
+    def createPDF(self,seriesText,diction,diction_s,outpdfname,yearalldict,copydirs):        
+        if self.order_obj.geometry.type.lower() == 'point' or self.order_obj.geometry.type.lower() == 'multipoint':
             orderGeomlyrfile = cfg.orderGeomlyrfile_point
         elif self.order_obj.geometry.type.lower() =='polyline':
             orderGeomlyrfile = cfg.orderGeomlyrfile_polyline
@@ -315,7 +324,7 @@ class topo_us_rpt():
         orderGeomLayer.replaceDataSource(cfg.scratch,"SHAPEFILE_WORKSPACE","orderGeometry")
 
         extentBufferLayer = arcpy.mapping.Layer(cfg.bufferlyrfile)
-        extentBufferLayer.replaceDataSource(cfg.scratch,"SHAPEFILE_WORKSPACE","buffer_extent75")   #change on 11/3/2016, fix all maps to the same scale
+        extentBufferLayer.replaceDataSource(cfg.scratch,"SHAPEFILE_WORKSPACE","buffer_extent75")   # change on 11/3/2016, fix all maps to the same scale
 
         outputPDF = arcpy.mapping.PDFDocumentCreate(os.path.join(cfg.scratch, outpdfname))
         years = diction.keys()
@@ -325,13 +334,11 @@ class topo_us_rpt():
         else:
             years.sort(reverse = True)
 
+        print(years)
         for year in years:
             if year == "":
                 years.remove("")
-        print(years)
-
-        for year in years:
-            if int(year) < 2008:
+            elif int(year) < 2008:
                 tifdir = cfg.tifdir_h
 
                 if len(years) > 1:
@@ -339,9 +346,8 @@ class topo_us_rpt():
                 else:
                     topofile = cfg.topolyrfile_none
 
-                mscale = int(diction[year][0].split('_')[-2])   #assumption: WI_Ashland East_500066_1964_24000_geo.pdf, and all pdfs from the same year are of the same scale
+                mscale = int(diction[year][0].split('_')[-2])   # assumption: WI_Ashland East_500066_1964_24000_geo.pdf, and all pdfs from the same year are of the same scale
                 print("########" + str(mscale))
-
                 if self.is_aei == 'Y' and mscale in [24000,31680]:
                     seriesText = '7.5'
                 elif self.is_aei == 'Y' and mscale == 62500:
@@ -358,7 +364,6 @@ class topo_us_rpt():
                 else:
                     topofile = cfg.topolyrfile_none
 
-                mscale = 24000
             mscale = 24000      # change on 11/3/2016, to fix all maps to the same scale
             # add to map template, clip (but need to keep both metadata: year, grid size, quadrangle name(s) and present in order
 
@@ -368,12 +373,9 @@ class topo_us_rpt():
                 mxd = arcpy.mapping.MapDocument(cfg.mxdfile)
 
             df = arcpy.mapping.ListDataFrames(mxd,"*")[0]
-            df.spatialReference = self.out_coordinate_system
+            df.spatialReference = self.srUTM
 
             arcpy.mapping.AddLayer(df,extentBufferLayer,"Top")
-
-            if self.yesBoundary.lower() == 'fixed':
-                arcpy.mapping.AddLayer(df,orderGeomLayer,"Top")
 
             # change scale, modify map elements, export
             needtif = False
@@ -455,6 +457,19 @@ class topo_us_rpt():
                 yearTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "year")[0]
                 yearTextE.text = year
 
+                # write photo and photo revision year
+                yearlist = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "yearlist")[0]
+                y = yearalldict.get(year)
+                if y != None:
+                    yearlisttext = " "                  # must include blank space if blank to write text element
+                    for k,v in y.items():               # for now we only want to include "aerial photo year","photo revision year" out of 8 years
+                        if k in ["aerial photo year","photo revision year"]:
+                            x = "".join((str(k).title() + ": " + v + "\r\n"))
+                            yearlisttext += x
+                    yearlist.text = yearlisttext
+                else:
+                    yearlist.text = " "                 # must include blank space if blank to write text element
+
                 quadrangleTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "quadrangle")[0]
                 quadrangleTextE.text = "Quadrangle(s): " + quadrangles
 
@@ -462,10 +477,10 @@ class topo_us_rpt():
                 sourceTextE.text = "Source: USGS " + seriesText + " Minute Topographic Map"
 
                 projNoTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "projno")[0]
-                projNoTextE.text = "Project No. " + self.order_obj.project_num
+                projNoTextE.text = "Project No: " + self.order_obj.project_num
 
                 siteNameTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "sitename")[0]
-                siteNameTextE.text = "Site Name: " + self.order_obj.site_name + ', ' + self.order_obj.addr
+                siteNameTextE.text = "Site Name: " + self.order_obj.site_name + ', ' + self.order_obj.address
 
                 ordernoTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "orderno")[0]
                 ordernoTextE.text = "Order No. " + self.order_obj.number
@@ -493,43 +508,50 @@ class topo_us_rpt():
                 sourceTextE.text = "Source: USGS " + seriesText + " Minute Topographic Map"
 
                 ordernoTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "orderno")[0]
-                ordernoTextE.text = "Order No.: " + self.order_obj.number
+                ordernoTextE.text = "Order No. " + self.order_obj.number
 
-            if self.is_newLogofile == 'Y':     # need to change logo for emg
+            if self.is_newLogofile == 'Y':     # custom logs
                 logoE = arcpy.mapping.ListLayoutElements(mxd, "PICTURE_ELEMENT", "logo")[0]
                 logoE.sourceImage = os.path.join(cfg.logopath, self.newlogofile)
 
-            arcpy.RefreshTOC()
-            outputpdf = os.path.join(cfg.scratch, "map_"+seriesText+"_"+year+".pdf")
+            if self.yesBoundary.lower() == 'fixed':
+                arcpy.mapping.AddLayer(df,orderGeomLayer,"Top")
+            elif self.yesBoundary.lower() == 'yes':
+                if self.order_obj.geometry.type.lower() == "polyline" or self.order_obj.geometry.type.lower() == "polygon":
+                    if firstTime:
+                        # remove all other layers
+                        scale2use = df.scale
+                        for lyr in arcpy.mapping.ListLayers(mxd, "", df):
+                            lyr.visible = False
+                        arcpy.mapping.AddLayer(df,orderGeomLayer,"Top")     # the layer is visible
+                        arcpy.mapping.ExportToPDF(mxd, cfg.shapePdf, "PAGE_LAYOUT", 640, 480, 250, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "LAYERS_AND_ATTRIBUTES", True, 90)
+                        for lyr in arcpy.mapping.ListLayers(mxd, "", df):
+                            if lyr.name == "Project Property":
+                                lyr.visible = False
+                            else:
+                                lyr.visible = True
 
-            if int(year)<2008:
-                arcpy.mapping.ExportToPDF(mxd, outputpdf, "PAGE_LAYOUT", 640, 480, 250, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "LAYERS_AND_ATTRIBUTES", True, 90)
-            else:
-                arcpy.mapping.ExportToPDF(mxd, outputpdf, "PAGE_LAYOUT", 640, 480, 350, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "LAYERS_AND_ATTRIBUTES", True, 90)
+                        # create the a pdf with annotation just once
+                        myAnnotPdf = self.createAnnotPdf(cfg.shapePdf)
+                        firstTime = False
+
+                elif self.order_obj.geometry.type.lower() == "point" or self.order_obj.geometry.type.lower() == "multipoint":
+                    arcpy.mapping.AddLayer(df,orderGeomLayer,"Top")
+                     
+            outputpdf = os.path.join(cfg.scratch, "map_"+seriesText+"_"+year+".pdf")
+            
+            arcpy.RefreshTOC()  
+            arcpy.RefreshActiveView()         
+            arcpy.mapping.ExportToPDF(mxd, outputpdf, "PAGE_LAYOUT", 640, 480, 350, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "LAYERS_AND_ATTRIBUTES", True, 90)
 
             if seriesText == "7.5":
                 mxd.saveACopy(os.path.join(cfg.scratch,"75_"+year+".mxd"))
             else:
                 mxd.saveACopy(os.path.join(cfg.scratch,"15_"+year+".mxd"))
 
-            if (self.yesBoundary.lower() == 'yes' and (self.order_obj.geometry.type.lower() == "polyline" or self.order_obj.geometry.type.lower() == "polygon")):
-
-                if firstTime:
-                    # remove all other layers
-                    scale2use = df.scale
-                    for lyr in arcpy.mapping.ListLayers(mxd, "", df):
-                        arcpy.mapping.RemoveLayer(df, lyr)
-                    arcpy.mapping.AddLayer(df,orderGeomLayer,"Top") #the layer is visible
-                    df.scale = scale2use
-                    shapePdf = os.path.join(cfg.scratch, 'shape.pdf')
-                    arcpy.mapping.ExportToPDF(mxd, shapePdf, "PAGE_LAYOUT", 640, 480, 250, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "LAYERS_AND_ATTRIBUTES", True, 90)
-                    # create the a pdf with annotation just once
-                    myAnnotPdf = self.createAnnotPdf(shapePdf)
-                    firstTime = False
-
-                # merge annotation pdf to the map
-                Topopdf = self.annotatePdf(outputpdf, myAnnotPdf)
-                outputpdf = Topopdf
+            # merge annotation pdf to the map if yesBoundary == Y
+            if os.path.exists(cfg.shapePdf):
+                outputpdf = self.annotatePdf(outputpdf, myAnnotPdf)
 
             outputPDF.appendPages(outputpdf)
 
@@ -543,16 +565,16 @@ class topo_us_rpt():
                 zip.write(os.path.join(root, file), arcname)
 
     def log(self, logfile):
-        logger = logging.getLogger("TOPO_US_dev")
+        logger = logging.getLogger(cfg.logname)
         handler = logging.FileHandler(logfile)
         handler.setLevel(logging.DEBUG)
         logger.setLevel(logging.DEBUG)    
         logger.addHandler(handler)
         return logger,handler
 
-    def custom_rpt(self):
+    def customrpt(self, order_obj):
         # Get company flag for custom colour border
-        if self.order_obj.company_id == '109085': # Mid-Atlantic Associates, Inc.
+        if order_obj.company_id == 109085: # Mid-Atlantic Associates, Inc.
             cfg.annot_poly = cfg.annot_poly_c
             cfg.annot_line = cfg.annot_line_c
             print('custom colour boundary set')
@@ -563,8 +585,7 @@ class topo_us_rpt():
         try:
             con = cx_Oracle.connect(cfg.connectionString)
             cur = con.cursor()
-
-            cur.execute("select decode(c.company_id, 40385, 'Y', 'N') is_nova from orders o, customer c where o.customer_id = c.customer_id and o.order_id=" + str(self.order_obj.id))
+            cur.execute("select decode(c.company_id, 40385, 'Y', 'N') is_nova from orders o, customer c where o.customer_id = c.customer_id and o.order_id=" + str(order_obj.id))
             t = cur.fetchone()
             self.is_nova = t[0]
         finally:
@@ -575,7 +596,7 @@ class topo_us_rpt():
         try:
             con = cx_Oracle.connect(cfg.connectionString)
             cur = con.cursor()
-            self.is_aei = cur.callfunc('ERIS_CUSTOMER.IsProductChron', str, (str(self.order_obj.id),))
+            self.is_aei = cur.callfunc('ERIS_CUSTOMER.IsProductChron', str, (str(order_obj.id),))
         finally:
             cur.close()
             con.close()
@@ -584,7 +605,7 @@ class topo_us_rpt():
         try:
             con = cx_Oracle.connect(cfg.connectionString)
             cur = con.cursor()
-            self.newlogofile = cur.callfunc('ERIS_CUSTOMER.IsCustomLogo', str, (str(self.order_obj.id),))
+            self.newlogofile = cur.callfunc('ERIS_CUSTOMER.IsCustomLogo', str, (str(order_obj.id),))
 
             if self.newlogofile != None:
                 self.is_newLogofile = 'Y'
@@ -596,16 +617,72 @@ class topo_us_rpt():
 
         return self.is_nova, self.is_aei, self.is_newLogofile
 
-    def proj_list(self, orderGeometry):
+    def projlist(self, orderGeometry):
         self.srGCS83 = arcpy.SpatialReference(os.path.join(cfg.prjpath, "GCSNorthAmerican1983.prj"))
         self.srWGS84 = arcpy.SpatialReference(os.path.join(cfg.prjpath, "WGS1984.prj"))
         self.srGoogle = arcpy.SpatialReference(3857)   # web mercator
 
-        for row in arcpy.SearchCursor(orderGeometry):
-            print(row)
+        for row in arcpy.SearchCursor(cfg.orderGeometry):
             UTMvalue = str(row.getValue('UTM'))[41:43]
+            print(row.getValue('UTM'))
         if UTMvalue[0] == '0':
-            UTMvalue=' '+UTMvalue[1:]
-        self.out_coordinate_system = arcpy.SpatialReference('WGS 1984 UTM Zone %sN'%UTMvalue)
+            UTMvalue = ' ' + UTMvalue[1:]
+        self.srUTM = arcpy.SpatialReference('WGS 1984 UTM Zone %sN'%UTMvalue)
 
-        return self.srGCS83, self.srWGS84, self.srGoogle, self.out_coordinate_system
+        return self.srGCS83, self.srWGS84, self.srGoogle, self.srUTM
+
+    def delyear(self, yeardel7575, yeardel1515, dict7575, dict7575_s, dict1515, dict1515_s):
+        if yeardel7575:
+            for y in yeardel7575:
+                del dict7575[y]
+                del dict7575_s[y]
+        if yeardel1515:
+            for y in yeardel1515:
+                del dict1515[y]
+                del dict1515_s[y]
+        return dict7575, dict7575_s, dict1515, dict1515_s
+
+    def createordergeometry(self, order_obj, srUTM):
+        # CREATE ORDER GEOMETRY ----------------------------------------------------------------------------------------------------------
+        point = arcpy.Point()
+        array = arcpy.Array()
+
+        sr = arcpy.SpatialReference()
+        sr.factoryCode = 4269   # requires input geometry is in 4269
+        sr.XYTolerance = .00000001
+        sr.scaleFactor = 2000
+        sr.create()
+
+        featureList = []
+
+        for feature in json.loads(order_obj.geometry.JSON).values()[0]:     # order coordinates
+            # For each coordinate pair, set the x,y properties and add to the Array object.
+            for coordPair in feature:
+                try:
+                    point.X = coordPair[0]
+                    point.Y = coordPair[1]
+                except:
+                    point.X = feature[0]
+                    point.Y = feature[1]
+                sr.setDomain(point.X, point.X, point.Y, point.Y)
+                array.add(point)
+            if order_obj.geometry.type.lower() == 'point' or order_obj.geometry.type.lower() == 'multipoint':
+                feat = arcpy.Multipoint(array, sr)
+            elif order_obj.geometry.type.lower() =='polyline':
+                feat  = arcpy.Polyline(array, sr)
+            else:
+                feat = arcpy.Polygon(array,sr)
+            array.removeAll()
+
+            # Append to the list of Polygon objects
+            featureList.append(feat)
+        
+        arcpy.CopyFeatures_management(featureList, cfg.orderGeometry)
+        # arcpy.DefineProjection_management(cfg.orderGeometry, srGCS83)
+        arcpy.AddField_management(cfg.orderGeometry, "UTM", "TEXT", "", "", "1500", "", "NULLABLE", "NON_REQUIRED", "")
+        arcpy.CalculateUTMZone_cartography(cfg.orderGeometry, 'UTM')
+
+        arcpy.Project_management(cfg.orderGeometry, cfg.orderGeometryPR, srUTM)
+
+        del point
+        del array     

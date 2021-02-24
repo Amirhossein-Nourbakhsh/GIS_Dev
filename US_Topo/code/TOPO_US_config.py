@@ -45,8 +45,17 @@ topouploadurl =  server_config["viewer_upload"] + r"/ErisInt/BIPublisherPortal_p
 
 connectionString = 'eris_gis/gis295@cabcvan1ora006.glaciermedia.inc:1521/GMTESTC'
 
+# scratch file/folder outputs
+summarypdf = os.path.join(scratch,'summary.pdf')
+coverPDF = os.path.join(scratch,"cover.pdf")
+shapePdf = os.path.join(scratch, 'shape.pdf')
+orderGeometry= os.path.join(scratch,"orderGeometry.shp")
+orderGeometryPR = os.path.join(scratch, "ordergeoNamePR.shp")
+extentBuffer75SHP = os.path.join(scratch,"buffer_extent75.shp")
+tempdir = os.path.join(scratch,'viewertemp')
+
 # folders
-testpath = r"W:\Data Analysts\Alison\_ERIS_GIS_GITHUB\GIS-Dev\US_Topo"#r"\\cabcvan1gis005\GISData\Topo_USA"
+testpath = r"\\cabcvan1gis005\GISData\Topo_USA"
 mxdpath = os.path.join(testpath, r"mxd")
 prjpath = os.path.join(testpath, r"projections")
 
@@ -59,14 +68,14 @@ tifdir_c = r'\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff'
 
 # mxds
 mxdfile = os.path.join(mxdpath,"template.mxd")
-mxdfile_nova = os.path.join(mxdpath,'template_nova_t.mxd')
+mxdfile_nova = os.path.join(mxdpath,'template_nova.mxd')
 
 # layers
 topolyrfile_none = os.path.join(mxdpath,"topo.lyr")
 topolyrfile_b = os.path.join(mxdpath,"topo_black.lyr")
 topolyrfile_w = os.path.join(mxdpath,"topo_white.lyr")
 bufferlyrfile = os.path.join(mxdpath,"buffer_extent.lyr")
-orderGeomlyrfile_point = os.path.join(mxdpath,"SiteMaker.lyr")
+orderGeomlyrfile_point = os.path.join(mxdpath,"orderPoint.lyr")
 orderGeomlyrfile_polyline = os.path.join(mxdpath,"orderLine.lyr")
 orderGeomlyrfile_polygon = os.path.join(mxdpath,"orderPoly.lyr")
 
@@ -86,4 +95,5 @@ summarypage = os.path.join(mxdpath, "coverPic", "ERIS_2018_ReportCover_Second Pa
 
 # other
 logfile = os.path.join(testpath, r"log\USTopoSearch_Log.txt")
+logname = "TOPO_US_dev"
 readmefile = os.path.join(mxdpath,"readme.txt")
