@@ -62,7 +62,7 @@ order by a.order_num DESC;
 
 if __name__ == '__main__':
     print("...starting..." + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-    start = time.perf_counter()
+    start = time.clock()
     arcpy.env.overwriteOutput = True
 
     order_obj = models.Order().get_order(21013000010)
@@ -95,10 +95,10 @@ if __name__ == '__main__':
         is_nova, is_aei, is_newLogofile = tf.customrpt(order_obj)
         
         # GET SPATIAL REFERENCES
-        srGCS83,srWGS84,srGoogle,srUTM = tf.projlist(cfg.orderGeometry)
+        srGCS83,srWGS84,srGoogle,srUTM = tf.projlist(order_obj)
 
         # CREATE ORDER GEOMETRY
-        tf.createordergeometry(order_obj)
+        tf.createordergeometry(order_obj,srUTM)
 
         # GET TOPO RECORDS ---------------------------------------------------------------------------------------------------------------
         logger.debug("#1")
@@ -330,7 +330,7 @@ if __name__ == '__main__':
                     years = comb7515.keys()
                     years.sort(reverse = False)
                     print("==========years 7515")
-                    years.remove("")
+                    years = filter(None, years)         # removes empty strings
                     print(years)
 
                     for year in years:
@@ -353,7 +353,7 @@ if __name__ == '__main__':
                     years = dict7575.keys()
                     years.sort(reverse = True)
                     print("==========years 7575")
-                    years.remove("")
+                    years = filter(None, years)         # removes empty strings
                     print(years)
 
                     for year in years:
@@ -369,7 +369,7 @@ if __name__ == '__main__':
                     years = dict1515.keys()
                     years.sort(reverse = True)
                     print("==========years 1515")
-                    years.remove("")
+                    years = filter(None, years)         # removes empty strings
                     print(years)
 
                     for year in years:
@@ -423,8 +423,8 @@ if __name__ == '__main__':
                 
                 if not os.path.exists(cfg.tempdir):
                     os.mkdir(cfg.tempdir)
-                # need to reorganize deliver directory
 
+                # need to reorganize deliver directory
                 dirs = filter(os.path.isdir, glob.glob(os.path.join(cfg.scratch,order_obj.number)+'\*_7.5_*'))
                 if len(dirs) > 0:
                     if not os.path.exists(os.path.join(viewerdir,"75")):
@@ -614,7 +614,7 @@ if __name__ == '__main__':
 
                 if needViewer == 'Y':
                     for item in metadata:
-                        cur.execute("insert into overlay_image_info values (%s, %s, %s, %.5f, %.5f, %.5f, %.5f, %s, '', '')" % (str(order_obj.id), str(order_obj.number), "'" + item['type']+"'", item['lat_sw'], item['long_sw'], item['lat_ne'], item['long_ne'],"'"+item['imagename']+"'" ) )
+                        cur.execute("insert into overlay_image_info values (%s, %s, %s, %.5f, %.5f, %.5f, %.5f, %s, '', '')" % (str(order_obj.id), str(order_obj.number), "'" + item['type']+"'", item['lat_sw'], item['long_sw'], item['lat_ne'], item['long_ne'],"'"+item['imagename']+"'" ))
                     con.commit()
             finally:
                 cur.close()
@@ -662,7 +662,6 @@ if __name__ == '__main__':
             con.close()
         raise       # raise the error again
 
-    finish = time.perf_counter()
+    finish = time.clock()
     print(cfg.reportcheckFolder + "\\TopographicMaps\\" + str(order_obj.number) + "_US_Topo.pdf")
-    print("finished in " + round(finish-start, 2) + " secs")
-    print("DONE!")
+    print("Finished in " + str(round(finish-start, 2)) + " secs")

@@ -1,29 +1,34 @@
 import arcpy
 import os
+import sys
 import ConfigParser
+addpath = os.path.abspath(__file__).replace(os.path.relpath(__file__),"GIS_Dev")
+sys.path.insert(1,os.path.join(addpath,'DB_Framework'))
+import db_connections as con
 
 def server_loc_config(configpath,environment):
     configParser = ConfigParser.RawConfigParser()
     configParser.read(configpath)
     if environment == 'test':
+        dbconnection = configParser.get('server-config','dbconnection_test')
         reportcheck = configParser.get('server-config','reportcheck_test')
         reportviewer = configParser.get('server-config','reportviewer_test')
         reportinstant = configParser.get('server-config','instant_test')
         reportnoninstant = configParser.get('server-config','noninstant_test')
         upload_viewer = configParser.get('url-config','uploadviewer')
-        server_config = {'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
+        server_config = {'dbconnection':dbconnection,'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
         return server_config
     # elif environment == 'prod':
+    #     dbconnection = configParser.get('server-config','dbconnection_prod')
     #     reportcheck = configParser.get('server-config','reportcheck_prod')
     #     reportviewer = configParser.get('server-config','reportviewer_prod')
     #     reportinstant = configParser.get('server-config','instant_prod')
     #     reportnoninstant = configParser.get('server-config','noninstant_prod')
     #     upload_viewer = configParser.get('url-config','uploadviewer_prod')
-    #     server_config = {'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
+    #     server_config = {'dbconnection':dbconnection,'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
     #     return server_config
     else:
         return 'invalid server configuration'
-
 
 # OrderIDText = arcpy.GetParameterAsText(0)#'734618'#
 # BufsizeText = arcpy.GetParameterAsText(1)#'2.4'
@@ -36,14 +41,13 @@ if not os.path.exists(scratch):
 
 # connections/report outputs
 server_environment = 'test'
-server_config_file = r"\\cabcvan1gis006\GISData\ERISServerConfig.ini"
+server_config_file = con.server_config_file #r"\\cabcvan1gis006\GISData\ERISServerConfig.ini"
 server_config = server_loc_config(server_config_file,server_environment)
 
 reportcheckFolder = server_config["reportcheck"]
 viewerFolder = server_config["viewer"]
 topouploadurl =  server_config["viewer_upload"] + r"/ErisInt/BIPublisherPortal_prod/Viewer.svc/TopoUpload?ordernumber="
-
-connectionString = 'eris_gis/gis295@cabcvan1ora006.glaciermedia.inc:1521/GMTESTC'
+connectionString = server_config["dbconnection"] #con.connection_string #'eris_gis/gis295@cabcvan1ora006.glaciermedia.inc:1521/GMTESTC'
 
 # scratch file/folder outputs
 summarypdf = os.path.join(scratch,'summary.pdf')

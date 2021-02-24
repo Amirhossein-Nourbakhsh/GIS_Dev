@@ -15,7 +15,6 @@ import urllib
 import re
 import time
 import xml.etree.ElementTree as ET
-import utm-zone
 import TOPO_US_config as cfg
 
 from PyPDF2 import PdfFileReader, PdfFileWriter
@@ -617,18 +616,11 @@ class topo_us_rpt():
 
         return self.is_nova, self.is_aei, self.is_newLogofile
 
-    def projlist(self, orderGeometry):
+    def projlist(self, order_obj):
         self.srGCS83 = arcpy.SpatialReference(os.path.join(cfg.prjpath, "GCSNorthAmerican1983.prj"))
         self.srWGS84 = arcpy.SpatialReference(os.path.join(cfg.prjpath, "WGS1984.prj"))
         self.srGoogle = arcpy.SpatialReference(3857)   # web mercator
-
-        for row in arcpy.SearchCursor(cfg.orderGeometry):
-            UTMvalue = str(row.getValue('UTM'))[41:43]
-            print(row.getValue('UTM'))
-        if UTMvalue[0] == '0':
-            UTMvalue = ' ' + UTMvalue[1:]
-        self.srUTM = arcpy.SpatialReference('WGS 1984 UTM Zone %sN'%UTMvalue)
-
+        self.srUTM = order_obj.spatial_ref_pcs
         return self.srGCS83, self.srWGS84, self.srGoogle, self.srUTM
 
     def delyear(self, yeardel7575, yeardel1515, dict7575, dict7575_s, dict1515, dict1515_s):
@@ -679,9 +671,6 @@ class topo_us_rpt():
         
         arcpy.CopyFeatures_management(featureList, cfg.orderGeometry)
         # arcpy.DefineProjection_management(cfg.orderGeometry, srGCS83)
-        arcpy.AddField_management(cfg.orderGeometry, "UTM", "TEXT", "", "", "1500", "", "NULLABLE", "NON_REQUIRED", "")
-        arcpy.CalculateUTMZone_cartography(cfg.orderGeometry, 'UTM')
-
         arcpy.Project_management(cfg.orderGeometry, cfg.orderGeometryPR, srUTM)
 
         del point
