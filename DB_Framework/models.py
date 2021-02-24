@@ -11,7 +11,7 @@ class Order(object):
     number = None
     full_address = None
     address = None
-    province = ''
+    province = None
     psr = None
     site_name = None
     customer_id = None
