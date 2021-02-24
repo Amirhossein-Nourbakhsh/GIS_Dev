@@ -28,7 +28,7 @@ from time import strftime
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-handler = logging.FileHandler(r"\\cabcvan1gis006\GISData\FIMS_USA\temp\USFIM_Log.txt")
+handler = logging.FileHandler(r"\\cabcvan1gis005\GISData\FIMS_USA\temp\USFIM_Log.txt")
 handler.setLevel(logging.INFO)
 logger.addHandler(handler)
 
@@ -252,17 +252,17 @@ def centreFromPolygon(polygonSHP,coordinate_system):
 
 # -------------------------------------------------------------------------------------------------------------------
 ##deployment variables
-server_environment = 'prod'
-server_config_file = r"\\cabcvan1gis007\gptools\ERISServerConfig.ini"
+server_environment = 'test'
+server_config_file = r"\\cabcvan1gis005\GISData\ERISServerConfig.ini"
 server_config = server_loc_config(server_config_file,server_environment)
 
-connectionString = 'eris_gis/gis295@cabcvan1ora003.glaciermedia.inc:1521/GMPRODC'
+connectionString = 'eris_gis/gis295@cabcvan1ora006.glaciermedia.inc:1521/GMTESTC'
 reportcheckFolder = server_config["reportcheck"]
 viewerFolder = server_config["viewer"]
 uploadlink =  server_config["viewer_upload"] + r"/ErisInt/BIPublisherPortal_prod/Viewer.svc/FIMUpload?ordernumber="
 
 ##global variables
-connectionPath = r"\\cabcvan1gis006\GISData\FIMS_USA"
+connectionPath = r"\\cabcvan1gis005\GISData\FIMS_USA"
 masterlyr = os.path.join(connectionPath,"master\Master.shp")
 shapefilepath = os.path.join(connectionPath,"master","mastershps")#g_ESRI_variable_15
 excelfile = os.path.join(connectionPath,"master\MASTER_ALL_STATES.xlsx")
@@ -621,7 +621,7 @@ try:
                 # arcpy.Resample_management(lyr,os.path.join(scratch,image_lyr_name[:-4]+".png"), cell_size="%s %s"%(float(arcpy.GetRasterProperties_management(lyr,"CELLSIZEX")[0])/10,float(arcpy.GetRasterProperties_management(lyr,"CELLSIZEY")[0])/10), resampling_type="NEAREST")
                 # lyr = os.path.join(scratch,image_lyr_name[:-4]+".png")
                 image = arcpy.MakeRasterLayer_management(lyr,image_lyr_name)
-                arcpy.ApplySymbologyFromLayer_management(image_lyr_name, r"\\cabcvan1gis006\GISData\FIMS_USA\python\layer\hallowsheet.lyr")
+                arcpy.ApplySymbologyFromLayer_management(image_lyr_name, r"\\cabcvan1gis005\GISData\FIMS_USA\python\layer\hallowsheet.lyr")
                 layer_temp = os.path.join(scratch,"image_%s.lyr"%(count))
                 arcpy.SaveToLayerFile_management(image_lyr_name,layer_temp)
                 layer_temp = arcpy.mapping.Layer(layer_temp)
