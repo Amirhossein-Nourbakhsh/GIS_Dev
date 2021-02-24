@@ -43,8 +43,7 @@ def generate_multipage_report(order_obj,mxd_wetland,output_jpg_wetland,df_wetlan
     del df_wetland
 
     ### part 2: the data driven pages
-    page = 1
-    page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
+    page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + 1
     mxd_mm_wetland = arcpy.mapping.MapDocument(config.mxd_mm_file_wetland)
     df_mm_wetland = arcpy.mapping.ListDataFrames(mxd_mm_wetland,"big")[0]
     df_mm_wetland.spatialReference = config.spatial_ref_pcs

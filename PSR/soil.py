@@ -108,8 +108,7 @@ def create_map(order_obj, soil_setting):
         del df_soil
         
         # part 2: the data driven pages maps
-        page = 1
-        page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
+        page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + 1
         mxd_mm_soil = arcpy.mapping.MapDocument(config.mxd_mm_file_soil)
 
         df_mm_soil = arcpy.mapping.ListDataFrames(mxd_mm_soil,"*")[0]

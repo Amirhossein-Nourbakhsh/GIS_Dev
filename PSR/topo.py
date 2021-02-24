@@ -195,9 +195,7 @@ def generate_topo_report(order_obj):
             del df_topo
 
             # part 2: the data driven pages
-            page = 1
-
-            page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
+            page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + 1
             
             utility.add_layer_to_mxd("order_buffer",df_mm_topo,config.buffer_lyr_file,1.1)
             utility.add_layer_to_mxd("order_geometry_pcs", df_mm_topo,config.order_geom_lyr_file,1)

@@ -18,7 +18,7 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 if __name__ == "__main__":
-    id = 21021100006
+    id = 21021100007
     arcpy.AddMessage('Start PSR report...')
     start = timeit.default_timer()
     # ### set workspace
@@ -38,14 +38,14 @@ if __name__ == "__main__":
         order_obj.get_search_radius() # populate search radius
         if len(order_obj.psr.search_radius) > 0:
         ### set type of reports
-            if_relief_report = False
-            if_topo_report = False
+            if_relief_report = True
+            if_topo_report = True
             if_wetland_report = True
-            if_flood_report = False
-            if_geology_report = False
-            if_soil_report = False
-            if_ogw_report = False
-            if_radon_report = False
+            if_flood_report = True
+            if_geology_report = True
+            if_soil_report = True
+            if_ogw_report = True
+            if_radon_report = True
 
             # shaded releif map report
             if if_relief_report:

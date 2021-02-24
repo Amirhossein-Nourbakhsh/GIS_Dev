@@ -126,19 +126,17 @@ def generate_ogw_report(order_obj):
     
     output_jpg_wells = config.output_jpg(order_obj,config.Report_Type.wells)
     config.buffer_dist_ogw =  str(order_obj.psr.search_radius['10685']) + ' MILES'
-    
+    ds_oid_wells_max_radius = '10093'     # 10093 is a federal source, PWSV
     ds_oid_wells = []
-    dsoid_wells_maxradius = '10093'     # 10093 is a federal source, PWSV
     for key in order_obj.psr.search_radius:
         if key not in ['9334', '10683', '10684', '10685', '10688','10689', '10695', '10696']:       #10695 is US topo, 10696 is HTMC, 10688 and 10689 are radons
             ds_oid_wells.append(key)
-            if (order_obj.psr.search_radius[key] > order_obj.psr.search_radius[dsoid_wells_maxradius]):
+            if (order_obj.psr.search_radius[key] > order_obj.psr.search_radius[ds_oid_wells_max_radius]):
                 ds_oid_wells = key
 
     merge_list = []
     for ds_oid in ds_oid_wells:
         buffer_wells_fc = os.path.join(config.scratch_folder,"order_buffer_" + str(ds_oid) + ".shp")
-        print (buffer_wells_fc)
         arcpy.Buffer_analysis(config.order_geometry_pcs_shp, buffer_wells_fc, str(order_obj.psr.search_radius[ds_oid]) + " MILES")
         wells_clip = os.path.join(config.scratch_folder,'wells_clip_' + str(ds_oid) + '.shp')
         arcpy.Clip_analysis(config.eris_wells, buffer_wells_fc, wells_clip)
@@ -224,8 +222,7 @@ def generate_ogw_report(order_obj):
         del mxd_wells
         del df_wells
         # part 2: the data driven pages
-        page = 1
-        page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
+        page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + 1
         mxd_mm_wells = arcpy.mapping.MapDocument(config.mxd_mm_file_wells)
         df_mm_wells = arcpy.mapping.ListDataFrames(mxd_mm_wells)[0]
         df_mm_wells.spatialReference = config.spatial_ref_pcs

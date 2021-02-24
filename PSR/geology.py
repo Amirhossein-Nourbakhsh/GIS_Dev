@@ -69,9 +69,8 @@ def generate_geology_report(order_obj):
         del df_geology
         
         # part 2: the data driven pages
-        page = 1
         
-        page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
+        page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + 1
         mxd_mm_geology = arcpy.mapping.MapDocument(config.mxd_mm_file_geology)
         
         df_mm_geology = arcpy.mapping.ListDataFrames(mxd_mm_geology,"*")[0]

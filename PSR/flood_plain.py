@@ -64,6 +64,9 @@ def generate_flood_report(order_obj):
     utility.add_layer_to_mxd("order_buffer",df_flood,config.buffer_lyr_file, 1.1)
     utility.add_layer_to_mxd("order_geometry_pcs", df_flood,config.order_geom_lyr_file,1)
     arcpy.RefreshActiveView()
+    
+    psr_obj = models.PSR()
+    
     if not config.if_multi_page: # single-page
         mxd_flood.saveACopy(os.path.join(config.scratch_folder, "mxd_flood.mxd"))  
         arcpy.mapping.ExportToJPEG(mxd_flood, Setting.output_jpg_flood, "PAGE_LAYOUT", resolution=75, jpeg_quality=40)
@@ -111,8 +114,6 @@ def generate_flood_report(order_obj):
        
         if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
             os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-            
-        page = 10
 
         for i in range(1,page):
             arcpy.SelectLayerByAttribute_management(Setting.grid_layer_mm, "NEW_SELECTION", ' "PageNumber" =  ' + str(i))
@@ -133,7 +134,6 @@ def generate_flood_report(order_obj):
         del Setting.df_mm_flood
         
         ### update tables in DB
-        psr_obj = models.PSR()
         for i in range(1,page):
             psr_obj.insert_map(order_obj.id, 'FLOOD', order_obj.number + '_US_FLOOD' + str(i) + '.jpg', i + 1)
         

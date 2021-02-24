@@ -22,6 +22,7 @@ class Order(object):
     postal_code = None
     city = None
     geometry = arcpy.Geometry()
+    spatial_ref_pcs = None
    
     def get_order(self,input_id):
         try:
@@ -65,6 +66,7 @@ class Order(object):
             order_obj.project_num = row[8]
             order_obj.postal_code = row[9]
             order_obj.geometry = order_obj.__getGeometry()
+            order_obj.spatial_ref_pcs = self.get_sr_pcs()
             return order_obj
         finally:
             cursor.close()
@@ -90,6 +92,10 @@ class Order(object):
             elif geometry_type.lower() =='polygon':
                 order_geom = arcpy.Polygon(arcpy.Array([arcpy.Point(*coords) for coords in coordinates]), sr_wgs84)
         return order_geom.projectAs(sr_wgs84)          
+    @classmethod
+    def get_sr_pcs(self):
+        centre_point = self.geometry.trueCentroid
+        return arcpy.GetUTMFromLocation(centre_point.X,centre_point.Y)
     @classmethod
     def get_search_radius(self):
         try:
