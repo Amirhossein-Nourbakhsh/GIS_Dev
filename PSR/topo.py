@@ -100,13 +100,13 @@ def generate_topo_report(order_obj):
 
         mxd_topo = arcpy.mapping.MapDocument(config.mxd_file_topo) if order_obj.province !='WA' else arcpy.mapping.MapDocument(config.mxd_file_topo_Tacoma)#mxdfile_topo_Tacoma
         df_topo = arcpy.mapping.ListDataFrames(mxd_topo,"*")[0]
-        df_topo.spatialReference = config.spatial_ref_pcs
+        df_topo.spatialReference = order_obj.spatial_ref_pcs
         mxd_mm_topo = None
         df_mm_topo = None
         if config.if_multi_page:
             mxd_mm_topo = arcpy.mapping.MapDocument(config.mxd_mm_file_topo) if order_obj.province !='WA' else arcpy.mapping.MapDocument(config.mxd_mm_file_topo_Tacoma)
             df_mm_topo = arcpy.mapping.ListDataFrames(mxd_mm_topo,"*")[0]
-            df_mm_topo.spatialReference =  config.spatial_ref_pcs
+            df_mm_topo.spatialReference =  order_obj.spatial_ref_pcs
 
         quadrangles = ''
         for item in infomatrix:

@@ -99,7 +99,7 @@ def generate_ogw_report(order_obj):
     point = arcpy.Point()
     array = arcpy.Array()
     feature_list = []
-    arcpy.CreateFeatureclass_management(config.scratch_folder, os.path.basename(config.order_center_pcs), "POINT", "", "DISABLED", "DISABLED", config.spatial_ref_pcs)
+    arcpy.CreateFeatureclass_management(config.scratch_folder, os.path.basename(config.order_center_pcs), "POINT", "", "DISABLED", "DISABLED", order_obj.spatial_ref_pcs)
     arcpy.AddField_management(config.order_center_pcs, "Site_z", "DOUBLE", "12", "6", "", "", "NULLABLE", "NON_REQUIRED", "")
     insert_cursor = arcpy.InsertCursor(config.order_center_pcs)
     feat = insert_cursor.newRow()
@@ -147,7 +147,7 @@ def generate_ogw_report(order_obj):
     
     # Calculate Distance with integration and spatial join- can be easily done with Distance tool along with direction if ArcInfo or Advanced license
     wells_merge_pcs= os.path.join(config.scratch_folder,"wells_merge_pcs.shp")
-    arcpy.Project_management(config.wells_merge, wells_merge_pcs, config.spatial_ref_pcs)
+    arcpy.Project_management(config.wells_merge, wells_merge_pcs, order_obj.spatial_ref_pcs)
     arcpy.Integrate_management(wells_merge_pcs, ".5 Meters")
     
     # Add distance to selected wells
@@ -177,7 +177,7 @@ def generate_ogw_report(order_obj):
         ## create a map with water wells and ogw wells
         mxd_wells = arcpy.mapping.MapDocument(config.mxd_file_wells)
         df_wells = arcpy.mapping.ListDataFrames(mxd_wells,"*")[0]
-        df_wells.spatialReference = config.spatial_ref_pcs
+        df_wells.spatialReference = order_obj.spatial_ref_pcs
         
         lyr = arcpy.mapping.ListLayers(mxd_wells, "wells", df_wells)[0]
         lyr.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE", "wells_display")
@@ -185,7 +185,7 @@ def generate_ogw_report(order_obj):
         arcpy.AddMessage('  - WaterWells section, no water wells exists')
         mxd_wells = arcpy.mapping.MapDocument(config.mxd_file_wells)
         df_wells = arcpy.mapping.ListDataFrames(mxd_wells,"*")[0]
-        df_wells.spatialReference = config.spatial_ref_pcs
+        df_wells.spatialReference = order_obj.spatial_ref_pcs
     for item in ds_oid_wells:
         psr_utility.add_layer_to_mxd("order_buffer_" + str(item), df_wells, config.buffer_lyr_file,1.1)
     psr_utility.add_layer_to_mxd("order_geometry_pcs", df_wells,config.order_geom_lyr_file,1)
@@ -225,7 +225,7 @@ def generate_ogw_report(order_obj):
         page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + 1
         mxd_mm_wells = arcpy.mapping.MapDocument(config.mxd_mm_file_wells)
         df_mm_wells = arcpy.mapping.ListDataFrames(mxd_mm_wells)[0]
-        df_mm_wells.spatialReference = config.spatial_ref_pcs
+        df_mm_wells.spatialReference = order_obj.spatial_ref_pcs
         for item in ds_oid_wells:
             psr_utility.add_layer_to_mxd("order_buffer_" + str(item), df_mm_wells, config.buffer_lyr_file,1.1)
         psr_utility.add_layer_to_mxd("order_geometry_pcs", df_mm_wells, config.order_geom_lyr_file,1)

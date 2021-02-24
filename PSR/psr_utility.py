@@ -35,13 +35,11 @@ def set_order_geometry(order_obj):
     else: #polygon
         config.order_geom_lyr_file = config.order_geom_lyr_polygon
     ### calculate order geometry in PCS
-    centre_point = order_obj.geometry.trueCentroid
-    config.spatial_ref_pcs = arcpy.GetUTMFromLocation(centre_point.X,centre_point.Y)
     order_geometry_pcs = order_obj.geometry.projectAs(config.spatial_ref_pcs)
     arcpy.CopyFeatures_management(order_obj.geometry, config.order_geometry_gcs_shp)
     arcpy.DefineProjection_management(config.order_geometry_gcs_shp, config.spatial_ref_gcs)
     arcpy.CopyFeatures_management(order_geometry_pcs, config.order_geometry_pcs_shp)
-    arcpy.DefineProjection_management(config.order_geometry_gcs_shp, config.spatial_ref_pcs)
+    arcpy.DefineProjection_management(config.order_geometry_gcs_shp, order_obj.spatial_ref_pcs)
 def return_unique_setstring_musym(table_name):
     data = arcpy.da.TableToNumPyArray(table_name, ['mukey', 'musym'])
     uniques = np.unique(data[data['musym']!='NOTCOM']['mukey'])

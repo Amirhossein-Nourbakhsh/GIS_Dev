@@ -29,7 +29,7 @@ def generate_geology_report(order_obj):
 
     mxd_geology = arcpy.mapping.MapDocument(config.mxd_file_geology)
     df_geology = arcpy.mapping.ListDataFrames(mxd_geology,"*")[0]
-    df_geology.spatialReference = config.spatial_ref_pcs
+    df_geology.spatialReference = order_obj.spatial_ref_pcs
     
     ### add order and order_buffer layers to geology mxd file
     utility.add_layer_to_mxd("order_buffer",df_geology,config.buffer_lyr_file, 1.1)
@@ -74,7 +74,7 @@ def generate_geology_report(order_obj):
         mxd_mm_geology = arcpy.mapping.MapDocument(config.mxd_mm_file_geology)
         
         df_mm_geology = arcpy.mapping.ListDataFrames(mxd_mm_geology,"*")[0]
-        df_mm_geology.spatialReference = config.spatial_ref_pcs
+        df_mm_geology.spatialReference = order_obj.spatial_ref_pcs
         utility.add_layer_to_mxd("order_buffer",df_mm_geology,config.buffer_lyr_file,1.1)
         utility.add_layer_to_mxd("order_geometry_pcs", df_mm_geology,config.order_geom_lyr_file,1)
         

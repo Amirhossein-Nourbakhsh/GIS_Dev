@@ -66,7 +66,7 @@ def create_map(order_obj, soil_setting):
     
     mxd_soil = arcpy.mapping.MapDocument(config.mxd_file_soil)
     df_soil = arcpy.mapping.ListDataFrames(mxd_soil,"*")[0]
-    df_soil.spatialReference = config.spatial_ref_pcs
+    df_soil.spatialReference = order_obj.spatial_ref_pcs
     
     ssurgo_lyr = arcpy.mapping.ListLayers(mxd_soil, "SSURGO*", df_soil)[0]
     ssurgo_lyr.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE", 'soil_selectedby_frame')
@@ -112,7 +112,7 @@ def create_map(order_obj, soil_setting):
         mxd_mm_soil = arcpy.mapping.MapDocument(config.mxd_mm_file_soil)
 
         df_mm_soil = arcpy.mapping.ListDataFrames(mxd_mm_soil,"*")[0]
-        df_mm_soil.spatialReference = config.spatial_ref_pcs
+        df_mm_soil.spatialReference = order_obj.spatial_ref_pcs
         
         utility.add_layer_to_mxd("order_buffer",df_mm_soil,config.buffer_lyr_file,1.1)
         utility.add_layer_to_mxd("order_geometry_pcs", df_mm_soil, config.order_geom_lyr_file,1)
@@ -225,7 +225,7 @@ def generate_soil_report(order_obj):
         eris_id = eris_id + 1
         psr_obj.insert_flex_rep(order_obj.id, eris_id, '9334', 2, 'N', 1, 'No soil data available in the project area.', '')
     else:
-        soil_selectedby_order_pcs_shp = arcpy.Project_management(config.soil_selectedby_order_shp, config.soil_selectedby_order_pcs_shp, config.spatial_ref_pcs)
+        soil_selectedby_order_pcs_shp = arcpy.Project_management(config.soil_selectedby_order_shp, config.soil_selectedby_order_pcs_shp, order_obj.spatial_ref_pcs)
         # create map keys
         arcpy.Statistics_analysis(soil_selectedby_order_pcs_shp, os.path.join(config.scratch_folder,"summary_soil.dbf"), [['mukey','FIRST'],["Shape_Area","SUM"]],'musym')
         arcpy.Sort_management(os.path.join(config.scratch_folder,"summary_soil.dbf"), os.path.join(config.scratch_folder,"summary_sorted_soil.dbf"), [["musym", "ASCENDING"]])

@@ -83,10 +83,10 @@ def generate_flood_report(order_obj):
     
     mxd_flood = arcpy.mapping.MapDocument(config.mxd_file_flood)
     df_flood = arcpy.mapping.ListDataFrames(mxd_flood,"Flood*")[0]
-    df_flood.spatialReference = config.spatial_ref_pcs
+    df_flood.spatialReference = order_obj.spatial_ref_pcs
     
     df_flood_small = arcpy.mapping.ListDataFrames(mxd_flood,"Study*")[0]
-    df_flood_small.spatialReference = config.spatial_ref_pcs
+    df_flood_small.spatialReference = order_obj.spatial_ref_pcs
     del df_flood_small
     
     utility.add_layer_to_mxd("order_buffer",df_flood,config.buffer_lyr_file, 1.1)
@@ -131,7 +131,7 @@ def generate_flood_report(order_obj):
         Setting.mxd_multi_flood = arcpy.mapping.MapDocument(config.mxd_mm_file_flood)
 
         Setting.df_mm_flood = arcpy.mapping.ListDataFrames(Setting.mxd_multi_flood,"Flood*")[0]
-        Setting.df_mm_flood.spatialReference = config.spatial_ref_pcs
+        Setting.df_mm_flood.spatialReference = order_obj.spatial_ref_pcs
         utility.add_layer_to_mxd("order_buffer",Setting.df_mm_flood,config.buffer_lyr_file,1.1)
         utility.add_layer_to_mxd("order_geometry_pcs", Setting.df_mm_flood,config.order_geom_lyr_file,1)
         

@@ -46,7 +46,7 @@ def generate_multipage_report(order_obj,mxd_wetland,output_jpg_wetland,df_wetlan
     page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + 1
     mxd_mm_wetland = arcpy.mapping.MapDocument(config.mxd_mm_file_wetland)
     df_mm_wetland = arcpy.mapping.ListDataFrames(mxd_mm_wetland,"big")[0]
-    df_mm_wetland.spatialReference = config.spatial_ref_pcs
+    df_mm_wetland.spatialReference = order_obj.spatial_ref_pcs
     
     utility.add_layer_to_mxd("order_buffer",df_mm_wetland,config.buffer_lyr_file, 1.1)
     utility.add_layer_to_mxd("order_geometry_pcs", df_mm_wetland,config.order_geom_lyr_file,1)
@@ -91,7 +91,7 @@ def generate_wetland_report(order_obj):
     df_wetland = arcpy.mapping.ListDataFrames(mxd_wetland,"big")[0]
     df_wetland.spatialReference =config.spatial_ref_pcs
     df_wetland_small = arcpy.mapping.ListDataFrames(mxd_wetland,"small")[0]
-    df_wetland_small.spatialReference = config.spatial_ref_pcs
+    df_wetland_small.spatialReference = order_obj.spatial_ref_pcs
     del df_wetland_small
     ### add order and order_buffer layers to wetland mxd file
     utility.add_layer_to_mxd("order_buffer",df_wetland,config.buffer_lyr_file, 1.1)
@@ -108,7 +108,7 @@ def generate_wetland_report(order_obj):
         buffer_wetland_shp = os.path.join(config.scratch_folder,"buffer_wetland.shp")
         mxd_wetland_ny = arcpy.mapping.MapDocument(config.mxd_file_wetlandNY)
         df_wetland_ny = arcpy.mapping.ListDataFrames(mxd_wetland_ny,"big")[0]
-        df_wetland_ny.spatialReference = config.spatial_ref_pcs
+        df_wetland_ny.spatialReference = order_obj.spatial_ref_pcs
         ### add order and order_buffer layers to wetland Newyork mxd file
         utility.add_layer_to_mxd("order_buffer",df_wetland_ny,config.buffer_lyr_file,1.1)
         utility.add_layer_to_mxd("order_geometry_pcs", df_wetland_ny,config.order_geom_lyr_file,1)
@@ -150,7 +150,7 @@ def generate_wetland_report(order_obj):
             mxd_mm_wetland_NY = arcpy.mapping.MapDocument(config.mxdMMfile_wetlandNY)
 
             df_mm_wetland_ny = arcpy.mapping.ListDataFrames(mxd_mm_wetland_NY,"big")[0]
-            df_mm_wetland_ny.spatialReference = config.spatial_ref_pcs
+            df_mm_wetland_ny.spatialReference = order_obj.spatial_ref_pcs
             ### add order and order_buffer layers to wetland Newyork multipage mxd file
             utility.add_layer_to_mxd("order_buffer",df_mm_wetland_ny,config.buffer_lyr_file,1.1)
             utility.add_layer_to_mxd("order_geometry_pcs", df_mm_wetland_ny,config.order_geom_lyr_file,1)

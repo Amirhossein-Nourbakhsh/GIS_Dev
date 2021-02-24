@@ -46,7 +46,7 @@ def generate_multipage_report(order_obj,cellids_selected, mxd_relief,df_relief, 
     mxd_mm_relief = arcpy.mapping.MapDocument(config.mxd_mm_file_relief)
     
     df_mm_relief = arcpy.mapping.ListDataFrames(mxd_mm_relief,"*")[0]
-    df_mm_relief.spatialReference = config.spatial_ref_pcs
+    df_mm_relief.spatialReference = order_obj.spatial_ref_pcs
     
     ### add order geometry and it's bugger to mxd
     utility.add_layer_to_mxd("order_buffer",df_mm_relief,config.buffer_lyr_file,1.1)
@@ -102,7 +102,7 @@ def generate_relief_report(order_obj):
     ### set mxd variable
     mxd_relief = arcpy.mapping.MapDocument(config.mxd_file_relief)
     df_relief = arcpy.mapping.ListDataFrames(mxd_relief,"*")[0]
-    df_relief.spatialReference = config.spatial_ref_pcs
+    df_relief.spatialReference = order_obj.spatial_ref_pcs
     
     ### create buffer map based on order geometry and topo redius
     arcpy.Buffer_analysis(config.order_geometry_pcs_shp, config.order_buffer_shp, config.buffer_dist_relief) 
