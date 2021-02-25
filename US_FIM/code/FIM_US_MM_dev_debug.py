@@ -197,8 +197,9 @@ def goSummaryPage(summaryfile,data,years):
     style = ParagraphStyle("cover",parent=styles['Normal'],fontName="Helvetica",fontSize=9,leading=9)
 
     for key in years:
-        for i in range(len(data[key])):
-            [state,city,vol,year,sheets] =data[key][i][2:7]
+        volumes = data[key]
+        for v in volumes.values():
+            [state,city,vol,year,sheets] = v[2:7]
             sheets = str([_ for _ in sheets]).replace("'","").replace("[","").replace("]","")
             newdata.append([Paragraph(('<para alignment="left">%s</para>')%(_), style) for _ in [year,city,state,vol, sheets]])
 
@@ -458,8 +459,8 @@ try:
     else:
         arcpy.Buffer_analysis(orderGeometryPR, outBufferSHP, bufferDistance)
         logger.info("order " + OrderIDText + ' polygon centre: no '+time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-
-    arcpy.env.workspace = shapefilepath
+    
+    arcpy.env.workspace = r"\\CABCVAN1FPR009\USA_FIPs\US FIM Footprints\2020_12_08\FIM_US_STATES.gdb"
     shplist = arcpy.ListFeatureClasses()
     outBufferSHP_GCS = os.path.join(scratch, "buffer_gcs.shp")
     arcpy.Project_management(outBufferSHP,outBufferSHP_GCS,srGCS83)
@@ -470,12 +471,6 @@ try:
     yMax = extent.YMax
     yMin = extent.YMin
 
-    selectedlist = []
-    selectedFIPs = os.path.join(scratch, "selected.shp")
-
-    if arcpy.Exists(selectedFIPs):
-        arcpy.Delete_management(selectedFIPs)
-    i = 0
     j = 0
     presentedlist = []
     presentedFIPs = os.path.join(scratch, "presented.shp")
@@ -491,16 +486,8 @@ try:
             print ("in extent: " + shp)
 
             shpLayer = arcpy.mapping.Layer(shp)
+            arcpy.SelectLayerByLocation_management(shpLayer,'intersect', outBufferSHP_GCS, None, 'NEW_SELECTION')
 
-            arcpy.SelectLayerByLocation_management(shpLayer,'intersect', outBufferSHP_GCS,selectionDist)
-            if(int((arcpy.GetCount_management(shpLayer).getOutput(0))) >0):
-                i = i + 1
-                selected = "in_memory/selected" + str(i)
-                arcpy.CopyFeatures_management(shpLayer, selected)
-                logger.debug("i = "+str(i))
-                selectedlist.append(selected)
-
-            arcpy.SelectLayerByLocation_management(shpLayer,'intersect', outBufferSHP_GCS,selectionDist, 'NEW_SELECTION')
             if(int((arcpy.GetCount_management(shpLayer).getOutput(0))) >0):
                 j = j + 1
                 presented = "in_memory/presented" + str(j)
@@ -508,9 +495,8 @@ try:
                 logger.debug("j = "+str(j))
                 presentedlist.append(presented)
 
-    if i > 0:
+    if j > 0:
         logger.debug("right before merge")
-        arcpy.Merge_management(selectedlist,selectedFIPs)
         arcpy.Merge_management(presentedlist,presentedFIPs)
         logger.debug("after merge")
         arcpy.Delete_management("in_memory")
@@ -518,79 +504,44 @@ try:
     nFIP = 0
     years_s = []
 
-    if(i == 0):
+    if(j == 0):
         print ("NO records selected")
     else:
         summaryList={}
         years_s = []
-        summaryList_s = []
-        selectedLayer = arcpy.MakeFeatureLayer_management(selectedFIPs)
-        # (summaryList_s, years_s) = selectbyyear(selectedLayer)         # to get the selected years
+        sheetNos_noLetter = []
+        imagepaths = []
 
         # need to clear selection on the layer
         presentedLayer = arcpy.MakeFeatureLayer_management(presentedFIPs)
 
         fim_select_collection = {}
-        fim_intersect_collection = set(findpath(row[1],row[0]) for row in arcpy.da.SearchCursor(presentedFIPs, ["mxd",'filepath']))
         
-        # CREATE SELECTED BOUNDARIES SHAPEFILE
-        boundaryselectedshp = os.path.join(scratch, "boundaryselectedshp.shp")
-        boundaryselectedshp = arcpy.CreateFeatureclass_management(scratch, "boundaryselectedshp.shp", "POLYGON")
-        arcpy.MakeFeatureLayer_management(boundaryselectedshp, "boundaryselected")
-        arcpy.AddField_management(boundaryselectedshp, "VOLUMENAME", "TEXT")
-        arcpy.AddField_management(boundaryselectedshp, "IMAGE_NO", "TEXT")
+        for row in arcpy.SearchCursor(presentedLayer):
+            voldict = {}
+            volumeNum = row.getValue('VOLUMENO')
+            volumeName_new  = row.getValue('VOLUMENAME')
+            state = row.getValue('STATE').title()
+            city = row.getValue('CITY').title()
+            volseq = row.getValue('VOLUME').title()
+            year = row.getValue('YEAR')
+            sheetNo = row.getValue('IMAGE_NO').lstrip("0").split('_')[0].split('-')[0].strip('A').strip('B').strip('C').strip('D').strip('E').strip('F').encode("utf-8")
+            imagepath = os.path.join(row.getValue('VOLUMEPATH'), volumeNum, "INDIVIDUAL_GEOREFERENCE", row.getValue('IMAGE_NO'))
+            volpath = os.path.join(row.getValue('VOLUMEPATH'), volumeNum)
+
+            t = [volumeNum, volumeName_new, state, city, volseq, year, [sheetNo], [imagepath],volpath]
+            if year in summaryList and volumeNum in summaryList[year]:
+                summaryList[year][volumeNum][6].append(sheetNo)
+                summaryList[year][volumeNum][7].append(imagepath)
+            elif year in summaryList and volumeNum not in summaryList[year]:
+                summaryList[year][volumeNum] = t
+            else:
+                voldict[volumeNum] = t
+                summaryList[year] = voldict
     
-        for volpath in fim_intersect_collection:
-            # print(volpath)
-            city = ' '
-            state = ' '
-            year = ' '
-            volseq = ' '
-            sheetNos = []
-            volumeNum = volpath.split("\\")[-1]
-            volbundary = arcpy.mapping.Layer(os.path.join(volpath,"IMAGE_BOUNDARY.shp"))
-            arcpy.SelectLayerByLocation_management(volbundary,"INTERSECT",outBufferSHP_GCS,  "450 Feet")
-            imagepaths =[]
-
-            # APPEND IMAGE_BOUNDARY.shp TO boundaryselectedshp
-            arcpy.Append_management(os.path.join(volpath, "IMAGE_BOUNDARY.shp"), boundaryselectedshp, "NO_TEST")
-            
-            if int(arcpy.GetCount_management(volbundary)[0])!=0:
-                fim_vol_info= [row for row in arcpy.da.SearchCursor(volbundary, ["IMAGE_NO",'VOLUMENAME'])]
-                for fim_sheet in fim_vol_info:
-                    volumeName_new = str(fim_sheet[1]).strip()     #e.g. Long Beach 1914 - Sep 1963; Volume 3@@@California@Long Beach@1963@3
-                    state = volumeName_new.split('@@@')[1].split('@')[0]          #e.g. California
-                    city = volumeName_new.split('@@@')[1].split('@')[1]          #e.g. los angeles
-                    year = int(volumeName_new.split('@@@')[1].split('@')[2].split('(')[0].strip())           #e.g. 1980
-                    volseq = volumeName_new.split('@@@')[1].split('@')[3]         #e.g. volume 2 of a particular series
-                    sheetNos.append(str(fim_sheet[0]).strip().lstrip('0'))
-                    imagepaths.append(os.path.join(volpath,r"INDIVIDUAL_GEOREFERENCE",fim_sheet[0]))
-                sheetNos.sort()
-                sheetNos_noLetter = []
-                for sheet in sheetNos:
-                    sheet1 = sheet.split('_')[0].split('-')[0].strip('A').strip('B').strip('C').strip('D').strip('E').strip('F')
-                    sheetNos_noLetter.append(sheet1)
-                sheetNos_set = set(sheetNos_noLetter)
-                sheetNos_noLetter = list(sheetNos_set)
-                sheetNos_noLetter.sort()
-
-                t = (volumeNum, volumeName_new, state, city, volseq, year, sheetNos_noLetter,imagepaths,volpath)
-                if year in summaryList.keys():
-                    records =summaryList[year]
-                    records.append(t)
-                    summaryList[year] = records
-                else:
-                    summaryList[year] = [t]
-
-    years_s=summaryList.keys()
+    years_s = summaryList.keys()
     outBufferSHP = None
-    masterLayer = None
-    dictSummary = {}
-    dictSummary_dedup = {}
-    # (dictSummary, dictSummary_dedup) = reorgbyyear(summaryList)
-    yearlookup = {}
-    # years = dictSummary_dedup.keys()
-    # years.sort(reverse = True)
+
     if is_aei == 'Y':
         years_s.sort(reverse = False)
     else:
@@ -616,15 +567,14 @@ try:
         dfFIP = arcpy.mapping.ListDataFrames(mxdFIP,"main")[0]
         queryLayer = arcpy.mapping.ListLayers(mxdFIP,"Buffer Outline",dfFIP)[0]
         dfinset = arcpy.mapping.ListDataFrames(mxdFIP,"inset")[0]
-        # sheetNos = []
+
         sheetnoText = ''
         volumeNums = ''
         imageLayer = arcpy.mapping.Layer(imagelyr)
-        # items = dictSummary_dedup[year]
+
         items = summaryList[year]
-        # (volumeNum, volumeName_new, state, city, volseq, year, sheetNos_noLetter,imagepaths,volpath) =summaryList[year]
-        for item in items:
-            (volumeNum, volumeName_new, state, city, volseq, year, sheetNos_noLetter,imagepaths,volpath) =item
+        for item in items.values():
+            (volumeNum, volumeName_new, state, city, volseq, year, sheetNos_noLetter,imagepaths,volpath) = item
             for lyr in item[-2]:
                 if os.path.exists(lyr+".tif"):
                     lyr+=".tif"
@@ -632,21 +582,14 @@ try:
                     lyr+=".jpg"
                 count+=1
                 image_lyr_name = "%s"%(lyr.replace("\\","").replace(".","_"))
-                # arcpy.Resample_management(lyr,os.path.join(scratch,image_lyr_name[:-4]+".png"), cell_size="%s %s"%(float(arcpy.GetRasterProperties_management(lyr,"CELLSIZEX")[0])*0.1,float(arcpy.GetRasterProperties_management(lyr,"CELLSIZEY")[0])*0.1, resampling_type="NEAREST")
-                # arcpy.Resample_management(imagePATH,os.path.join(scratch,image_lyr_name[:-4]+".tif"), cell_size="%s %s"%(float(arcpy.GetRasterProperties_management(lyr,"CELLSIZEX")[0])*0.1,float(arcpy.GetRasterProperties_management(lyr,"CELLSIZEY")[0])*0.1), resampling_type="NEAREST")
-                # lyr = os.path.join(scratch,image_lyr_name[:-4]+".tif")
                 image = arcpy.MakeRasterLayer_management(lyr,image_lyr_name)
-                arcpy.ApplySymbologyFromLayer_management(image_lyr_name, r"\\cabcvan1gis005\GISData\FIMS_USA\python\layer\hallowsheet.lyr")
+                arcpy.ApplySymbologyFromLayer_management(image_lyr_name, r"\\cabcvan1gis006\GISData\FIMS_USA\python\layer\hallowsheet.lyr")
                 layer_temp = os.path.join(scratch,"image_%s.lyr"%(count))
                 arcpy.SaveToLayerFile_management(image_lyr_name,layer_temp)
                 layer_temp = arcpy.mapping.Layer(layer_temp)
                 arcpy.mapping.AddLayer(dfFIP, layer_temp,"Bottom")
 
-            # for lyr in arcpy.mapping.ListLayers(mxdFIP, "", dfFIP)[:1]:
-            #     arcpy.mapping.RemoveLayer(dfFIP, lyr)
-
-            # for item in items:                                                       #multiple folders need to be mosaicked together
-            if item[4] == '':
+            if item[4] == '' or item[4] == ' ':
                 sheetnoText = sheetnoText + 'Volume NA: '
             else:
                 sheetnoText = sheetnoText + 'Volume ' + str(item[4]) + ': '
@@ -655,7 +598,6 @@ try:
             print(sheetnoText)
 
             sheetnoText = sheetnoText + ', '.join(item[6][:14]) + ', '.join(item[6][14:28]) + ', '.join(item[6][28:42]) + ', '.join(item[6][42:]) + '; ' + '\r\n'
-            # sheetnoText = sheetnoText + ','.join(item[6][:14])+ '\n'+ ','.join(item[6][14:28])+'\n'+ ','.join(item[6][28:42]) +'\n'+ ','.join(item[6][42:])+ ';' + '\r\n'
             volumeNums = volumeNums + item[0]
             logger.info("order " + OrderIDText + ":                add to mxd the image: " + imageLayer.dataSource)
 
@@ -670,10 +612,10 @@ try:
         orderIDTextE.text = str(year)
         mapsheetTextE = arcpy.mapping.ListLayoutElements(mxdFIP, "TEXT_ELEMENT", "mapsheetText")[0]
 
-        mapsheetTextE.elementPositionX = 1.8702 #2.0833
-        mapsheetTextE.elementPositionY = 1.17 #1.1195
-        mapsheetTextE.elementHeight = 0.5
-        mapsheetTextE.elementWidth = 6.1826
+        # mapsheetTextE.elementPositionX = 1.8702 #2.0833
+        # mapsheetTextE.elementPositionY = 1.17 #1.1195
+        # mapsheetTextE.elementHeight = 0.5
+        # mapsheetTextE.elementWidth = 6.1826
         mapsheetTextE.text = "Map sheet(s): " + '\r\n' + sheetnoText #'\r\n'.join(textwrap.wrap(sheetnoText, 170)) 
         orderIDTextE = arcpy.mapping.ListLayoutElements(mxdFIP, "TEXT_ELEMENT", "ordernumText")[0]
         orderIDTextE.text = "Order Number " + OrderNumText
@@ -740,21 +682,26 @@ try:
         arcpy.DefineProjection_management(os.path.join(scratch, "Extent.shp"), arcpy.SpatialReference(4326))
         
         # CREATES GRID
-        Gridlrshp = os.path.join(scratch,"gridlr.shp")
-        arcpy.GridIndexFeatures_cartography(Gridlrshp, os.path.join(scratch, "buffer_gcs.shp"), "", "", "", gridsize, gridsize)
+        # Gridlrshp = os.path.join(scratch,"gridlr.shp")
+        # arcpy.GridIndexFeatures_cartography(Gridlrshp, outBufferSHP_GCS, "", "", "", gridsize, gridsize)
+        
+        Gridlrshp = os.path.join(scratch,"gridlr_" + str(year) + '.shp')        
+        expression = str('"YEAR" LIKE \'%' + str(year) + "%'")
+        arcpy.SelectLayerByAttribute_management(presentedLayer,'NEW_SELECTION', expression)
+        arcpy.GridIndexFeatures_cartography(Gridlrshp, presentedLayer, "", "", "", gridsize, gridsize)
         arcpy.MakeFeatureLayer_management(Gridlrshp, "gridlr")
         # print(arcpy.mapping.ListLayers(mxdFIP,"Grid",dfFIP))
 
         # SKIP BLANK GRIDS
-        expression = str('"VOLUMENAME" LIKE \'%@' + str(year) + "@%'")
-        arcpy.SelectLayerByAttribute_management("boundaryselected",'NEW_SELECTION', expression)
-        arcpy.SelectLayerByLocation_management('gridlr', 'intersect', "boundaryselected")
-        Gridlrselectedshp = arcpy.CopyFeatures_management('gridlr', os.path.join(scratch,'gridlrselectedshp_' + str(year) + '.shp'))
-        arcpy.MakeFeatureLayer_management(Gridlrselectedshp, "gridlrselected")
+        # expression = str('"VOLUMENAME" LIKE \'%@' + str(year) + "@%'")
+        # arcpy.SelectLayerByAttribute_management("boundaryselected",'NEW_SELECTION', expression)
+        # arcpy.SelectLayerByLocation_management('gridlr', 'intersect', "boundaryselected", None)
+        # Gridlrselectedshp = arcpy.CopyFeatures_management('gridlr', os.path.join(scratch,'gridlrselectedshp_' + str(year) + '.shp'))
+        # arcpy.MakeFeatureLayer_management(Gridlrselectedshp, "gridlrselected")
 
         newgridlr = arcpy.mapping.ListLayers(mxdFIP,"Grid",dfFIP)[0]
-        newgridlr.replaceDataSource(scratch, "SHAPEFILE_WORKSPACE","gridlrselectedshp" + "_" + str(year))
-        # newgridlr.replaceDataSource(scratch, "SHAPEFILE_WORKSPACE","gridlr")
+        # newgridlr.replaceDataSource(scratch, "SHAPEFILE_WORKSPACE","gridlrselectedshp" + "_" + str(year))
+        newgridlr.replaceDataSource(scratch, "SHAPEFILE_WORKSPACE","gridlr" + "_" + str(year))
         dfFIP.spatialReference = spatialRef
 
         # REFRESH VIEW
@@ -796,7 +743,7 @@ try:
             ddMMDDP = mxdFIP.dataDrivenPages
             ddMMDDP.refresh()
             FIPpdfMM = os.path.join(scratch, 'FIPExport_'+volumeNums+"_"+str(year)+'_multipage.pdf')
-            ddMMDDP.exportToPDF(FIPpdfMM, page_range_type="ALL",resolution=800)
+            ddMMDDP.exportToPDF(FIPpdfMM, page_range_type="ALL",resolution=600)
             pdflist.append(FIPpdfMM)
             del ddMMDDP
         # pdflist.append(FIPpdf1)

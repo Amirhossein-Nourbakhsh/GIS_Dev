@@ -55,7 +55,8 @@ coverPDF = os.path.join(scratch,"cover.pdf")
 shapePdf = os.path.join(scratch, 'shape.pdf')
 orderGeometry= os.path.join(scratch,"orderGeometry.shp")
 orderGeometryPR = os.path.join(scratch, "ordergeoNamePR.shp")
-extentBuffer75SHP = os.path.join(scratch,"buffer_extent75.shp")
+orderBuffer = os.path.join(scratch,"buffer.shp")
+extent = os.path.join(scratch, "extent.shp")
 tempdir = os.path.join(scratch,'viewertemp')
 
 # folders

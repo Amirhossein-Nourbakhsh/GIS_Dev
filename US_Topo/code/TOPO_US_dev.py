@@ -48,15 +48,18 @@ select
 a.order_id, a.order_num, a.site_name,
 b.customer_id, 
 c.company_id, c.company_desc,
-d.radius_type, d.geometry_type, d.geometry
-from orders a, customer b, company c, eris_order_geometry d
+d.radius_type, d.geometry_type, d.geometry,
+e.topo_viewer
+from orders a, customer b, company c, eris_order_geometry d, order_viewer e
 where 
 a.customer_id = b.customer_id and
 b.company_id = c.company_id and
-a.order_id = d.order_id
+a.order_id = d.order_id and
+a.order_id = e.order_id
 and upper(a.site_name) not like '%TEST%'
-and upper(c.company_desc) like '%NOVA GROUP%'
+and upper(c.company_desc) like '%AEI%'
 and d.geometry_type = 'POLYGON'
+and e.topo_viewer = 'Y'
 order by a.order_num DESC;
 '''
 
@@ -65,7 +68,7 @@ if __name__ == '__main__':
     start = time.clock()
     arcpy.env.overwriteOutput = True
 
-    order_obj = models.Order().get_order(21013000010)
+    order_obj = models.Order().get_order(21020700002)
     print("Order: " + str(order_obj.id) + ", " + str(order_obj.number))
 
     BufsizeText = "2.4"
@@ -99,97 +102,25 @@ if __name__ == '__main__':
 
         # CREATE ORDER GEOMETRY
         tf.createordergeometry(order_obj,srUTM)
-
-        # GET TOPO RECORDS ---------------------------------------------------------------------------------------------------------------
-        logger.debug("#1")
-        bufferDistance_e75 = '2 KILOMETERS'                                                                     # has to be not smaller than the search radius to void white page
         
-        arcpy.Buffer_analysis(cfg.orderGeometryPR, cfg.extentBuffer75SHP, bufferDistance_e75)
-
+        # GET TOPO RECORDS ---------------------------------------------------------------------------------------------------------------
+        logger.debug("#1")                                                               
+        
         masterLayer = arcpy.mapping.Layer(cfg.masterlyr)
-        arcpy.SelectLayerByLocation_management(masterLayer,'intersect', cfg.orderGeometryPR,'0.25 KILOMETERS')  # it doesn't seem to work without the distance
+        arcpy.Buffer_analysis(cfg.orderGeometryPR, cfg.orderBuffer, '1 KILOMETERS')                             # has to be not smaller than the search radius to void white page
+
+        # CREATE MXD AND MAP EXTENT
+        mxd, df, orderGeomLayer, extentBufferLayer = tf.mapExtent(cfg.bufferlyrfile)
+
+        arcpy.SelectLayerByLocation_management(masterLayer,'intersect', cfg.extent, None, 'NEW_SELECTION')  # it doesn't seem to work without the distance
+        rows = arcpy.SearchCursor(masterLayer)    # loop through the selected records
 
         logger.debug("#2")
         if(int((arcpy.GetCount_management(masterLayer).getOutput(0))) ==0):
-            print ("NO records selected")
+            print("NO records selected")
             masterLayer = None
         else:
-            cellids_selected = []
-            # loop through the relevant records, locate the selected cell IDs
-            rows = arcpy.SearchCursor(masterLayer)    # loop through the selected records
-            for row in rows:
-                cellid = str(int(row.getValue("CELL_ID")))
-                cellids_selected.append(cellid)
-            del row
-            del rows
-
-            arcpy.SelectLayerByLocation_management(masterLayer,'intersect', cfg.orderGeometryPR,'7 KILOMETERS','NEW_SELECTION')
-            cellids = []
-            cellsizes = []
-            # loop through the relevant records, locate the selected cell IDs
-            rows = arcpy.SearchCursor(masterLayer)    # loop through the selected records
-
-            for row in rows:
-                cellid = str(int(row.getValue("CELL_ID")))
-                cellsize = str(int(row.getValue("CELL_SIZE")))
-                cellids.append(cellid)
-                cellsizes.append(cellsize)
-            del row
-            del rows
-
-            masterLayer = None
-            logger.debug(cellids)
-
-            # cellids are found, need to find corresponding map .pdf by reading the .csv file
-            # also get the year info from the corresponding .xml
-            print("#1 " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-            infomatrix = []
-            yearalldict = {}
-
-            with open(cfg.csvfile_h, "rb") as f:
-                print("___All USGS HTMC Topo List.")
-                reader = csv.reader(f)
-                for row in reader:
-                    if row[9] in cellids:
-                        pdfname = row[15].strip()
-                        # read the year from .xml file
-                        xmlname = pdfname[0:-3] + "xml"
-                        xmlpath = os.path.join(cfg.tifdir_h,xmlname)
-                        tree = ET.parse(xmlpath)
-                        root = tree.getroot()
-                        procsteps = root.findall("./dataqual/lineage/procstep")
-                        yeardict = {}
-                        for procstep in procsteps:
-                            procdate = procstep.find("./procdate")
-                            if procdate != None:
-                                procdesc = procstep.find("./procdesc")
-                                yeardict[procdesc.text.lower()] = procdate.text
-
-                        year2use = yeardict.get("date on map")
-
-                        if year2use == "":
-                            print("################### cannot determine year of the map from xml...get from csv instead")
-                            year2use = row[11].strip()
-
-                        yearalldict[year2use] = yeardict
-
-                        infomatrix.append([row[9],row[5],row[15],year2use])  # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963]
-
-            with open(cfg.csvfile_c, "rb") as f:
-                print("___All USGS Current Topo List.")
-                reader = csv.reader(f)
-                for row in reader:
-                    if row[9] in cellids:
-                        pdfname = row[15].strip()
-
-                        # for current topos, read the year from the geopdf file name
-                        templist = pdfname.split("_")
-                        year2use = templist[len(templist)-3][0:4]
-
-                        if year2use[0:2] != "20" or year2use == "" or year2use == None:
-                            print ("################### Error in the year of the map!!!" + year2use)
-
-                        infomatrix.append([row[9],row[5],pdfname,year2use])
+            infomatrix, yearalldict, cellids = tf.getTopoRecords(rows, cfg.csvfile_h, cfg.csvfile_c)
 
             logger.debug("#3")
             print("#3 " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
@@ -222,10 +153,10 @@ if __name__ == '__main__':
             print("#4 " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
             # reorganize data structure
-            (dict7575,dict7575_s) = tf.reorgByYear(maps7575, cellids_selected)  # {1975: geopdf.pdf, 1973: ...}
-            (dict1515,dict1515_s) = tf.reorgByYear(maps1515, cellids_selected)
-            (dict3060,dict3060_s) = tf.reorgByYear(maps3060, cellids_selected)
-            (dict12,dict12_s) = tf.reorgByYear(maps12, cellids_selected)
+            (dict7575,dict7575_s) = tf.reorgByYear(maps7575, cellids)  # {1975: geopdf.pdf, 1973: ...}
+            (dict1515,dict1515_s) = tf.reorgByYear(maps1515, cellids)
+            (dict3060,dict3060_s) = tf.reorgByYear(maps3060, cellids)
+            (dict12,dict12_s) = tf.reorgByYear(maps12, cellids)
 
             # remove blank maps
             if delyearFlag == 'Y':
@@ -243,12 +174,12 @@ if __name__ == '__main__':
                 comb7515_s.update(dict1515_s)
                 comb7515_s.update(dict7575_s)
 
-                tf.createPDF("15-7.5", comb7515, comb7515_s, "map_" + order_obj.number + "_7515.pdf", yearalldict, copydirs)
+                tf.createPDF("15-7.5", comb7515, comb7515_s, "map_" + order_obj.number + "_7515.pdf", yearalldict, copydirs, mxd, df, orderGeomLayer, extentBufferLayer)
             else:
                 print("dict7575: " + str(dict7575.keys()))
                 print("dict1515: " + str(dict1515.keys()))
-                tf.createPDF("7.5", dict7575, dict7575_s, "map_" + order_obj.number + "_75.pdf", yearalldict, copydirs)
-                tf.createPDF("15", dict1515, dict1515_s, "map_" + order_obj.number + "_15.pdf", yearalldict, copydirs)
+                tf.createPDF("7.5", dict7575, dict7575_s, "map_" + order_obj.number + "_75.pdf", yearalldict, copydirs, mxd, df, orderGeomLayer, extentBufferLayer)
+                tf.createPDF("15", dict1515, dict1515_s, "map_" + order_obj.number + "_15.pdf", yearalldict, copydirs, mxd, df, orderGeomLayer, extentBufferLayer)
 
             tabledata = []
             summarydata = []

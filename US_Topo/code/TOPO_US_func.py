@@ -311,19 +311,7 @@ class topo_us_rpt():
         return (diction_pdf_inPresentationBuffer,diction_pdf_inSearchBuffer)
 
     # create PDF and also make a copy of the geotiff files if the scale is too small
-    def createPDF(self,seriesText,diction,diction_s,outpdfname,yearalldict,copydirs):        
-        if self.order_obj.geometry.type.lower() == 'point' or self.order_obj.geometry.type.lower() == 'multipoint':
-            orderGeomlyrfile = cfg.orderGeomlyrfile_point
-        elif self.order_obj.geometry.type.lower() =='polyline':
-            orderGeomlyrfile = cfg.orderGeomlyrfile_polyline
-        else:
-            orderGeomlyrfile = cfg.orderGeomlyrfile_polygon
-
-        orderGeomLayer = arcpy.mapping.Layer(orderGeomlyrfile)
-        orderGeomLayer.replaceDataSource(cfg.scratch,"SHAPEFILE_WORKSPACE","orderGeometry")
-
-        extentBufferLayer = arcpy.mapping.Layer(cfg.bufferlyrfile)
-        extentBufferLayer.replaceDataSource(cfg.scratch,"SHAPEFILE_WORKSPACE","buffer_extent75")   # change on 11/3/2016, fix all maps to the same scale
+    def createPDF(self,seriesText,diction,diction_s,outpdfname,yearalldict,copydirs, mxd, df, orderGeomLayer, extentBufferLayer):        
 
         outputPDF = arcpy.mapping.PDFDocumentCreate(os.path.join(cfg.scratch, outpdfname))
         years = diction.keys()
@@ -335,6 +323,7 @@ class topo_us_rpt():
 
         print(years)
         for year in years:
+            print("--------------------" + year)
             if year == "":
                 years.remove("")
             elif int(year) < 2008:
@@ -362,36 +351,23 @@ class topo_us_rpt():
                     topofile = cfg.topolyrfile_w
                 else:
                     topofile = cfg.topolyrfile_none
-
             mscale = 24000      # change on 11/3/2016, to fix all maps to the same scale
             # add to map template, clip (but need to keep both metadata: year, grid size, quadrangle name(s) and present in order
-
-            if self.is_nova == 'Y':
-                mxd = arcpy.mapping.MapDocument(cfg.mxdfile_nova)
-            else:
-                mxd = arcpy.mapping.MapDocument(cfg.mxdfile)
-
-            df = arcpy.mapping.ListDataFrames(mxd,"*")[0]
-            df.spatialReference = self.srUTM
-
-            arcpy.mapping.AddLayer(df,extentBufferLayer,"Top")
-
-            # change scale, modify map elements, export
-            needtif = False
             df.extent = extentBufferLayer.getSelectedExtent(False)
-
+            needtif = False
+            print(df.scale)
             if df.scale < mscale:
-                scale = mscale
+                df.scale = mscale
                 needtif = False
             else:
                 # if df.scale > 2 * mscale:  # 2 is an empirical number
-                if df.scale > 1.5 * mscale:
+                if df.scale > 1.2 * mscale:
                     print("***** need to provide geotiffs")
-                    scale = df.scale
+                    df.scale = df.scale * 1.2
                     needtif = True
                 else:
                     print("scale is slightly bigger than the original map scale, use the standard topo map scale.")
-                    scale = df.scale
+                    df.scale = df.scale
                     needtif = False
 
             copydir = os.path.join(cfg.scratch,self.order_obj.number,str(year)+"_"+seriesText+"_"+str(mscale))
@@ -445,12 +421,7 @@ class topo_us_rpt():
                         print("tif dir does exist " + tifdir)
                 seq = seq + 1
 
-            df.extent = extentBufferLayer.getSelectedExtent(False) # this helps centre the map
-            df.scale = scale
-
-            for lyr in arcpy.mapping.ListLayers(mxd, "", df):
-                if lyr.name == "Buffer Outline":
-                    arcpy.mapping.RemoveLayer(df, lyr)
+                needtif = False
 
             if self.is_nova == 'Y':
                 yearTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "year")[0]
@@ -548,6 +519,9 @@ class topo_us_rpt():
             else:
                 mxd.saveACopy(os.path.join(cfg.scratch,"15_"+year+".mxd"))
 
+            for lyr in arcpy.mapping.ListLayers(mxd, "", df):
+                arcpy.mapping.RemoveLayer(df, lyr)
+
             # merge annotation pdf to the map if yesBoundary == Y
             if os.path.exists(cfg.shapePdf):
                 outputpdf = self.annotatePdf(outputpdf, myAnnotPdf)
@@ -616,13 +590,6 @@ class topo_us_rpt():
 
         return self.is_nova, self.is_aei, self.is_newLogofile
 
-    def projlist(self, order_obj):
-        self.srGCS83 = arcpy.SpatialReference(os.path.join(cfg.prjpath, "GCSNorthAmerican1983.prj"))
-        self.srWGS84 = arcpy.SpatialReference(os.path.join(cfg.prjpath, "WGS1984.prj"))
-        self.srGoogle = arcpy.SpatialReference(3857)   # web mercator
-        self.srUTM = order_obj.spatial_ref_pcs
-        return self.srGCS83, self.srWGS84, self.srGoogle, self.srUTM
-
     def delyear(self, yeardel7575, yeardel1515, dict7575, dict7575_s, dict1515, dict1515_s):
         if yeardel7575:
             for y in yeardel7575:
@@ -634,8 +601,15 @@ class topo_us_rpt():
                 del dict1515_s[y]
         return dict7575, dict7575_s, dict1515, dict1515_s
 
+    def projlist(self, order_obj):
+        self.srGCS83 = arcpy.SpatialReference(os.path.join(cfg.prjpath, "GCSNorthAmerican1983.prj"))
+        self.srWGS84 = arcpy.SpatialReference(os.path.join(cfg.prjpath, "WGS1984.prj"))
+        self.srGoogle = arcpy.SpatialReference(3857)   # web mercator
+        self.srUTM = order_obj.spatial_ref_pcs
+        print(self.srUTM.name)
+        return self.srGCS83, self.srWGS84, self.srGoogle, self.srUTM
+        
     def createordergeometry(self, order_obj, srUTM):
-        # CREATE ORDER GEOMETRY ----------------------------------------------------------------------------------------------------------
         point = arcpy.Point()
         array = arcpy.Array()
 
@@ -674,4 +648,117 @@ class topo_us_rpt():
         arcpy.Project_management(cfg.orderGeometry, cfg.orderGeometryPR, srUTM)
 
         del point
-        del array     
+        del array
+
+    def getTopoRecords(self, rows, csvfile_h, csvfile_c):
+        cellids = []
+        # loop through the relevant records, locate the selected cell IDs
+        # arcpy.SelectLayerByLocation_management(masterLayer,'intersect', orderGeometry, '0.25 KILOMETERS', 'NEW_SELECTION')
+
+        for row in rows:
+            cellid = str(int(row.getValue("CELL_ID")))
+            cellids.append(cellid)
+        del row
+        del rows            
+
+        # cellids are found, need to find corresponding map .pdf by reading the .csv file
+        # also get the year info from the corresponding .xml
+        infomatrix = []
+        yearalldict = {}
+
+        with open(cfg.csvfile_h, "rb") as f:
+            print("___All USGS HTMC Topo List.")
+            reader = csv.reader(f)
+            for row in reader:
+                if row[9] in cellids:
+                    pdfname = row[15].strip()
+                    # read the year from .xml file
+                    xmlname = pdfname[0:-3] + "xml"
+                    xmlpath = os.path.join(cfg.tifdir_h,xmlname)
+                    tree = ET.parse(xmlpath)
+                    root = tree.getroot()
+                    procsteps = root.findall("./dataqual/lineage/procstep")
+                    yeardict = {}
+                    for procstep in procsteps:
+                        procdate = procstep.find("./procdate")
+                        if procdate != None:
+                            procdesc = procstep.find("./procdesc")
+                            yeardict[procdesc.text.lower()] = procdate.text
+
+                    year2use = yeardict.get("date on map")
+
+                    if year2use == "":
+                        print("################### cannot determine year of the map from xml...get from csv instead")
+                        year2use = row[11].strip()
+
+                    yearalldict[year2use] = yeardict
+
+                    infomatrix.append([row[9],row[5],row[15],year2use])  # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963]
+
+        with open(cfg.csvfile_c, "rb") as f:
+            print("___All USGS Current Topo List.")
+            reader = csv.reader(f)
+            for row in reader:
+                if row[9] in cellids:
+                    pdfname = row[15].strip()
+
+                    # for current topos, read the year from the geopdf file name
+                    templist = pdfname.split("_")
+                    year2use = templist[len(templist)-3][0:4]
+
+                    if year2use[0:2] != "20" or year2use == "" or year2use == None:
+                        print ("################### Error in the year of the map!!!" + year2use)
+
+                    infomatrix.append([row[9],row[5],pdfname,year2use])
+
+        return infomatrix, yearalldict, cellids
+
+    def mapExtent(self, bufferlyrfile):
+        if self.order_obj.geometry.type.lower() == 'point' or self.order_obj.geometry.type.lower() == 'multipoint':
+            orderGeomlyrfile = cfg.orderGeomlyrfile_point
+        elif self.order_obj.geometry.type.lower() =='polyline':
+            orderGeomlyrfile = cfg.orderGeomlyrfile_polyline
+        else:
+            orderGeomlyrfile = cfg.orderGeomlyrfile_polygon
+
+        orderGeomLayer = arcpy.mapping.Layer(orderGeomlyrfile)
+        orderGeomLayer.replaceDataSource(cfg.scratch,"SHAPEFILE_WORKSPACE","orderGeometry")
+
+        extentBufferLayer = arcpy.mapping.Layer(bufferlyrfile)
+        extentBufferLayer.replaceDataSource(cfg.scratch,"SHAPEFILE_WORKSPACE","buffer")   # change on 11/3/2016, fix all maps to the same scale
+
+        if self.is_nova == 'Y':
+            mxd = arcpy.mapping.MapDocument(cfg.mxdfile_nova)
+        else:
+            mxd = arcpy.mapping.MapDocument(cfg.mxdfile)
+
+        df = arcpy.mapping.ListDataFrames(mxd,"*")[0]
+        df.spatialReference = self.srUTM
+
+        arcpy.mapping.AddLayer(df,extentBufferLayer,"Top")
+        df.extent = extentBufferLayer.getSelectedExtent(False)
+        extent = df.extent
+        print(extent)
+        print(df.scale)
+
+        XMAX = extent.XMax
+        XMIN = extent.XMin
+        YMAX = extent.YMax
+        YMIN = extent.YMin
+        pnt1 = arcpy.Point(XMIN, YMIN)
+        pnt2 = arcpy.Point(XMIN, YMAX)
+        pnt3 = arcpy.Point(XMAX, YMAX)
+        pnt4 = arcpy.Point(XMAX, YMIN)
+        array = arcpy.Array()
+        array.add(pnt1)
+        array.add(pnt2)
+        array.add(pnt3)
+        array.add(pnt4)
+        array.add(pnt1)
+        polygon = arcpy.Polygon(array, self.srUTM)
+        arcpy.CopyFeatures_management(polygon, cfg.extent)
+        
+        for lyr in arcpy.mapping.ListLayers(mxd, "", df):
+            if lyr.name == "Buffer Outline":
+                arcpy.mapping.RemoveLayer(df, lyr)
+        return mxd, df, orderGeomLayer, extentBufferLayer
