@@ -50,22 +50,22 @@ topouploadurl =  server_config["viewer_upload"] + r"/ErisInt/BIPublisherPortal_p
 connectionString = server_config["dbconnection"] #con.connection_string #'eris_gis/gis295@cabcvan1ora006.glaciermedia.inc:1521/GMTESTC'
 
 # scratch file/folder outputs
-summarypdf = os.path.join(scratch,'summary.pdf')
-coverPDF = os.path.join(scratch,"cover.pdf")
+summaryPdf = os.path.join(scratch,'summary.pdf')
+coverPdf = os.path.join(scratch,"cover.pdf")
 shapePdf = os.path.join(scratch, 'shape.pdf')
+annotPdf = os.path.join(scratch, "annot.pdf")
 orderGeometry= os.path.join(scratch,"orderGeometry.shp")
-orderGeometryPR = os.path.join(scratch, "ordergeoNamePR.shp")
+orderGeometryPR = os.path.join(scratch, "orderGeometryPR.shp")
 orderBuffer = os.path.join(scratch,"buffer.shp")
 extent = os.path.join(scratch, "extent.shp")
-tempdir = os.path.join(scratch,'viewertemp')
+viewertemp = os.path.join(scratch,'viewertemp')
 
 # folders
 testpath = r"\\cabcvan1gis005\GISData\Topo_USA"
 mxdpath = os.path.join(testpath, r"mxd")
-prjpath = os.path.join(testpath, r"projections")
 
 # master data files\folders
-masterlyr = os.path.join(testpath, r"masterfile\Cell_PolygonAll.shp")
+mastergdb = os.path.join(testpath, r"masterfile\MapIndices_National_GDB.gdb")
 csvfile_h = os.path.join(testpath, r"masterfile\All_HTMC_all_all_gda_results.csv")
 csvfile_c = os.path.join(testpath, r"masterfile\All_USTopo_T_7.5_gda_results.csv")
 tifdir_h = r'\\cabcvan1fpr009\USGS_Topo\USGS_HTMC_Geotiff'
