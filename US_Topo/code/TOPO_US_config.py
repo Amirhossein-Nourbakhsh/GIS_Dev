@@ -15,7 +15,7 @@ def server_loc_config(configpath,environment):
         reportviewer = configParser.get('server-config','reportviewer_test')
         reportinstant = configParser.get('server-config','instant_test')
         reportnoninstant = configParser.get('server-config','noninstant_test')
-        upload_viewer = configParser.get('url-config','uploadviewer')
+        upload_viewer = configParser.get('url-config','uploadviewer_test')
         server_config = {'dbconnection':dbconnection,'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
         return server_config
     # elif environment == 'prod':
@@ -46,7 +46,7 @@ server_config = server_loc_config(server_config_file,server_environment)
 
 reportcheckFolder = server_config["reportcheck"]
 viewerFolder = server_config["viewer"]
-topouploadurl =  server_config["viewer_upload"] + r"/ErisInt/BIPublisherPortal_prod/Viewer.svc/TopoUpload?ordernumber="
+topouploadurl =  server_config["viewer_upload"] + r"/TopoUpload?ordernumber="
 connectionString = server_config["dbconnection"] #con.connection_string #'eris_gis/gis295@cabcvan1ora006.glaciermedia.inc:1521/GMTESTC'
 
 # scratch file/folder outputs
@@ -79,7 +79,7 @@ mxdfile_nova = os.path.join(mxdpath,'template_nova.mxd')
 topolyrfile_none = os.path.join(mxdpath,"topo.lyr")
 topolyrfile_b = os.path.join(mxdpath,"topo_black.lyr")
 topolyrfile_w = os.path.join(mxdpath,"topo_white.lyr")
-bufferlyrfile = os.path.join(mxdpath,"buffer_extent.lyr")
+bufferlyrfile = os.path.join(mxdpath,"buffer.lyr")
 orderGeomlyrfile_point = os.path.join(mxdpath,"orderPoint.lyr")
 orderGeomlyrfile_polyline = os.path.join(mxdpath,"orderLine.lyr")
 orderGeomlyrfile_polygon = os.path.join(mxdpath,"orderPoly.lyr")

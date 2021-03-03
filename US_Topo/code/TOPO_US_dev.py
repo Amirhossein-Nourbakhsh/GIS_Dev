@@ -66,7 +66,7 @@ if __name__ == '__main__':
     print("...starting..." + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     start = time.clock()
 
-    order_obj = models.Order().get_order(21020700002)
+    order_obj = models.Order().get_order(21020500342)
     print("Order: " + str(order_obj.id) + ", " + str(order_obj.number))
 
     yesBoundary = "yes"
@@ -101,8 +101,8 @@ if __name__ == '__main__':
         
         # open mxd and create map extent
         logger.debug("#1")
-        mxd, df, orderGeomLayer, bufferLayer = tf.mapDocument(srUTM, is_nova)
-        needtif = tf.mapExtent(df, srUTM, bufferLayer)
+        mxd, df, orderGeomLayer, bufferLayer = tf.mapDocument(is_nova, srUTM)
+        needtif = tf.mapExtent(df, bufferLayer, srUTM)
 
         # select topo records
         rowsMain, rowsAdj = tf.selectTopo(cfg.orderGeometryPR, cfg.extent, srUTM)
@@ -118,10 +118,10 @@ if __name__ == '__main__':
             maps7575 = tf.dedupMaplist(maps7575)
             maps1515 = tf.dedupMaplist(maps1515)
 
-            # reorganize data structure
+            # reorganize data structure by year
             logger.debug("#4")
-            dict7575 = tf.reorgByYear(maps7575, "75")  # {1975: geopdf.pdf, 1973: ...}
-            dict1515 = tf.reorgByYear(maps1515, "15")
+            dict7575 = tf.reorgByYear(maps7575)  # {1975: geopdf.pdf, 1973: ...}
+            dict1515 = tf.reorgByYear(maps1515)
 
             # remove blank maps flag
             if delyearFlag == 'Y':
@@ -146,10 +146,10 @@ if __name__ == '__main__':
 
             # create blank pdf and append cover and summary pages
             output = PdfFileWriter()
-            tf.goCoverPage(cfg.coverPdF)
+            tf.goCoverPage(cfg.coverPdf)
             tf.goSummaryPage(dictlist, cfg.summaryPdf)
 
-            coverPages = PdfFileReader(open(cfg.coverPdF,'rb'))
+            coverPages = PdfFileReader(open(cfg.coverPdf,'rb'))
             summaryPages = PdfFileReader(open(cfg.summaryPdf,'rb'))
             output.addPage(coverPages.getPage(0))
             output.addPage(summaryPages.getPage(0))
@@ -157,9 +157,8 @@ if __name__ == '__main__':
             output.addBookmark("Summary",1)
             output.addAttachment("US Topo Map Symbols.pdf", open(cfg.pdfsymbolfile,"rb").read())
 
-            # append map pages
-            for d in dictlist:      # [dict7575, dict1515] or [comb7515]
-                tf.appendMapPages(d, output)
+            # append map pages   
+            tf.appendMapPages(dictlist, output)          # [dict7575, dict1515] or [comb7515]
 
             outputStream = open(os.path.join(cfg.scratch,pdfreport),"wb")
             output.setPageMode('/UseOutlines')
@@ -167,8 +166,8 @@ if __name__ == '__main__':
             outputStream.close()
 
             output = None
-            coverPages= None
-            summaryPages=None
+            coverPages = None
+            summaryPages = None
             summaryPages = None
 
             # save summary data to oracle
@@ -204,5 +203,5 @@ if __name__ == '__main__':
         raise       # raise the error again
 
     finish = time.clock()
-    print(cfg.reportcheckFolder + "\\TopographicMaps\\" + str(order_obj.number) + "_US_Topo.pdf")
+    print(cfg.reportcheckFolder + "\\TopographicMaps\\" + pdfreport)
     print("Finished in " + str(round(finish-start, 2)) + " secs")
