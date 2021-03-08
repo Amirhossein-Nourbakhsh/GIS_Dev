@@ -1,4 +1,3 @@
-import arcpy
 import os
 import sys
 import ConfigParser
@@ -31,7 +30,6 @@ def server_loc_config(configpath,environment):
         return 'invalid server configuration'
 
 # OrderIDText = arcpy.GetParameterAsText(0)#'734618'#
-# BufsizeText = arcpy.GetParameterAsText(1)#'2.4'
 # yesBoundary = arcpy.GetParameterAsText(2)#'no'##
 # scratch = arcpy.env.scratchWorkspace#r"
 
