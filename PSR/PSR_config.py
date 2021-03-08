@@ -107,9 +107,9 @@ def output_jpg(order_obj, report_type):
         return os.path.join(scratch_folder, order_obj.number + '_US_WELLS.jpg')
     
 ### Basemaps
-imgdir_demCA = r"\\Cabcvan1fpr009\US_DEM\DEM1"
+img_dir_demCA = r"\\Cabcvan1fpr009\US_DEM\DEM1"
 master_lyr_dem_CA = r"\\Cabcvan1fpr009\US_DEM\Canada_DEM_edited.shp"
-imgdir_dem = r"\\Cabcvan1fpr009\US_DEM\DEM13"
+img_dir_dem = r"\\Cabcvan1fpr009\US_DEM\DEM13"
 master_lyr_dem = r"\\cabcvan1gis005\GISData\Data\US_DEM\CellGrid_1X1Degree_NW_wgs84.shp"
 master_lyr_states = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USStates.lyr"
 master_lyr_counties = r"\\cabcvan1gis005\GISData\PSR\python\mxd\USCounties.lyr"
@@ -225,3 +225,8 @@ wells_final= os.path.join(scratch_folder,"wells_fin.shp")
 wells_display= os.path.join(scratch_folder,"wells_display.shp")
 mxd_file_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wells.mxd"
 mxd_mm_file_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wellsMM.mxd"
+
+### Aspect map config
+buffer_dist_aspect = '0.25 MILES'
+order_aspect_buffer =  os.path.join(scratch_folder,'order_spect_buffer.shp')
+dem_selectedby_order = os.path.join(scratch_folder,'aspect_selectedby_order.shp')

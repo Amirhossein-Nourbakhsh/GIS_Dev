@@ -35,7 +35,7 @@ def set_order_geometry(order_obj):
     else: #polygon
         config.order_geom_lyr_file = config.order_geom_lyr_polygon
     ### calculate order geometry in PCS
-    order_geometry_pcs = order_obj.geometry.projectAs(config.spatial_ref_pcs)
+    order_geometry_pcs = order_obj.geometry.projectAs(order_obj.spatial_ref_pcs)
     arcpy.CopyFeatures_management(order_obj.geometry, config.order_geometry_gcs_shp)
     arcpy.DefineProjection_management(config.order_geometry_gcs_shp, config.spatial_ref_gcs)
     arcpy.CopyFeatures_management(order_geometry_pcs, config.order_geometry_pcs_shp)

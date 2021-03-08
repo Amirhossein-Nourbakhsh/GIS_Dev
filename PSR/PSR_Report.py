@@ -13,12 +13,13 @@ import geology
 import soil
 import ogw
 import radon
+import aspect
 import multi_proc_test
 reload(sys)
 sys.setdefaultencoding('utf8')
 
 if __name__ == "__main__":
-    id = 21021100007
+    id = 21030400001
     arcpy.AddMessage('Start PSR report...')
     start = timeit.default_timer()
     # ### set workspace
@@ -38,14 +39,15 @@ if __name__ == "__main__":
         order_obj.get_search_radius() # populate search radius
         if len(order_obj.psr.search_radius) > 0:
         ### set type of reports
-            if_relief_report = True
-            if_topo_report = True
-            if_wetland_report = True
-            if_flood_report = True
-            if_geology_report = True
-            if_soil_report = True
-            if_ogw_report = True
-            if_radon_report = True
+            if_relief_report = False
+            if_topo_report = False
+            if_wetland_report = False
+            if_flood_report = False
+            if_geology_report = False
+            if_soil_report = False
+            if_ogw_report = False
+            if_radon_report = False
+            if_aspect_map = True
 
             # shaded releif map report
             if if_relief_report:
@@ -72,6 +74,8 @@ if __name__ == "__main__":
             if if_radon_report:
                 radon.generate_radon_report(order_obj)
             # multi_proc_test.generate_flood_report(order_obj)
+            if if_aspect_map:
+                aspect.generate_aspect_map(order_obj)
         else:
             arcpy.AddMessage('No PSR is availabe for this order')
     else:
