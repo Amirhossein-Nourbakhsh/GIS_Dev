@@ -14,7 +14,7 @@ import cx_Oracle
 import xml.etree.ElementTree as ET
 import TOPO_US_config as cfg
 
-from PyPDF2 import PdfFileReader, PdfFileWriter, pdf
+from PyPDF2 import PdfFileReader, PdfFileWriter
 from PyPDF2.generic import NameObject, createStringObject, ArrayObject, FloatObject
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Frame,Table
 from reportlab.lib.styles import getSampleStyleSheet,ParagraphStyle
@@ -93,7 +93,7 @@ class topo_us_rpt(object):
         # the format seems to follow x1 y1 m x2 y2 l x3 y3 l x4 y4 l x5 y5 l (i.e. 302.99519 433.46045 m 308.75555 433.74844 l 309.04357 423.09304 l 303.28321 423.09304 l 302.99519 433.46045 l S)
         # geomString = mystr.split('S\r\n')[0].split('M\r\n')[1]
         for line in mystr.split("\r\n"):
-            if bool(re.match('^\d+.+m.+l.+S$', line)) == True:
+            if bool(re.match('^\d+.+m.+l.+S$', line)) == True:              # if line matches above format
                 geomString = line
         coordsString = [value for value in geomString.split(' ') if value not in ['m','l','', 'S']]
 
@@ -162,6 +162,7 @@ class topo_us_rpt(object):
         canvas.linkURL(r"https://pubs.usgs.gov/unnumbered/70039569/report.pdf", (60,247,220,257), thickness=0, relative=1)
         canvas.linkURL(r"https://pubs.usgs.gov/bul/0788e/report.pdf", (60,237,220,247), thickness=0, relative=1)
         canvas.linkURL(r"https://pubs.usgs.gov/gip/TopographicMapSymbols/topomapsymbols.pdf", (60,217,220,227), thickness=0, relative=1)
+        canvas.linkURL(r"US Topo Map Symbols.pdf", (60,197,280,207), thickness=0, relative=1)
 
         canvas.setFont('Helvetica-Bold', 8)
         canvas.drawString(54, 270, "Topographic Map Symbology for the maps may be available in the following documents:")
@@ -346,19 +347,16 @@ class topo_us_rpt(object):
                 diction_pdf_inPresentationBuffer[row[3]] = [row[4], seriesText, [row[2]]]
         return diction_pdf_inPresentationBuffer             # {1975: ['htmc', '75', ['LA_Zachary_335142_1963_62500_geo.pdf','LA_Zachary_335142_1963_62500_geo.pdf']...], 1968: ['htmc', '7.5', ['LA_Zachary_335142_1963_62500_geo.pdf']}
 
-    def createPDF(self, diction, yearalldict, mxd, df, yesboundary):         # {1975: ['htmc', '7.5', ['LA_Zachary_335142_1963_62500_geo.pdf','LA_Zachary_335142_1963_62500_geo.pdf']...], 1968: ['htmc', '7.5', ['LA_Zachary_335142_1963_62500_geo.pdf']}
+    def createPDF(self, diction, yearalldict, mxd, df, yesboundary, multipage, projection):         # {1975: ['htmc', '7.5', ['LA_Zachary_335142_1963_62500_geo.pdf','LA_Zachary_335142_1963_62500_geo.pdf']...], 1968: ['htmc', '7.5', ['LA_Zachary_335142_1963_62500_geo.pdf']}
         # create PDF and also make a copy of the geotiff files if the scale is too small
         years = diction.keys()
         seriesText = diction.values()[0][1]
-        outpdfname = "map_" + self.order_obj.number + "_" + seriesText + ".pdf"
 
         if self.is_aei == 'Y':
             years.sort(reverse = False)
-            outpdfname = "map_" + self.order_obj.number + "_7515.pdf"
         else:
             years.sort(reverse = True)
-        
-        outputPDF = arcpy.mapping.PDFDocumentCreate(os.path.join(cfg.scratch, outpdfname))
+
         for year in years:
             if year == "":
                 years.remove("")
@@ -370,6 +368,10 @@ class topo_us_rpt(object):
             # set mxd elements
             self.mapSetElements(mxd, year, yearalldict, seriesText, quaddict)
 
+            # multipage
+            if multipage == "Y":
+                self.setMultipage(df, mxd, seriesText, year, projection)
+
             # export mxd to pdf       
             outputpdf = os.path.join(cfg.scratch, "map_"+seriesText+"_"+year+".pdf")            
             arcpy.RefreshTOC()  
@@ -378,16 +380,13 @@ class topo_us_rpt(object):
             
             mxd.saveACopy(os.path.join(cfg.scratch, seriesText + "_" + year + ".mxd"))
 
+            if multipage != "Y" and yesboundary == 'yes':
+                # merge annotation pdf to the map if yesBoundary == Y
+                self.annotatePdf(outputpdf, cfg.annotPdf)
+
             for lyr in arcpy.mapping.ListLayers(mxd, "", df):
-                if lyr.name not in ["Project Property", "Buffer Outline"]:
+                if lyr.name not in ["Project Property", "Buffer Outline", "Grid"]:
                     arcpy.mapping.RemoveLayer(df, lyr)
-
-            # merge annotation pdf to the map if yesBoundary == Y
-            if yesboundary == 'yes':
-                outputpdf = self.annotatePdf(outputpdf, cfg.annotPdf)
-
-            outputPDF.appendPages(outputpdf)
-        outputPDF.saveAndClose()
 
     def zipDir(self, pdfreport):
         path = os.path.join(cfg.scratch,self.order_obj.number)
@@ -473,7 +472,40 @@ class topo_us_rpt(object):
         self.srUTM = order_obj.spatial_ref_pcs
         arcpy.AddMessage(self.srUTM.name)
         return self.srGCS83, self.srWGS84, self.srGoogle, self.srUTM
+
+    def mapDocument(self, is_nova, projection):
+        arcpy.env.overwriteOutput = True
+        arcpy.env.outputCoordinateSystem = projection
+        arcpy.env.workspace = cfg.mastergdb
+
+        if is_nova == 'Y':
+            mxd = arcpy.mapping.MapDocument(cfg.mxdfile_nova)
+        else:
+            mxd = arcpy.mapping.MapDocument(cfg.mxdfile)
+
+        df = arcpy.mapping.ListDataFrames(mxd,"*")[0]
+        df.spatialReference = projection
+
+        if self.order_obj.geometry.type.lower() == 'point' or self.order_obj.geometry.type.lower() == 'multipoint':
+            orderGeomlyrfile = cfg.orderGeomlyrfile_point
+        elif self.order_obj.geometry.type.lower() == 'polyline':
+            orderGeomlyrfile = cfg.orderGeomlyrfile_polyline
+        else:
+            orderGeomlyrfile = cfg.orderGeomlyrfile_polygon
+
+        arcpy.Buffer_analysis(cfg.orderGeometryPR, cfg.orderBuffer, '1 KILOMETERS')                     # has to be not smaller than the search radius to void white page
+
+        orderGeomLayer = arcpy.mapping.Layer(orderGeomlyrfile)
+        orderGeomLayer.replaceDataSource(os.path.join(cfg.scratch, cfg.scratchgdb),"FILEGDB_WORKSPACE","orderGeometryPR")
+
+        bufferLayer = arcpy.mapping.Layer(cfg.bufferlyrfile)
+        bufferLayer.replaceDataSource(os.path.join(cfg.scratch, cfg.scratchgdb),"FILEGDB_WORKSPACE","buffer")                       # change on 11/3/2016, fix all maps to the same scale
         
+        arcpy.mapping.AddLayer(df,bufferLayer,"Top")
+        arcpy.mapping.AddLayer(df,orderGeomLayer,"Top")
+
+        return mxd, df
+
     def createordergeometry(self, order_obj, projection):
         arcpy.env.overwriteOutput = True
         point = arcpy.Point()
@@ -514,6 +546,51 @@ class topo_us_rpt(object):
 
         del point
         del array
+
+    def mapExtent(self, df, mxd, projection):
+        df.extent = arcpy.mapping.ListLayers(mxd, "Buffer Outline", df)[0].getSelectedExtent(True)
+        df.scale = df.scale * 1.1               # need to add 10% buffer or ordergeometry might touch dataframe boundary.
+
+        needtif = False
+        mscale = 24000      # change on 11/3/2016, to fix all maps to the same scale
+        # add to map template, clip (but need to keep both metadata: year, grid size, quadrangle name(s) and present in order
+        # 7.5x7.5 minute 24000 scale
+        # 30x60 minute 100000 scale
+        # 15x15 minute 62500 scale
+
+        if df.scale < mscale:
+            df.scale = mscale
+            needtif = False
+        else:
+            # if df.scale > 2 * mscale:  # 2 is an empirical number
+            if df.scale > 1.5 * mscale:
+                arcpy.AddMessage("...need to provide geotiffs.")
+                needtif = True
+            else:
+                arcpy.AddMessage("...scale is slightly bigger than the original map scale, use the standard topo map scale.")
+                needtif = False
+
+        extent = df.extent
+
+        XMAX = extent.XMax
+        XMIN = extent.XMin
+        YMAX = extent.YMax
+        YMIN = extent.YMin
+        pnt1 = arcpy.Point(XMIN, YMIN)
+        pnt2 = arcpy.Point(XMIN, YMAX)
+        pnt3 = arcpy.Point(XMAX, YMAX)
+        pnt4 = arcpy.Point(XMAX, YMIN)
+        array = arcpy.Array()
+        array.add(pnt1)
+        array.add(pnt2)
+        array.add(pnt3)
+        array.add(pnt4)
+        array.add(pnt1)
+        polygon = arcpy.Polygon(array, projection)
+        arcpy.CopyFeatures_management(polygon, cfg.extent)
+        
+        return needtif
+
 
     def selectTopo(self, orderGeometry, extent, projection):                
         arcpy.env.overwriteOutput = True
@@ -640,79 +717,6 @@ class topo_us_rpt(object):
 
         return maps7575, maps1515, yearalldict
     
-    def mapDocument(self, is_nova, projection):
-        if self.order_obj.geometry.type.lower() == 'point' or self.order_obj.geometry.type.lower() == 'multipoint':
-            orderGeomlyrfile = cfg.orderGeomlyrfile_point
-        elif self.order_obj.geometry.type.lower() == 'polyline':
-            orderGeomlyrfile = cfg.orderGeomlyrfile_polyline
-        else:
-            orderGeomlyrfile = cfg.orderGeomlyrfile_polygon
-
-        arcpy.Buffer_analysis(cfg.orderGeometryPR, cfg.orderBuffer, '1 KILOMETERS')                     # has to be not smaller than the search radius to void white page
-
-        orderGeomLayer = arcpy.mapping.Layer(orderGeomlyrfile)
-        orderGeomLayer.replaceDataSource(cfg.scratch,"SHAPEFILE_WORKSPACE","orderGeometryPR")
-
-        bufferLayer = arcpy.mapping.Layer(cfg.bufferlyrfile)
-        bufferLayer.replaceDataSource(cfg.scratch,"SHAPEFILE_WORKSPACE","buffer")                       # change on 11/3/2016, fix all maps to the same scale
-
-        if is_nova == 'Y':
-            mxd = arcpy.mapping.MapDocument(cfg.mxdfile_nova)
-        else:
-            mxd = arcpy.mapping.MapDocument(cfg.mxdfile)
-
-        df = arcpy.mapping.ListDataFrames(mxd,"*")[0]
-        df.spatialReference = projection
-
-        arcpy.mapping.AddLayer(df,bufferLayer,"Top")
-        arcpy.mapping.AddLayer(df,orderGeomLayer,"Top")
-        
-        return mxd, df, orderGeomLayer, bufferLayer
-
-    def mapExtent(self, df, bufferLayer, projection):
-        df.extent = bufferLayer.getSelectedExtent(True)
-        df.scale = df.scale * 1.1               # need to add 10% buffer or ordergeometry might touch dataframe boundary.
-
-        needtif = False
-        mscale = 24000      # change on 11/3/2016, to fix all maps to the same scale
-        # add to map template, clip (but need to keep both metadata: year, grid size, quadrangle name(s) and present in order
-        # 7.5x7.5 minute 24000 scale
-        # 30x60 minute 100000 scale
-        # 15x15 minute 62500 scale
-
-        if df.scale < mscale:
-            df.scale = mscale
-            needtif = False
-        else:
-            # if df.scale > 2 * mscale:  # 2 is an empirical number
-            if df.scale > 1.5 * mscale:
-                arcpy.AddMessage("...need to provide geotiffs.")
-                needtif = True
-            else:
-                arcpy.AddMessage("...scale is slightly bigger than the original map scale, use the standard topo map scale.")
-                needtif = False
-
-        extent = df.extent
-
-        XMAX = extent.XMax
-        XMIN = extent.XMin
-        YMAX = extent.YMax
-        YMIN = extent.YMin
-        pnt1 = arcpy.Point(XMIN, YMIN)
-        pnt2 = arcpy.Point(XMIN, YMAX)
-        pnt3 = arcpy.Point(XMAX, YMAX)
-        pnt4 = arcpy.Point(XMAX, YMIN)
-        array = arcpy.Array()
-        array.add(pnt1)
-        array.add(pnt2)
-        array.add(pnt3)
-        array.add(pnt4)
-        array.add(pnt1)
-        polygon = arcpy.Polygon(array, projection)
-        arcpy.CopyFeatures_management(polygon, cfg.extent)
-        
-        return needtif
-
     def addTopoImages(self, df, diction, year): # {1975: ['htmc', '7.5', ['LA_Zachary_335142_1963_62500_geo.pdf','LA_Zachary_335142_1963_62500_geo.pdf']...], 1968: ['htmc', '7.5', ['LA_Zachary_335142_1963_62500_geo.pdf']}
         topoType = diction[year][0]
         seriesText = diction[year][1]
@@ -780,27 +784,26 @@ class topo_us_rpt(object):
                     arcpy.AddMessage("tif dir does exist " + tifdir)
 
             seq = seq + 1
-        # arcpy.AddMessage(quaddict)
         return quaddict
 
     def mapSetElements(self, mxd, year, yearalldict, seriesText, quaddict):
         # write photo and photo revision year
         quadText = ""
-        yearlistText = ""                                      # must include blank space if blank to write text element        
+        yearlistText = ""                                           # must include blank space if blank to write text element        
         i = 1
-        for key, value in quaddict.items():                     # {'WA_Bothell_240161_1953_24000_geo.pdf': [1, 'Bothell, WA']}
+        for key, value in quaddict.items():                         # {'WA_Bothell_240161_1953_24000_geo.pdf': [1, 'Bothell, WA']}
             pdfname = key
             quadname = value[0]
 
-            pdfyears =  yearalldict.get(pdfname)                   # {'WA_Seattle_243651_1992_100000_geo.pdf': {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'}], ['WA_Seattle_243652_1992_100000_geo.pdf', {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'},...}
+            pdfyears =  yearalldict.get(pdfname)                    # {'WA_Seattle_243651_1992_100000_geo.pdf': {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'}], ['WA_Seattle_243652_1992_100000_geo.pdf', {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'},...}
             filteryears = {k: v for k, v in pdfyears.items() if k in ["aerial photo year","photo revision year"]}
             if filteryears:
                 seqno = "<SUB>(" + str(i) + ")</SUB>" 
                 yearlistText = yearlistText + seqno + "\r\n"
-                for k,v in filteryears.items():                   # for now we only want to include "aerial photo year","photo revision year" out of 8 year types
+                for k,v in filteryears.items():                     # for now we only want to include "aerial photo year","photo revision year" out of 8 year types
                     if len(filteryears) == 2:
                         x = k.title() + ": " + v + "\r\n"
-                    else:                                         # if there is only 1 year available
+                    else:                                           # if there is only 1 year available
                         x = k.title() + ": " + v + "\r\n\r\n"
                     yearlistText = yearlistText + x
                 quadText = quadText + quadname + seqno + "; "
@@ -837,6 +840,7 @@ class topo_us_rpt(object):
 
     def setBoundary(self, mxd, df, yesboundary):        
         # get yesboundary flag
+        arcpy.AddMessage("yesboundary = " + yesboundary)
         if yesboundary == "":
             try:
                 expression = "SELECT * FROM ERIS.TOPO_AUDIT WHERE ORDER_ID  = " + str(self.order_obj.id)
@@ -853,27 +857,24 @@ class topo_us_rpt(object):
             for lyr in arcpy.mapping.ListLayers(mxd, "", df):
                 if lyr.name == "Project Property":
                     lyr.visible = True
-                elif lyr.name == "Buffer Outline":
+                else:
                     lyr.visible = False
 
         elif yesboundary.lower() == 'yes':
             if not os.path.exists(cfg.shapePdf) and not os.path.exists(cfg.annotPdf):
                 if self.order_obj.geometry.type.lower() == "polyline" or self.order_obj.geometry.type.lower() == "polygon":
-                        # remove all other layers
-                        for lyr in arcpy.mapping.ListLayers(mxd, "", df):
-                            if lyr.name == "Project Property":
-                                lyr.visible = True
-                            else:
-                                lyr.visible = False
-                        arcpy.mapping.ExportToPDF(mxd, cfg.shapePdf, "PAGE_LAYOUT", 640, 480, 250, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "LAYERS_AND_ATTRIBUTES", True, 90)
-                        for lyr in arcpy.mapping.ListLayers(mxd, "", df):
-                            if lyr.name == "Project Property" or lyr.name == "Buffer Outline":
-                                lyr.visible = False
-                            else:
-                                lyr.visible = True
+                    # remove all other layers
+                    for lyr in arcpy.mapping.ListLayers(mxd, "", df):
+                        if lyr.name == "Project Property":
+                            lyr.visible = True
+                        else:
+                            lyr.visible = False
+                    arcpy.mapping.ExportToPDF(mxd, cfg.shapePdf, "PAGE_LAYOUT", 640, 480, 250, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "LAYERS_AND_ATTRIBUTES", True, 90)
+                    for lyr in arcpy.mapping.ListLayers(mxd, "", df):
+                        lyr.visible = False
 
-                        # create the map_a.pdf with annotation just once
-                        self.createAnnotPdf(cfg.shapePdf)                   # creates annot.pdf
+                    # create the map_a.pdf with annotation just once
+                    self.createAnnotPdf(cfg.shapePdf)                   # creates annot.pdf
 
                 elif self.order_obj.geometry.type.lower() == "point" or self.order_obj.geometry.type.lower() == "multipoint":
                     for lyr in arcpy.mapping.ListLayers(mxd, "", df):
@@ -882,8 +883,7 @@ class topo_us_rpt(object):
 
         elif yesboundary.lower() == 'no':
             for lyr in arcpy.mapping.ListLayers(mxd, "", df):
-                if lyr.name == "Project Property" or lyr.name == "Buffer Outline":
-                    lyr.visible = False
+                lyr.visible = False
 
         return mxd, df, yesboundary
 
@@ -915,24 +915,35 @@ class topo_us_rpt(object):
             arcpy.AddMessage("### Oracle eris_gis.AddTopoSummary failed... " + str(e))
             raise
 
-    def appendMapPages(self, dictlist, output):
+    def appendMapPages(self, dictlist, output, yesboundary, multipage):
         n=0
         for d in dictlist:
             seriesText = d.values()[0][1]
             if len(d) > 0:
-                mapPages = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + self.order_obj.number+ "_" + seriesText + ".pdf"),'rb'))
                 years = d.keys()
                 years.sort(reverse = True)
                 years = filter(None, years)         # removes empty strings
                 
-                i=0
                 for year in years:
-                    page = mapPages.getPage(i)
-                    output.addPage(page)
-                    output.addBookmark(year + "_" + seriesText.replace("75", "7.5"), n+2)   #i+1 to accommodate the summary page
-                    i = i + 1
-                    n = n + 1
-                    page = None
+                    if multipage == "Y":
+                        pdf = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + ".pdf"),'rb'))
+                        pdfmm = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + "_mm.pdf"),'rb'))
+                        
+                        output.addPage(pdf.getPage(0))
+                        output.addBookmark(year + "_" + seriesText.replace("75", "7.5"), n+2)   #n+1 to accommodate the summary page                        
+                        
+                        for x in range(pdfmm.getNumPages()):
+                            output.addPage(pdfmm.getPage(x))
+                            n = n + 1
+                        n = n + 1
+                    else:
+                        if yesboundary == "Y":
+                            pdf = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + "_a.pdf"),'rb'))
+                        else:
+                            pdf = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + ".pdf"),'rb'))
+                        output.addPage(pdf.getPage(0))
+                        output.addBookmark(year + "_" + seriesText.replace("75", "7.5"), n+2)   #n+1 to accommodate the summary page
+                        n = n + 1
 
     def toXplorer(self, needtif, dictlist, inprojection, outprojection):
         # check if need to copy data to Topo viewer
@@ -981,9 +992,6 @@ class topo_us_rpt(object):
         viewerdir = os.path.join(cfg.scratch, self.order_obj.number+'_topo')
         if not os.path.exists(viewerdir):
             os.mkdir(viewerdir)
-
-        if not os.path.exists(cfg.viewertemp):
-            os.mkdir(cfg.viewertemp)
         
         if not os.path.exists(os.path.join(viewerdir,"75")):
             os.mkdir(os.path.join(viewerdir,"75"))
@@ -998,11 +1006,12 @@ class topo_us_rpt(object):
             df = arcpy.mapping.ListDataFrames(mxd)[0]                   # the spatial reference here was UTM zone #, need to change to WGS84 Web Mercator
             df.spatialReference = inprojection                          # need to use srGoogle because xplorer uses Google
 
+            for lyr in [x for x in arcpy.mapping.ListLayers(mxd, "", df) if x.name in ["Project Property","Buffer Outline", "Grid"]]:
+                    lyr.visible = False
+
             if needtif == True:
-                for lyr in arcpy.mapping.ListLayers(mxd, "", df):
-                    if lyr.name == "Buffer Outline":
-                        df.extent = lyr.getSelectedExtent(True)
-                        df.scale = df.scale * 1.1                       # need to add 10% buffer or ordergeometry might touch dataframe boundary.            
+                df.extent = arcpy.mapping.ListLayers(mxd, "Buffer Outline", df)[0].getSelectedExtent(True)
+                df.scale = df.scale * 1.1                               # need to add 10% buffer or ordergeometry might touch dataframe boundary.            
             else:
                 df.scale = 24000
 
@@ -1013,7 +1022,7 @@ class topo_us_rpt(object):
             desc = arcpy.Describe(imagepath)
             featbound = arcpy.Polygon(arcpy.Array([desc.extent.lowerLeft, desc.extent.lowerRight, desc.extent.upperRight, desc.extent.upperLeft]), inprojection)                            
 
-            tempfeat = os.path.join(cfg.viewertemp, "tilebnd_"+str(year)+ ".shp")
+            tempfeat = os.path.join(cfg.scratch, cfg.scratchgdb, "tilebnd_"+str(year))
             arcpy.Project_management(featbound, tempfeat, outprojection, None, inprojection)  # function requires output not be in_memory
             desc = arcpy.Describe(tempfeat)
 
@@ -1057,3 +1066,40 @@ class topo_us_rpt(object):
             arcpy.AddMessage(e)
             arcpy.AddMessage("### eris_topo.processTopo failed...")
             pass
+
+    def setMultipage(self, df, mxd, seriestext, year, projection):
+        gridname = seriestext + "_" + str(year)
+
+        # clip topo image extents to buffer
+        rasterExt = arcpy.CreateFeatureclass_management(os.path.join(cfg.scratch, cfg.scratchgdb), "ext_" + gridname, "POLYGON")
+        for lyr in arcpy.mapping.ListLayers(mxd, "", df):
+            if lyr.name not in ["Project Property","Buffer Outline", "Grid"]:
+                rasterExtent = arcpy.Describe(lyr)
+                polygon = arcpy.Polygon(arcpy.Array([rasterExtent.extent.lowerLeft, rasterExtent.extent.lowerRight, rasterExtent.extent.upperRight, rasterExtent.extent.upperLeft]), projection)                            
+                
+                arcpy.Append_management(polygon, rasterExt, "NO_TEST")
+            elif lyr.name == "Grid":
+                lyr.visible = True
+                gridLayer = lyr
+
+        rasterExtClip = os.path.join(cfg.scratch, cfg.scratchgdb, "extclip_" + gridname)
+        arcpy.Clip_analysis(rasterExt, cfg.orderBuffer, rasterExtClip)
+
+        # create grid
+        grid = os.path.join(cfg.scratch, cfg.scratchgdb, "grid_" + gridname)
+        arcpy.GridIndexFeatures_cartography(grid, rasterExtClip, "", "", "", "4 KiloMeters", "4 KiloMeters")
+
+        gridLayer = arcpy.mapping.ListLayers(mxd, "Grid", df)[0]
+        gridLayer.replaceDataSource(os.path.join(cfg.scratch,cfg.scratchgdb),"FILEGDB_WORKSPACE","grid_" + gridname)
+
+        # export mmpage
+        pdfmm = os.path.join(cfg.scratch, "map_" + gridname + "_mm.pdf")
+        mxdmm = mxd.dataDrivenPages             # data driven pages must be enabled on ArcMap first in the template.mxd.
+        mxdmm.refresh()
+        mxdmm.exportToPDF(pdfmm, page_range_type="ALL", resolution=100, georef_info = True)
+
+        # get extent of everything for export of main map later
+        df.extent = gridLayer.getSelectedExtent(True)
+        df.scale = df.scale * 1.1
+
+        del mxdmm
