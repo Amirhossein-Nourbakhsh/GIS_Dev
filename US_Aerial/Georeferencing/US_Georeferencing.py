@@ -7,10 +7,6 @@ import shutil
 import timeit
 import os
 import json
-from os import path
-file_path =os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(1,os.path.join(os.path.dirname(os.path.dirname(file_path)),'DB_Framework'))
-import models
 reload(sys)
 
 class Machine:
@@ -182,7 +178,7 @@ def export_to_jpg(env,imagepath,outputImage_jpg,order_geometry,auid):
     arcpy.RefreshActiveView()
     message_return = None
     try:
-        image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : order_obj.number,"AUI_ID":auid,"SWLAT":str(df.extent.YMin),"SWLONG":str(df.extent.XMin),"NELAT":(df.extent.XMax),"NELONG":str(df.extent.XMax)})
+        image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : order_num,"AUI_ID":auid,"SWLAT":str(df.extent.YMin),"SWLONG":str(df.extent.XMin),"NELAT":(df.extent.XMax),"NELONG":str(df.extent.XMax)})
         message_return = Oracle(env).call_erisapi(image_extents)
         if message_return[3] != 'Y':
             raise OracleBadReturn
@@ -204,31 +200,32 @@ def ExportToOutputs(env,geroref_Image,outputImage_jpg,out_img_name,orderGeometry
     set_raster_background(output_image_jpg)
 if __name__ == '__main__':
     ### set input parameters
-    id = arcpy.GetParameterAsText(0)
+    order_id = arcpy.GetParameterAsText(0)
     auid = arcpy.GetParameterAsText(1)
-    id = '21030800010'
-    auid = '7061304'
+    order_id = '1035550'
+    auid = '7367799'
     env = 'test'
     ## set scratch folder
     scratch_folder = arcpy.env.scratchFolder
     # arcpy.env.workspace = scratchFolder
     arcpy.env.overwriteOutput = True 
     arcpy.env.pyramid = 'NONE'
-    if str(id) != '' and str(auid) != '':
-        order_obj = models.Order().get_order(int(id))
+    if str(order_id) != '' and str(auid) != '':
         mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
         MapScale = 6000
         try:
             start = timeit.default_timer()
+
             ##get info for order from oracle
-            orderInfo = Oracle(env).call_function('getorderinfo',str(order_obj.id))
+            orderInfo = Oracle(env).call_function('getorderinfo',str(order_id))
+            order_num = str(orderInfo['ORDER_NUM'])
             job_folder = ''
             if env == 'test':
-                job_folder = os.path.join(OutputDirectory.job_directory_test,order_obj.number)
+                job_folder = os.path.join(OutputDirectory.job_directory_test,order_num)
             elif env == 'prod':
-                job_folder = os.path.join(OutputDirectory.job_directory_prod,order_obj.number)
+                job_folder = os.path.join(OutputDirectory.job_directory_prod,order_num)
             ### get georeferencing info from oracle
-            oracle_georef = str({"PROCEDURE":Oracle.erisapi_procedures["getGeoreferencingInfo"],"ORDER_NUM": order_obj.number, "AUI_ID": str(auid)})
+            oracle_georef = str({"PROCEDURE":Oracle.erisapi_procedures["getGeoreferencingInfo"],"ORDER_NUM": order_num, "AUI_ID": str(auid)})
             aerial_us_georef = Oracle(env).call_erisapi(oracle_georef)
             aerial_georefjson = json.loads(aerial_us_georef[1])
             if  (len(aerial_georefjson)) == 0:
@@ -245,7 +242,7 @@ if __name__ == '__main__':
                     os.mkdir(org_image_folder)
                     os.mkdir(jpg_image_folder)  
                 ### get input image from inventory
-                aerial_inventory = str({"PROCEDURE":Oracle.erisapi_procedures["getImageInventoryInfo"],"ORDER_NUM":order_obj.number , "AUI_ID": str(auid)})
+                aerial_inventory = str({"PROCEDURE":Oracle.erisapi_procedures["getImageInventoryInfo"],"ORDER_NUM":order_num , "AUI_ID": str(auid)})
                 aerial_us_inventory = Oracle(env).call_erisapi(aerial_inventory)
                 aerial_inventoryjson = json.loads(aerial_us_inventory[1])
                 
