@@ -73,7 +73,6 @@ class oracle(object):
             arcpy.AddMessage(e)
             arcpy.AddMessage("### oracle failed to close.")
         
-
 class topo_us_rpt(object):
     def __init__(self,order_obj):
         self.order_obj = order_obj
@@ -91,10 +90,36 @@ class topo_us_rpt(object):
 
         # to pinpoint the string part: 1.19997 791.75999 m 1.19997 0.19466 l 611.98627 0.19466 l 611.98627 791.75999 l 1.19997 791.75999 l
         # the format seems to follow x1 y1 m x2 y2 l x3 y3 l x4 y4 l x5 y5 l (i.e. 302.99519 433.46045 m 308.75555 433.74844 l 309.04357 423.09304 l 303.28321 423.09304 l 302.99519 433.46045 l S)
-        # geomString = mystr.split('S\r\n')[0].split('M\r\n')[1]
-        for line in mystr.split("\r\n"):
-            if bool(re.match('^\d+.+m.+l.+S$', line)) == True:              # if line matches above format
-                geomString = line
+        previousline = ""
+        geomString = ""
+
+        # parse coordinates from pdf source code
+        try:
+            for line in mystr.split("\r\n"):
+                if bool(re.match('^\d+\..+ m .+l S$', line)) == True and bool(re.match('.+M$', previousline)) == True:              # if line matches above format
+                    geomString = line
+                    print(line)
+                    break                           # get the first match only
+                previousline = line
+            if geomString == "":
+                arcpy.AddMessage("### Failed to parse geomString...")
+                raise ValueError
+        except:
+            try:
+                for line in mystr.split("\r\n"):
+                    if "l S" in line and bool(re.match('.+M$', previousline)) == True:
+                        geomString = line
+                        break                       # get the first match only
+                    previousline = line
+                if geomString == "":
+                    arcpy.AddMessage("### Failed to parse geomString...")
+                    raise
+            except:
+                geomString = mystr.split('S\r\n')[0].split('M\r\n')[1]
+                if geomString == "":
+                    arcpy.AddMessage("### Failed to parse geomString...")
+                raise
+
         coordsString = [value for value in geomString.split(' ') if value not in ['m','l','', 'S']]
 
         # part 2: update geometry in the map
@@ -195,14 +220,18 @@ class topo_us_rpt(object):
     def goSummaryPage(self, dictlist, summaryPdf):
         tocData = []
         for d in dictlist:
-            seriesText = d.values()[0][1].replace("75", "7.5")
-            tempyears = d.keys()
+            years = d.keys()
 
-            tempyears.sort(reverse = True)
-            for year in tempyears:
+            if self.is_aei == 'Y':
+                years.sort(reverse = False)
+            else:
+                years.sort(reverse = True)
+
+            for year in years:
+                seriesText = d[year][1].replace("75", "7.5")
                 if year != "":
                     tocData.append([year, seriesText])
-            tempyears = None
+            years = None
 
         doc = SimpleDocTemplate(summaryPdf, pagesize = letter)
         Story = [Spacer(1,0.5*inch)]
@@ -218,24 +247,24 @@ class topo_us_rpt(object):
         Story.append(p)
         Story.append(Spacer(1,0.28*inch))
 
-        if len(tocData) < 31:
+        if len(tocData) < 26:
             tocData.insert(0,["  "])
             tocData.insert(0,['Year','Map Series'])
             table = Table(tocData, colWidths = 35, rowHeights = 14)
             table.setStyle([('FONT',(0,0),(1,0),'Helvetica-Bold'),
                             ('ALIGN',(0,1),(-1,-1),'CENTER'),
-                            ('ALIGN',(0,0),(1,0),'LEFT'),])   #note the last comma
+                            ('ALIGN',(0,0),(1,0),'LEFT'),])     # note the last comma
             Story.append(table)
-        elif len(tocData) > 30 and len(tocData) < 61: #break into 2 columns
+        elif len(tocData) > 25 and len(tocData) < 51:           # break into 2 columns
             newdata = []
             newdata.append(['Year','Map Series','   ','Year','Map Series'])
             newdata.append([' ','   ',' '])
             i = 0
-            while i < 30:
+            while i < 25:
                 row= tocData[i]
                 row.append('    ')
-                if (i+30) < len(tocData):
-                    row.extend(tocData[i+30])
+                if (i+25) < len(tocData):
+                    row.extend(tocData[i+25])
                 else:
                     row.extend(['    ','  '])
                 newdata.append(row)
@@ -245,18 +274,18 @@ class topo_us_rpt(object):
                     ('FONT',(0,0),(4,0),'Helvetica-Bold'),
                     ('ALIGN',(0,1),(-1,-1),'CENTER'),])
             Story.append(table)
-        elif len(tocData) > 60 and len(tocData) < 91:   #break into 3 columns
+        elif len(tocData) > 50 and len(tocData) < 76:               # break into 3 columns
             newdata = []
             newdata.append(['Year','Map Series','   ','Year','Map Series','   ','Year','Map Series'])
             newdata.append([' ',' ','   ',' ',' ','   ',' ',' '])
             i = 0
-            while i < 30:
+            while i < 25:
                 row= tocData[i]
                 row.append('    ')
-                row.extend(tocData[i+30])
+                row.extend(tocData[i+25])
                 row.append('    ')
-                if(i+60) < len(tocData):
-                    row.extend(tocData[i+60])
+                if(i+50) < len(tocData):
+                    row.extend(tocData[i+50])
                 else:
                     row.append('    ')
                     row.append('  ')
@@ -329,7 +358,7 @@ class topo_us_rpt(object):
                     del mapslist[index]
         return mapslist
 
-    def reorgByYear(self, maplist):            # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963, 'htmc']
+    def reorgByYear(self, maplist):            # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963, 'htmc', "rowsMain"]
         # reorganize the pdf dictionary based on years
         # filter out irrelevant background years (which doesn't have a centre selected map)
         diction_pdf_inPresentationBuffer = {}
@@ -342,26 +371,22 @@ class topo_us_rpt(object):
                 seriesText = "75"
 
             if row[3] in diction_pdf_inPresentationBuffer.keys():
-                diction_pdf_inPresentationBuffer[row[3]][2].append(row[2])
+                diction_pdf_inPresentationBuffer[row[3]][2].append([row[2],row[5]])
             else:                
-                diction_pdf_inPresentationBuffer[row[3]] = [row[4], seriesText, [row[2]]]
-        return diction_pdf_inPresentationBuffer             # {1975: ['htmc', '75', ['LA_Zachary_335142_1963_62500_geo.pdf','LA_Zachary_335142_1963_62500_geo.pdf']...], 1968: ['htmc', '7.5', ['LA_Zachary_335142_1963_62500_geo.pdf']}
+                diction_pdf_inPresentationBuffer[row[3]] = [row[4], seriesText, [[row[2],row[5]]]]
+        return diction_pdf_inPresentationBuffer             # {'1946': ['htmc', '15', [['NY_Newburgh_130830_1946_62500_geo.pdf', 'rowsMain']]], '1903': ['htmc', '15', [['NY_Rosendale_129217_1903_62500_geo.pdf', 'rowsAdj'], ['NY_Newburg_144216_1903_62500_geo.pdf', 'rowsMain']]]}
 
-    def createPDF(self, diction, yearalldict, mxd, df, yesboundary, multipage, projection):         # {1975: ['htmc', '7.5', ['LA_Zachary_335142_1963_62500_geo.pdf','LA_Zachary_335142_1963_62500_geo.pdf']...], 1968: ['htmc', '7.5', ['LA_Zachary_335142_1963_62500_geo.pdf']}
+    def createPDF(self, diction, yearalldict, mxd, df, yesboundary, multipage, projection, gridsize):         # {'1946': ['htmc', '15', [['NY_Newburgh_130830_1946_62500_geo.pdf', 'rowsMain']]], '1903': ['htmc', '15', [['NY_Rosendale_129217_1903_62500_geo.pdf', 'rowsAdj'], ['NY_Newburg_144216_1903_62500_geo.pdf', 'rowsMain']]]}
         # create PDF and also make a copy of the geotiff files if the scale is too small
         years = diction.keys()
-        seriesText = diction.values()[0][1]
-
-        if self.is_aei == 'Y':
-            years.sort(reverse = False)
-        else:
-            years.sort(reverse = True)
 
         for year in years:
             if year == "":
                 years.remove("")
                 continue
 
+            seriesText = diction[year][1]
+            
             # add topo images to mxd
             quaddict = self.addTopoImages(df, diction, year)
 
@@ -370,7 +395,7 @@ class topo_us_rpt(object):
 
             # multipage
             if multipage == "Y":
-                self.setMultipage(df, mxd, seriesText, year, projection)
+                self.setMultipage(df, mxd, seriesText, year, projection, gridsize)
 
             # export mxd to pdf       
             outputpdf = os.path.join(cfg.scratch, "map_"+seriesText+"_"+year+".pdf")            
@@ -380,8 +405,8 @@ class topo_us_rpt(object):
             
             mxd.saveACopy(os.path.join(cfg.scratch, seriesText + "_" + year + ".mxd"))
 
-            if multipage != "Y" and yesboundary == 'yes':
-                # merge annotation pdf to the map if yesBoundary == Y
+            # merge annotation pdf to the map if yesBoundary == Y
+            if multipage != "Y" and yesboundary == 'yes' and self.order_obj.geometry.type.lower() != 'point' and self.order_obj.geometry.type.lower() != 'multipoint':
                 self.annotatePdf(outputpdf, cfg.annotPdf)
 
             for lyr in arcpy.mapping.ListLayers(mxd, "", df):
@@ -591,7 +616,6 @@ class topo_us_rpt(object):
         
         return needtif
 
-
     def selectTopo(self, orderGeometry, extent, projection):                
         arcpy.env.overwriteOutput = True
         arcpy.env.outputCoordinateSystem = projection
@@ -627,7 +651,7 @@ class topo_us_rpt(object):
                     root = tree.getroot()
                     procsteps = root.findall("./dataqual/lineage/procstep")
 
-                    yeardict = {}                                           # {'1992': [['WA_Seattle_243651_1992_100000_geo.pdf', {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'}], ['WA_Seattle_243652_1992_100000_geo.pdf', {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'}]], ...}
+                    yeardict = {}                                           
                     for procstep in procsteps:
                         procdate = procstep.find("./procdate")
                         if procdate != None:
@@ -639,9 +663,8 @@ class topo_us_rpt(object):
                         year2use = row["SourceYear"].strip()
                         arcpy.AddMessage("### cannot determine year of the map from xml...get from csv instead")
 
-
-                    yearalldict[pdfname] = yeardict
-                    infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"htmc"])  # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963]
+                    yearalldict[pdfname] = yeardict                                                 # {'WA_Seattle_243651_1992_100000_geo.pdf': {'aerial photo year': '1988', 'edit year': '1992', 'date on map': '1992'}], ['WA_Seattle_243652_1992_100000_geo.pdf', {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'},...}
+                    infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"htmc", "rowsMain"])    # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963]
 
             f.seek(0)       # resets to beginning of csv
             next(f)         # skip header
@@ -667,9 +690,9 @@ class topo_us_rpt(object):
                         arcpy.AddMessage("### cannot determine year of the map from xml...get from csv instead..." + year2use)
 
                     if [row["Grid Size"],year2use,"htmc"] in [[y[1],y[3],y[4]] for y in infomatrix]:
-                        if pdfname not in yearalldict:
-                            yearalldict[pdfname] = yeardict
-                        infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"htmc"])  # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963, "htmc"]
+                        if pdfname not in yearalldict:                                                  
+                            yearalldict[pdfname] = yeardict                                             # {'WA_Seattle_243651_1992_100000_geo.pdf': {'aerial photo year': '1988', 'edit year': '1992', 'date on map': '1992'}], ['WA_Seattle_243652_1992_100000_geo.pdf', {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'},...}
+                        infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"htmc", "rowsAdj"])    # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963, "htmc"]
 
         with open(csvfile_c, "rb") as f:
             arcpy.AddMessage("___All USGS Current Topo List.")
@@ -685,7 +708,7 @@ class topo_us_rpt(object):
                             arcpy.AddMessage("### Error in the year of the map..." + year2use)
                     
                     yearalldict[pdfname] = {}
-                    infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"topo"])
+                    infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"topo", "rowsMain"])
 
             f.seek(0)       # resets to beginning of csv
             next(f)         # skip header
@@ -702,7 +725,7 @@ class topo_us_rpt(object):
                     if [row["Grid Size"],year2use,"topo"] in [[y[1],y[3],y[4]] for y in infomatrix]:
                         if pdfname not in yearalldict:
                             yearalldict[pdfname] = {}
-                        infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"topo"])  # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963, "topo"]
+                        infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"topo", "rowsAdj"])  # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963, "topo"]
 
         maps7575 = []
         maps1515 = []
@@ -717,22 +740,12 @@ class topo_us_rpt(object):
 
         return maps7575, maps1515, yearalldict
     
-    def addTopoImages(self, df, diction, year): # {1975: ['htmc', '7.5', ['LA_Zachary_335142_1963_62500_geo.pdf','LA_Zachary_335142_1963_62500_geo.pdf']...], 1968: ['htmc', '7.5', ['LA_Zachary_335142_1963_62500_geo.pdf']}
+    def addTopoImages(self, df, diction, year): # {'1946': ['htmc', '15', [['NY_Newburgh_130830_1946_62500_geo.pdf', 'rowsMain']]], '1903': ['htmc', '15', [['NY_Rosendale_129217_1903_62500_geo.pdf', 'rowsAdj'], ['NY_Newburg_144216_1903_62500_geo.pdf', 'rowsMain']]]}
         topoType = diction[year][0]
         seriesText = diction[year][1]
         mscale = 24000
         if topoType == 'htmc':
-            mscale = int(diction[year][2][0].split('_')[-2])   # assumption: WI_Ashland East_500066_1964_24000_geo.pdf, and all pdfs from the same year are of the same scale
-            # arcpy.AddMessage("...mscale is " + str(mscale))
-
-            # if self.is_aei == 'Y' and mscale in [24000,31680]:
-            #     seriesText = '7.5'
-            # elif self.is_aei == 'Y' and mscale == 62500:
-            #     seriesText = '15'
-            # elif self.is_aei == 'Y':
-            #     seriesText = '7.5'
-            # else:
-            #     pass
+            mscale = int(diction[year][2][0][0].split('_')[-2])   # assumption: WI_Ashland East_500066_1964_24000_geo.pdf, and all pdfs from the same year are of the same scale
 
         if topoType == "htmc":
             tifdir = cfg.tifdir_h
@@ -756,7 +769,8 @@ class topo_us_rpt(object):
         quaddict = {}
         seq = 1
         for pdfname in pdfnames:
-            tifname = pdfname[0:-4]   # note without .tif part
+            tifname = pdfname[0][0:-4]   # note without .tif part
+            tifMainAdj = pdfname[1]
 
             if os.path.exists(os.path.join(tifdir, tifname + "_t.tif")):
                 if '.' in tifname:
@@ -769,13 +783,14 @@ class topo_us_rpt(object):
                 topoLayer.name = tifname
                 arcpy.mapping.AddLayer(df, topoLayer, "BOTTOM")
 
-                quad = pdfname.split('_')
-                if topoType == "htmc":
-                    quadname = quad[1] +", "+quad[0]
-                else:
-                    quadname = " ".join(quad[1:len(quad)-3])+", "+quad[0]
+                quad = tifname.split('_')
+                if tifMainAdj == "rowsMain":                                            # we only want quadstext that intersect with the ordergeometry displayed
+                    if topoType == "htmc":
+                        quadname = quad[1] +", "+quad[0]
+                    else:
+                        quadname = " ".join(quad[1:len(quad)-3])+", "+quad[0]
 
-                quaddict[pdfname] = [quadname]
+                    quaddict[pdfname[0]] = quadname
             else:
                 arcpy.AddMessage("### tif file doesn't exist " + tifname)
                 if not os.path.exists(tifdir):
@@ -791,13 +806,14 @@ class topo_us_rpt(object):
         quadText = ""
         yearlistText = ""                                           # must include blank space if blank to write text element        
         i = 1
-        for key, value in quaddict.items():                         # {'WA_Bothell_240161_1953_24000_geo.pdf': [1, 'Bothell, WA']}
+        for key, value in quaddict.items():                         # {'NY_Clintondale_137764_1943_31680_geo.pdf': 'Clintondale, NY', 'NY_Rosendale_129220_1943_31680_geo.pdf': 'Clintondale, NY'}
             pdfname = key
-            quadname = value[0]
-
+            quadname = value
+            print(pdfname)
             pdfyears =  yearalldict.get(pdfname)                    # {'WA_Seattle_243651_1992_100000_geo.pdf': {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'}], ['WA_Seattle_243652_1992_100000_geo.pdf', {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'},...}
             filteryears = {k: v for k, v in pdfyears.items() if k in ["aerial photo year","photo revision year"]}
             if filteryears:
+                print(filteryears)
                 seqno = "<SUB>(" + str(i) + ")</SUB>" 
                 yearlistText = yearlistText + seqno + "\r\n"
                 for k,v in filteryears.items():                     # for now we only want to include "aerial photo year","photo revision year" out of 8 year types
@@ -877,9 +893,12 @@ class topo_us_rpt(object):
                     self.createAnnotPdf(cfg.shapePdf)                   # creates annot.pdf
 
                 elif self.order_obj.geometry.type.lower() == "point" or self.order_obj.geometry.type.lower() == "multipoint":
+                    yesboundary = 'fixed'
                     for lyr in arcpy.mapping.ListLayers(mxd, "", df):
                         if lyr.name == "Project Property":
                             lyr.visible = True
+                        else:
+                            lyr.visible = False
 
         elif yesboundary.lower() == 'no':
             for lyr in arcpy.mapping.ListLayers(mxd, "", df):
@@ -891,10 +910,10 @@ class topo_us_rpt(object):
         summarydata = []
         topoSource = 'USGS'
         for d in dictlist:
-            seriesText = d.values()[0][1].replace("75", "7.5")
             tempyears = d.keys()
             tempyears.sort(reverse = True)
             for year in tempyears:
+                seriesText = d[year][1].replace("75", "7.5")
                 if year != "":
                     summarydata.append([year, seriesText, topoSource])
             tempyears = None
@@ -918,13 +937,17 @@ class topo_us_rpt(object):
     def appendMapPages(self, dictlist, output, yesboundary, multipage):
         n=0
         for d in dictlist:
-            seriesText = d.values()[0][1]
             if len(d) > 0:
                 years = d.keys()
-                years.sort(reverse = True)
                 years = filter(None, years)         # removes empty strings
+
+                if self.is_aei == 'Y':
+                    years.sort(reverse = False)
+                else:
+                    years.sort(reverse = True)
                 
                 for year in years:
+                    seriesText = d[year][1]
                     if multipage == "Y":
                         pdf = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + ".pdf"),'rb'))
                         pdfmm = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + "_mm.pdf"),'rb'))
@@ -937,7 +960,7 @@ class topo_us_rpt(object):
                             n = n + 1
                         n = n + 1
                     else:
-                        if yesboundary == "Y":
+                        if yesboundary == "yes":
                             pdf = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + "_a.pdf"),'rb'))
                         else:
                             pdf = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + ".pdf"),'rb'))
@@ -991,17 +1014,17 @@ class topo_us_rpt(object):
 
         viewerdir = os.path.join(cfg.scratch, self.order_obj.number+'_topo')
         if not os.path.exists(viewerdir):
-            os.mkdir(viewerdir)
-        
+            os.mkdir(viewerdir)        
         if not os.path.exists(os.path.join(viewerdir,"75")):
             os.mkdir(os.path.join(viewerdir,"75"))
-        elif not os.path.exists(os.path.join(viewerdir,"150")):
+        if not os.path.exists(os.path.join(viewerdir,"150")):
             os.mkdir(os.path.join(viewerdir,"150"))
 
         for year in diction.keys():
             arcpy.AddMessage(year)
             seriesText = diction[year][1]
             mxdname = os.path.join(cfg.scratch, seriesText+'_'+str(year)+'.mxd')
+
             mxd = arcpy.mapping.MapDocument(mxdname)
             df = arcpy.mapping.ListDataFrames(mxd)[0]                   # the spatial reference here was UTM zone #, need to change to WGS84 Web Mercator
             df.spatialReference = inprojection                          # need to use srGoogle because xplorer uses Google
@@ -1016,7 +1039,7 @@ class topo_us_rpt(object):
                 df.scale = 24000
 
             imagename = str(year)+".jpg"
-            imagepath = os.path.join(cfg.scratch, viewerdir, seriesText.replace("15", "150"), imagename)
+            imagepath = os.path.join(viewerdir, seriesText.replace("15", "150"), imagename)
             arcpy.mapping.ExportToJPEG(mxd, imagepath, df, df_export_width=3573, df_export_height=4000, color_mode='24-BIT_TRUE_COLOR', world_file = True, jpeg_quality=50)
 
             desc = arcpy.Describe(imagepath)
@@ -1067,7 +1090,7 @@ class topo_us_rpt(object):
             arcpy.AddMessage("### eris_topo.processTopo failed...")
             pass
 
-    def setMultipage(self, df, mxd, seriestext, year, projection):
+    def setMultipage(self, df, mxd, seriestext, year, projection, gridsize):
         gridname = seriestext + "_" + str(year)
 
         # clip topo image extents to buffer
@@ -1075,19 +1098,19 @@ class topo_us_rpt(object):
         for lyr in arcpy.mapping.ListLayers(mxd, "", df):
             if lyr.name not in ["Project Property","Buffer Outline", "Grid"]:
                 rasterExtent = arcpy.Describe(lyr)
-                polygon = arcpy.Polygon(arcpy.Array([rasterExtent.extent.lowerLeft, rasterExtent.extent.lowerRight, rasterExtent.extent.upperRight, rasterExtent.extent.upperLeft]), projection)                            
-                
+                polygon = arcpy.Polygon(arcpy.Array([rasterExtent.extent.lowerLeft, rasterExtent.extent.lowerRight, rasterExtent.extent.upperRight, rasterExtent.extent.upperLeft]), projection)
                 arcpy.Append_management(polygon, rasterExt, "NO_TEST")
-            elif lyr.name == "Grid":
+
+            if lyr.name == "Grid":
                 lyr.visible = True
                 gridLayer = lyr
 
-        rasterExtClip = os.path.join(cfg.scratch, cfg.scratchgdb, "extclip_" + gridname)
+        rasterExtClip = os.path.join(cfg.scratch, cfg.scratchgdb, "extclip_" + gridname) 
         arcpy.Clip_analysis(rasterExt, cfg.orderBuffer, rasterExtClip)
 
         # create grid
         grid = os.path.join(cfg.scratch, cfg.scratchgdb, "grid_" + gridname)
-        arcpy.GridIndexFeatures_cartography(grid, rasterExtClip, "", "", "", "4 KiloMeters", "4 KiloMeters")
+        arcpy.GridIndexFeatures_cartography(grid, rasterExtClip, "", "", "", gridsize, gridsize)
 
         gridLayer = arcpy.mapping.ListLayers(mxd, "Grid", df)[0]
         gridLayer.replaceDataSource(os.path.join(cfg.scratch,cfg.scratchgdb),"FILEGDB_WORKSPACE","grid_" + gridname)
@@ -1098,7 +1121,7 @@ class topo_us_rpt(object):
         mxdmm.refresh()
         mxdmm.exportToPDF(pdfmm, page_range_type="ALL", resolution=100, georef_info = True)
 
-        # get extent of everything for export of main map later
+        # get extent of whole grid for export of main map later
         df.extent = gridLayer.getSelectedExtent(True)
         df.scale = df.scale * 1.1
 

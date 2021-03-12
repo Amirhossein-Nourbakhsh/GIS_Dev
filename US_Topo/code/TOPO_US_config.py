@@ -38,27 +38,30 @@ def server_loc_config(configpath,environment):
         return 'invalid server configuration'
 
 # order info
-# OrderIDText = arcpy.GetParameterAsText(0)#'734618'#
-order_obj = models.Order().get_order(20200422040)
+OrderIDText = arcpy.GetParameterAsText(0)
+order_obj = models.Order().get_order(OrderIDText)
 
 # flags
-# yesBoundary = arcpy.GetParameterAsText(2)#'no'##
-yesBoundary = "yes"        # fixed/yes/no
-delyearFlag = "N"           # Y/N, for internal use only, blank maps, etc.
-multipage = "N"             # Y/N, for multipages, set yesBoundary to 'fixed' (not 'yes') if want boundary to display
+yesBoundary = arcpy.GetParameterAsText(2)
+# yesBoundary = "yes"                 # fixed/yes/no
+delyearFlag = "N"                   # Y/N, for internal use only, blank maps, etc.
+multipage = "Y"                     # Y/N, for multipages, set yesBoundary to 'fixed' (not 'yes') if want boundary to display
+gridsize = "30 KiloMeters"          # for multipage grid
+BufsizeText = "2.4"
 
 # scratch file/folder outputs
-# scratch = arcpy.env.scratchWorkspace
-# scratchgdb = "scratch.gdb"
-def createScratch():
-    scratch = os.path.join(r"\\cabcvan1gis005\MISC_DataManagement\_AW\TOPO_US_SCRATCHY", "test_test10")
-    scratchgdb = "scratch.gdb"
-    if not os.path.exists(scratch):
-        os.mkdir(scratch)
-    if not os.path.exists(os.path.join(scratch, scratchgdb)):
-        arcpy.CreateFileGDB_management(scratch, "scratch.gdb")
-    return scratch, scratchgdb
-scratch, scratchgdb = createScratch()
+scratch = arcpy.env.scratchWorkspace
+scratchgdb = "scratch.gdb"
+BufsizeText = arcpy.GetParameterAsText(1)
+# def createScratch():
+#     scratch = os.path.join(r"\\cabcvan1gis005\MISC_DataManagement\_AW\TOPO_US_SCRATCHY", "test_20292500002_fixedpolygon_mm")
+#     scratchgdb = "scratch.gdb"
+#     if not os.path.exists(scratch):
+#         os.mkdir(scratch)
+#     if not os.path.exists(os.path.join(scratch, scratchgdb)):
+#         arcpy.CreateFileGDB_management(scratch, "scratch.gdb")
+#     return scratch, scratchgdb
+# scratch, scratchgdb = createScratch()
 
 summaryPdf = os.path.join(scratch,'summary.pdf')
 coverPdf = os.path.join(scratch,"cover.pdf")
@@ -71,7 +74,7 @@ extent = os.path.join(scratch, scratchgdb, "extent")
 
 # connections/report outputs
 server_environment = 'test'
-server_config_file = con.server_config_file #r"\\cabcvan1gis006\GISData\ERISServerConfig.ini"
+server_config_file = con.server_config_file #r"\\cabcvan1gis005\GISData\ERISServerConfig.ini"
 server_config = server_loc_config(server_config_file,server_environment)
 
 reportcheckFolder = server_config["reportcheck"]
