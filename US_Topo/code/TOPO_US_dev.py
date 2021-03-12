@@ -109,14 +109,14 @@ if __name__ == '__main__':
                 comb7515 = {}
                 comb7515.update(dict7575)
                 comb7515.update(dict1515)
-                tf.createPDF(comb7515, yearalldict, mxd, df, yesBoundary, cfg.multipage, srUTM, cfg.gridsize)
+                tf.createPDF(comb7515, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize)
                 dictlist.append(comb7515)
             else:
                 if dict7575:
-                    tf.createPDF(dict7575, yearalldict, mxd, df, yesBoundary, cfg.multipage, srUTM, cfg.gridsize)
+                    tf.createPDF(dict7575, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize)
                     dictlist.append(dict7575)
                 if dict1515:
-                    tf.createPDF(dict1515, yearalldict, mxd, df, yesBoundary, cfg.multipage, srUTM, cfg.gridsize)
+                    tf.createPDF(dict1515, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize)
                     dictlist.append(dict1515)
 
             # create blank pdf and append cover and summary pages

@@ -98,7 +98,6 @@ class topo_us_rpt(object):
             for line in mystr.split("\r\n"):
                 if bool(re.match('^\d+\..+ m .+l S$', line)) == True and bool(re.match('.+M$', previousline)) == True:              # if line matches above format
                     geomString = line
-                    print(line)
                     break                           # get the first match only
                 previousline = line
             if geomString == "":
@@ -376,7 +375,7 @@ class topo_us_rpt(object):
                 diction_pdf_inPresentationBuffer[row[3]] = [row[4], seriesText, [[row[2],row[5]]]]
         return diction_pdf_inPresentationBuffer             # {'1946': ['htmc', '15', [['NY_Newburgh_130830_1946_62500_geo.pdf', 'rowsMain']]], '1903': ['htmc', '15', [['NY_Rosendale_129217_1903_62500_geo.pdf', 'rowsAdj'], ['NY_Newburg_144216_1903_62500_geo.pdf', 'rowsMain']]]}
 
-    def createPDF(self, diction, yearalldict, mxd, df, yesboundary, multipage, projection, gridsize):         # {'1946': ['htmc', '15', [['NY_Newburgh_130830_1946_62500_geo.pdf', 'rowsMain']]], '1903': ['htmc', '15', [['NY_Rosendale_129217_1903_62500_geo.pdf', 'rowsAdj'], ['NY_Newburg_144216_1903_62500_geo.pdf', 'rowsMain']]]}
+    def createPDF(self, diction, yearalldict, mxd, df, yesboundary, projection, multipage, gridsize):         # {'1946': ['htmc', '15', [['NY_Newburgh_130830_1946_62500_geo.pdf', 'rowsMain']]], '1903': ['htmc', '15', [['NY_Rosendale_129217_1903_62500_geo.pdf', 'rowsAdj'], ['NY_Newburg_144216_1903_62500_geo.pdf', 'rowsMain']]]}
         # create PDF and also make a copy of the geotiff files if the scale is too small
         years = diction.keys()
 
@@ -703,7 +702,7 @@ class topo_us_rpt(object):
                     year2use = row["Filename"].split("_")[-3][:4]   # for current topos, read the year from the geopdf file name
 
                     if year2use == "" or year2use == None:
-                        year2use = row["SourceYear"].strip()
+                        year2use = row["SourceYear"].strip()        # else get it from csv file
                         if year2use[0:2] != "20":
                             arcpy.AddMessage("### Error in the year of the map..." + year2use)
                     
@@ -713,7 +712,7 @@ class topo_us_rpt(object):
             f.seek(0)       # resets to beginning of csv
             next(f)         # skip header
             for row in reader:
-                if row["Cell ID"] in rowsAdj:
+                if row["Cell ID"] in rowsAdj:                               # grab surrounding topo records
                     pdfname = row["Filename"].strip()
                     year2use = row["Filename"].split("_")[-3][:4]
 
@@ -809,11 +808,10 @@ class topo_us_rpt(object):
         for key, value in quaddict.items():                         # {'NY_Clintondale_137764_1943_31680_geo.pdf': 'Clintondale, NY', 'NY_Rosendale_129220_1943_31680_geo.pdf': 'Clintondale, NY'}
             pdfname = key
             quadname = value
-            print(pdfname)
+
             pdfyears =  yearalldict.get(pdfname)                    # {'WA_Seattle_243651_1992_100000_geo.pdf': {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'}], ['WA_Seattle_243652_1992_100000_geo.pdf', {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'},...}
             filteryears = {k: v for k, v in pdfyears.items() if k in ["aerial photo year","photo revision year"]}
             if filteryears:
-                print(filteryears)
                 seqno = "<SUB>(" + str(i) + ")</SUB>" 
                 yearlistText = yearlistText + seqno + "\r\n"
                 for k,v in filteryears.items():                     # for now we only want to include "aerial photo year","photo revision year" out of 8 year types

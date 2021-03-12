@@ -9,11 +9,6 @@ import db_connections as con
 import models
 
 def server_loc_config(configpath,environment):
-    if not os.path.exists(scratch):
-        os.mkdir(scratch)
-    if not os.path.exists(scratch):
-        arcpy.management.CreateFileGDB(scratch, scratchgdb)
-
     configParser = ConfigParser.RawConfigParser()
     configParser.read(configpath)
     if environment == 'test':
@@ -25,44 +20,37 @@ def server_loc_config(configpath,environment):
         upload_viewer = configParser.get('url-config','uploadviewer_test')
         server_config = {'dbconnection':dbconnection,'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
         return server_config
-    # elif environment == 'prod':
-    #     dbconnection = configParser.get('server-config','dbconnection_prod')
-    #     reportcheck = configParser.get('server-config','reportcheck_prod')
-    #     reportviewer = configParser.get('server-config','reportviewer_prod')
-    #     reportinstant = configParser.get('server-config','instant_prod')
-    #     reportnoninstant = configParser.get('server-config','noninstant_prod')
-    #     upload_viewer = configParser.get('url-config','uploadviewer_prod')
-    #     server_config = {'dbconnection':dbconnection,'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
-    #     return server_config
     else:
         return 'invalid server configuration'
 
-# order info
+def createScratch():
+    scratch = os.path.join(r"\\cabcvan1gis005\MISC_DataManagement\_AW\TOPO_US_SCRATCHY", "test123")
+    scratchgdb = "scratch.gdb"
+    if not os.path.exists(scratch):
+        os.mkdir(scratch)
+    if not os.path.exists(os.path.join(scratch, scratchgdb)):
+        arcpy.CreateFileGDB_management(scratch, "scratch.gdb")
+    return scratch, scratchgdb
+
+# arcpy parameters
 OrderIDText = arcpy.GetParameterAsText(0)
+BufsizeText = arcpy.GetParameterAsText(1)
+yesBoundary = arcpy.GetParameterAsText(2)
+scratch = arcpy.env.scratchWorkspace
+scratchgdb = arcpy.env.scratchGDB
+
+# order info
 order_obj = models.Order().get_order(OrderIDText)
 
 # flags
-yesBoundary = arcpy.GetParameterAsText(2)
-# yesBoundary = "yes"                 # fixed/yes/no
 delyearFlag = "N"                   # Y/N, for internal use only, blank maps, etc.
 multipage = "Y"                     # Y/N, for multipages, set yesBoundary to 'fixed' (not 'yes') if want boundary to display
-gridsize = "30 KiloMeters"          # for multipage grid
-BufsizeText = "2.4"
+gridsize = "3 KiloMeters"           # for multipage grid
+# yesBoundary = "fixed"               # fixed/yes/no
+# BufsizeText = "2.4"
 
 # scratch file/folder outputs
-scratch = arcpy.env.scratchWorkspace
-scratchgdb = "scratch.gdb"
-BufsizeText = arcpy.GetParameterAsText(1)
-# def createScratch():
-#     scratch = os.path.join(r"\\cabcvan1gis005\MISC_DataManagement\_AW\TOPO_US_SCRATCHY", "test_20292500002_fixedpolygon_mm")
-#     scratchgdb = "scratch.gdb"
-#     if not os.path.exists(scratch):
-#         os.mkdir(scratch)
-#     if not os.path.exists(os.path.join(scratch, scratchgdb)):
-#         arcpy.CreateFileGDB_management(scratch, "scratch.gdb")
-#     return scratch, scratchgdb
 # scratch, scratchgdb = createScratch()
-
 summaryPdf = os.path.join(scratch,'summary.pdf')
 coverPdf = os.path.join(scratch,"cover.pdf")
 shapePdf = os.path.join(scratch, 'shape.pdf')
