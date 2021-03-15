@@ -136,7 +136,7 @@ if __name__ == '__main__':
             # append map pages   
             tf.appendMapPages(dictlist, output, yesBoundary, cfg.multipage)          # [dict7575, dict1515] or [comb7515]
 
-            outputStream = open(os.path.join(cfg.scratch, order_obj.number + "_US_Topo.pdf"   ),"wb")
+            outputStream = open(os.path.join(cfg.scratch, order_obj.number + "_US_Topo.pdf"),"wb")
             output.setPageMode('/UseOutlines')
             output.write(outputStream)
             outputStream.close()
@@ -147,18 +147,18 @@ if __name__ == '__main__':
             summaryPages = None
 
             # save summary data to oracle
-            tf.oracleSummary(dictlist, order_obj.number + "_US_Topo.pdf"   )
+            tf.oracleSummary(dictlist, order_obj.number + "_US_Topo.pdf")
 
             # zip tiffs if needtif  
             copydirs = [os.path.join(os.path.join(cfg.scratch,order_obj.number), name) for name in os.listdir(os.path.join(cfg.scratch,order_obj.number))]
             if len(copydirs) > 0 and needtif == True:
-                tf.zipDir(order_obj.number + "_US_Topo.pdf"   )
+                tf.zipDir(order_obj.number + "_US_Topo.pdf")
 
             # export to xplorer
             tf.toXplorer(needtif, dictlist, srGoogle, srWGS84)
 
             # copy files to report check
-            tf.toReportCheck(needtif, order_obj.number + "_US_Topo.pdf"   )
+            tf.toReportCheck(needtif, order_obj.number + "_US_Topo.pdf")
 
     except:
         # Get the traceback object
@@ -173,13 +173,13 @@ if __name__ == '__main__':
             oc.proc(procedure, (order_obj.id, 'python-Error Handling',pymsg))
         finally:
             pass
-        raise                   # raise the error again
+        raise                                   # raise the error again
 
     finally:
-        oc.close()              # close oracle connection
+        oc.close()                              # close oracle connection
         logger.removeHandler(handler)
         handler.close()
 
     finish = time.clock()
-    arcpy.AddMessage(cfg.reportcheckFolder + "\\TopographicMaps\\" + order_obj.number + "_US_Topo.pdf"   )
+    arcpy.AddMessage(cfg.reportcheckFolder + "\\TopographicMaps\\" + order_obj.number + "_US_Topo.pdf")
     arcpy.AddMessage("Finished in " + str(round(finish-start, 2)) + " secs")

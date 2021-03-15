@@ -9,11 +9,6 @@ import db_connections as con
 import models
 
 def server_loc_config(configpath,environment):
-    if not os.path.exists(scratch):
-        os.mkdir(scratch)
-    if not os.path.exists(scratch):
-        arcpy.management.CreateFileGDB(scratch, scratchgdb)
-
     configParser = ConfigParser.RawConfigParser()
     configParser.read(configpath)
     if environment == 'test':
@@ -25,41 +20,37 @@ def server_loc_config(configpath,environment):
         upload_viewer = configParser.get('url-config','uploadviewer_test')
         server_config = {'dbconnection':dbconnection,'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
         return server_config
-    # elif environment == 'prod':
-    #     dbconnection = configParser.get('server-config','dbconnection_prod')
-    #     reportcheck = configParser.get('server-config','reportcheck_prod')
-    #     reportviewer = configParser.get('server-config','reportviewer_prod')
-    #     reportinstant = configParser.get('server-config','instant_prod')
-    #     reportnoninstant = configParser.get('server-config','noninstant_prod')
-    #     upload_viewer = configParser.get('url-config','uploadviewer_prod')
-    #     server_config = {'dbconnection':dbconnection,'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
-    #     return server_config
     else:
         return 'invalid server configuration'
 
-# order info
-# OrderIDText = arcpy.GetParameterAsText(0)#'734618'#
-order_obj = models.Order().get_order(20200422040)
-
-# flags
-# yesBoundary = arcpy.GetParameterAsText(2)#'no'##
-yesBoundary = "yes"        # fixed/yes/no
-delyearFlag = "N"           # Y/N, for internal use only, blank maps, etc.
-multipage = "N"             # Y/N, for multipages, set yesBoundary to 'fixed' (not 'yes') if want boundary to display
-
-# scratch file/folder outputs
-# scratch = arcpy.env.scratchWorkspace
-# scratchgdb = "scratch.gdb"
 def createScratch():
-    scratch = os.path.join(r"\\cabcvan1gis005\MISC_DataManagement\_AW\TOPO_US_SCRATCHY", "test_test10")
+    scratch = os.path.join(r"\\cabcvan1gis005\MISC_DataManagement\_AW\TOPO_US_SCRATCHY", "test123")
     scratchgdb = "scratch.gdb"
     if not os.path.exists(scratch):
         os.mkdir(scratch)
     if not os.path.exists(os.path.join(scratch, scratchgdb)):
         arcpy.CreateFileGDB_management(scratch, "scratch.gdb")
     return scratch, scratchgdb
-scratch, scratchgdb = createScratch()
 
+# arcpy parameters
+OrderIDText = arcpy.GetParameterAsText(0)
+BufsizeText = arcpy.GetParameterAsText(1)
+yesBoundary = arcpy.GetParameterAsText(2)
+scratch = arcpy.env.scratchWorkspace
+scratchgdb = arcpy.env.scratchGDB
+
+# order info
+order_obj = models.Order().get_order(OrderIDText)
+
+# flags
+delyearFlag = "N"                   # Y/N, for internal use only, blank maps, etc.
+multipage = "Y"                     # Y/N, for multipages, set yesBoundary to 'fixed' (not 'yes') if want boundary to display
+gridsize = "3 KiloMeters"           # for multipage grid
+# yesBoundary = "fixed"               # fixed/yes/no
+# BufsizeText = "2.4"
+
+# scratch file/folder outputs
+# scratch, scratchgdb = createScratch()
 summaryPdf = os.path.join(scratch,'summary.pdf')
 coverPdf = os.path.join(scratch,"cover.pdf")
 shapePdf = os.path.join(scratch, 'shape.pdf')
@@ -71,7 +62,7 @@ extent = os.path.join(scratch, scratchgdb, "extent")
 
 # connections/report outputs
 server_environment = 'test'
-server_config_file = con.server_config_file #r"\\cabcvan1gis006\GISData\ERISServerConfig.ini"
+server_config_file = con.server_config_file #r"\\cabcvan1gis005\GISData\ERISServerConfig.ini"
 server_config = server_loc_config(server_config_file,server_environment)
 
 reportcheckFolder = server_config["reportcheck"]
