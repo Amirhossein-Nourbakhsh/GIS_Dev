@@ -148,11 +148,11 @@ def get_elevation(long,lat):
     
     if 10 in dem_params.keys():
         # Calculate elevation based on 10m collection
-        elevation = get_single_elevation(xy,dem_params[10],config.imgdir_dem,10)
+        elevation = get_single_elevation(xy,dem_params[10],config.img_dir_dem,10)
 
         if elevation is None and 30 in dem_params.keys():
             # 3.1 Calculate Elevation based on 30m collection
-            elevation = get_single_elevation(xy,dem_params[30],config.imgdir_demCA,30)
+            elevation = get_single_elevation(xy,dem_params[30],config.img_dir_dem_CA,30)
 
         if elevation is None:
             elevation = get_single_elevation(xy)
@@ -213,3 +213,41 @@ def dgr_dir_to_txt(dgr_360):
         dir_text = "NUL"    # this line should not be reached
 
     return dir_text
+def degree_direction_to_text(dgr_360):
+    if (dgr_360 >= 348.75) or (dgr_360 < 11.25):
+        dir_text = "N"
+    elif (dgr_360 >= 11.25) and (dgr_360 < 33.75):
+        dir_text = "NNE"
+    elif (dgr_360 >= 33.75) and (dgr_360 < 56.25):
+        dir_text = "NE"
+    elif (dgr_360 >= 56.25) and (dgr_360 < 78.75):
+        dir_text = "ENE"
+    elif (dgr_360 >= 78.75) and (dgr_360 < 101.25):
+        dir_text = "E"
+    elif (dgr_360 >= 101.25) and (dgr_360 < 123.75):
+        dir_text = "ESE"
+    elif (dgr_360 >= 123.75) and (dgr_360 < 146.25):
+        dir_text = "SE"
+    elif (dgr_360 >= 146.25) and (dgr_360 < 168.75):
+        dir_text = "SSE"
+    elif (dgr_360 >= 168.75) and (dgr_360 < 191.25):
+        dir_text = "S"
+    elif (dgr_360 >= 191.25) and (dgr_360 < 213.75):
+        dir_text = "SSW"
+    elif (dgr_360 >= 213.75) and (dgr_360 < 236.25):
+        dir_text = "SW"
+    elif (dgr_360 >= 236.25) and (dgr_360 < 258.75):
+        dir_text = "WSW"
+    elif (dgr_360 >= 258.75) and (dgr_360 < 281.25):
+        dir_text = "W"
+    elif (dgr_360 >= 281.25) and (dgr_360 < 303.75):
+        dir_text = "WNW"
+    elif (dgr_360 >= 303.75) and (dgr_360 < 326.25):
+        dir_text = "NW"
+    elif (dgr_360 >= 326.25) and (dgr_360 < 348.75):
+        dir_text = "NNW"
+    else:
+        dir_text = "NUL"    # this line should not be reached
+
+    return dir_text
+    
