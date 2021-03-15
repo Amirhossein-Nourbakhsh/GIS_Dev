@@ -54,39 +54,14 @@ order_geom_lyr_polygon = r"\\cabcvan1gis005\GISData\PSR\python\mxd\orderPoly.lyr
 buffer_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\buffer.lyr"
 grid_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\Grid_hollow.lyr"
 
-
-
-# data_flood = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\S_Fld_Haz_Ar_merged2018'
-data_flood = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\flood_map_wgs84'
-
-data_flood_panel = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\flood_panel_map_wgs84'
-data_wetland = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\Merged_wetland_Final'
-
-
-datalyr_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland_kml.lyr"
-##datalyr_wetlandNY = r"E:\GISData\PSR\python\mxd\wetlandNY.lyr"
-datalyr_wetlandNYkml = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandNY_kml.lyr"
-datalyr_wetlandNYAPAkml = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandNYAPA_kml.lyr"
-datalyr_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.lyr"
-data_lyr_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.lyr"
-datalyr_contour = r"\\cabcvan1gis005\GISData\PSR\python\mxd\contours_largescale.lyr"
-datalyr_plumetacoma = r"\\cabcvan1gis005\GISData\PSR\python\mxd\Plume.lyr"
-
-mxd_file_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland.mxd"
-mxd_file_wetlandNY = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandNY_CC.mxd"
-mxd_mm_file_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandMM.mxd"
-mxd_mmfile_wetlandNY = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandMMNY.mxd"
-
-
-
-
 # grid size
 grid_size = "2 MILES"
 # Explorer
 data_lyr_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland_kml.lyr"
-datalyr_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.lyr"
+datal_yr_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.lyr"
 data_lyr_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geology.lyr"
-
+data_lyr_contour = r"\\cabcvan1gis005\GISData\PSR\python\mxd\contours_largescale.lyr"
+data_lyr_plumet_acoma = r"\\cabcvan1gis005\GISData\PSR\python\mxd\Plume.lyr"
 
 def output_jpg(order_obj, report_type):
     if report_type == Report_Type.wetland :
@@ -125,8 +100,17 @@ order_buffer_shp =  os.path.join(scratch_folder,'order_buffer.shp')
 order_geom_lyr_file = None
 spatial_ref_pcs = None
 spatial_ref_gcs = arcpy.SpatialReference(4283)
+spatial_ref_mercator = arcpy.SpatialReference(3857) #web mercator
 ### wetland report config
 buffer_dist_wetland = None
+mxd_file_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland.mxd"
+mxd_file_wetlandNY = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandNY_CC.mxd"
+mxd_mm_file_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandMM.mxd"
+mxd_mm_file_wetland_ny = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandMMNY.mxd"
+data_wetland = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\Merged_wetland_Final'
+data_lyr_wetland = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetland_kml.lyr"
+data_lyr_wetland_ny_kml = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandNY_kml.lyr"
+data_lyr_wetland_ny_apa_kml = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wetlandNYAPA_kml.lyr"
 ### relief report paths config
 buffer_dist_relief = '1 MILES'
 mxd_file_relief =  r"\\cabcvan1gis005\GISData\PSR\python\mxd\shadedrelief.mxd"
@@ -151,12 +135,14 @@ topo_frame = os.path.join(scratch_folder, "topo_frame.shp")
 
 ### flood report paths config
 buffer_dist_flood = None
+data_flood = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\flood_map_wgs84'
+data_flood_panel = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\flood_panel_map_wgs84'
 mxd_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.mxd"
 mxd_mm_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\floodMM.mxd"
 order_buffer_flood_shp = os.path.join(scratch_folder,'order_buffer_flood.shp')
 flood_selectedby_order_shp = os.path.join(scratch_folder,"flood_selectedby_order.shp")
 flood_panel_selectedby_order_shp = os.path.join(scratch_folder,"flood_panel_selectedby_order.shp")
-
+data_lyr_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.lyr"
 ### geology report paths config
 buffer_dist_geology = None
 data_geology = r'\\cabcvan1gis005\GISData\Data\PSR\PSR.gdb\GEOL_DD_MERGE' ## WGS84
@@ -170,9 +156,9 @@ data_path_soil_HI =r'\\cabcvan1gis005\GISData\Data\CONUS_2015\gSSURGO_HI.gdb'  #
 data_path_soil_AK =r'\\cabcvan1gis005\GISData\Data\CONUS_2015\gSSURGO_AK.gdb'  ## WGS84
 data_path_soil_CONUS =r'\\cabcvan1gis005\GISData\Data\CONUS_2015\gSSURGO_CONUS_10m.gdb'  ## WGS84
 
-data_path_soil_HI =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_HI.gdb'
-data_path_soil_AK =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_AK.gdb'
-data_path_soil_CONUS =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_CONUS_10m.gdb'
+# data_path_soil_HI =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_HI.gdb'
+# data_path_soil_AK =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_AK.gdb'
+# data_path_soil_CONUS =r'\\cabcvan1fpr009\SSURGO\CONUS_2015\gSSURGO_CONUS_10m.gdb'
 
 soil_selectedby_order_shp = os.path.join(scratch_folder,"soil_selectedby_order.shp")
 soil_selectedby_order_pcs_shp =  os.path.join(scratch_folder,"soil_selectedby_order_pcs.shp")

@@ -84,7 +84,6 @@ def save_wells_to_db(order_obj, page):
             for i in range(1,page):
                 psr_obj.insert_map(order_obj.id, 'WELLS', order_obj.number +'_US_WELLS'+str(i)+'.jpg', i + 1)
 def generate_ogw_report(order_obj):
-    print( os.path.dirname(os.path.abspath(__file__)))
     arcpy.AddMessage('  -- Start generating PSR Oil, Gas and Water wells map report...')
     start = timeit.default_timer() 
     ### set scratch folder

@@ -89,7 +89,7 @@ def generate_wetland_report(order_obj):
     arcpy.Buffer_analysis(config.order_geometry_pcs_shp, config.order_buffer_shp,  config.buffer_dist_wetland)
     mxd_wetland = arcpy.mapping.MapDocument(config.mxd_file_wetland)
     df_wetland = arcpy.mapping.ListDataFrames(mxd_wetland,"big")[0]
-    df_wetland.spatialReference =config.spatial_ref_pcs
+    df_wetland.spatialReference = order_obj.spatial_ref_pcs
     df_wetland_small = arcpy.mapping.ListDataFrames(mxd_wetland,"small")[0]
     df_wetland_small.spatialReference = order_obj.spatial_ref_pcs
     del df_wetland_small

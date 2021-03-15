@@ -14,6 +14,7 @@ import soil
 import ogw
 import radon
 import aspect
+import kml
 import multi_proc_test
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -47,7 +48,8 @@ if __name__ == "__main__":
             if_soil_report = False
             if_ogw_report = False
             if_radon_report = False
-            if_aspect_map = True
+            if_aspect_map = False
+            if_kml_output = True
 
             # shaded releif map report
             if if_relief_report:
@@ -76,6 +78,9 @@ if __name__ == "__main__":
             # multi_proc_test.generate_flood_report(order_obj)
             if if_aspect_map:
                 aspect.generate_aspect_map(order_obj)
+            # convert to kml for viewer
+            if if_kml_output:
+                kml.convert_to_kml(order_obj)
         else:
             arcpy.AddMessage('No PSR is availabe for this order')
     else:
