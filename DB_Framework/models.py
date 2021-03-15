@@ -7,23 +7,25 @@ import arcpy, os
 from ast import literal_eval
 
 class Order(object):
-    id = None
-    number = None
-    full_address = None
-    address = None
-    province = None
-    psr = None
-    site_name = None
-    customer_id = None
-    radius_type = None
-    company_id = None
-    company_desc = None
-    project_num = None
-    postal_code = None
-    city = None
-    geometry = arcpy.Geometry()
-    spatial_ref_pcs = None
-   
+    
+    def __init__(self):
+        self.id = None
+        self.number = None
+        self.full_address = None
+        self.address = None
+        self.province = None
+        self. psr = None
+        self.site_name = None
+        self.customer_id = None
+        self.radius_type = None
+        self.company_id = None
+        self.company_desc = None
+        self.project_num = None
+        self.postal_code = None
+        self.city = None
+        self.geometry = arcpy.Geometry()
+        self.spatial_ref_pcs = None
+        self.spatial_ref_gcs = arcpy.SpatialReference(4326)
     def get_order(self,input_id):
         try:
             order_obj = Order
@@ -67,6 +69,7 @@ class Order(object):
             order_obj.postal_code = row[9]
             order_obj.geometry = order_obj.__getGeometry()
             order_obj.spatial_ref_pcs = self.get_sr_pcs()
+            order_obj.spatial_ref_gcs = self.spatial_ref_gcs
             return order_obj
         finally:
             cursor.close()
@@ -144,7 +147,6 @@ class PSR(object):
             cur = con.cursor()
              ### insert data into ERIS_FLEX_REPORTING_PSR table 
             cur.callproc('eris_psr.InsertFlexRep', (order_id, eris_id, p_ds_oid, p_num, p_sub, p_count, p_flex_label, p_flex_value))
-           
         finally:
             cur.close()
             con.close()
@@ -154,7 +156,14 @@ class PSR(object):
             cur = con.cursor()
              ### insert data into ... table 
             cur.callproc('eris_psr.GetRadon', (order_id, state_list_str, zip_list_str, county_list_str, city_list_str))
-           
+        finally:
+            cur.close()
+            con.close()
+    def update_order(self,order_id,x,y,utm_zone, site_elevation, aspect):
+        try:
+            con = cx_Oracle.connect(db_connections.connection_string)
+            cur = con.cursor()
+            cur.callproc('eris_psr.UpdateOrder', (int(order_id), float(x), float(y), str(utm_zone), float(site_elevation), str(aspect)))
         finally:
             cur.close()
             con.close()

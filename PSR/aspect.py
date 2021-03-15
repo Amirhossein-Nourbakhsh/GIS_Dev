@@ -1,11 +1,27 @@
 
-import arcpy, os
+import arcpy, os, sys
 import timeit
 import psr_utility as utility
 import psr_config as config
 from numpy import gradient
 from numpy import arctan2, arctan, sqrt
-
+sys.path.insert(1,os.path.join(os.getcwd(),'DB_Framework'))
+reload(sys)
+import models
+def calculate_aspect(order_obj,aspect_tif_pcs):
+    order_geometry_pcs = order_obj.geometry.projectAs(order_obj.spatial_ref_pcs)
+    centre_point_pcs = order_geometry_pcs.trueCentroid
+    location = str(centre_point_pcs.X)+" "+str(centre_point_pcs.Y)
+    aspect = arcpy.GetCellValue_management(aspect_tif_pcs,location)
+    if aspect.getOutput((0)) != "NoData":
+        aspect_text = utility.degree_direction_to_text(float(aspect.getOutput((0))))
+        if float(aspect.getOutput((0))) == -1:
+            aspect_text = r'N/A'
+    else:
+        print ('fail to use point XY to retrieve')
+        aspect_text = '-9999'
+        raise ValueError('No aspect retrieved CHECK data spatial reference')
+    return aspect_text,centre_point_pcs.X, centre_point_pcs.Y
 def generate_aspect_map(order_obj):
     arcpy.AddMessage('  -- Start generating aspect map ...')
     start = timeit.default_timer() 
@@ -65,7 +81,6 @@ def generate_aspect_map(order_obj):
                 if slope[i][j] ==0:
                     aspect[i][j] = -1
         # gather some information on the original file
-        raster_spatial_ref = arcpy.Describe(os.path.join(config.scratch_folder,dem_raster)).spatialReference
         cell_size_h  = arcpy.Describe(os.path.join(config.scratch_folder,dem_raster)).meanCellHeight
         cell_size_w  = arcpy.Describe(os.path.join(config.scratch_folder,dem_raster)).meanCellWidth
         extent     = arcpy.Describe(os.path.join(config.scratch_folder,dem_raster)).Extent
@@ -75,15 +90,23 @@ def generate_aspect_map(order_obj):
         aspect_tif = os.path.join(config.scratch_folder,"aspect.tif")
         aspect_ras = arcpy.NumPyArrayToRaster(aspect,pnt,cell_size_h,cell_size_w)
         arcpy.CopyRaster_management(aspect_ras,aspect_tif)
-        arcpy.DefineProjection_management(aspect_tif, raster_spatial_ref)
+        arcpy.DefineProjection_management(aspect_tif, order_obj.spatial_ref_gcs)
         # slope map
         slope_tif = os.path.join(config.scratch_folder,"slope.tif")
         slope_ras = arcpy.NumPyArrayToRaster(slope,pnt,cell_size_h,cell_size_w)
         arcpy.CopyRaster_management(slope_ras,slope_tif)
-        arcpy.DefineProjection_management(slope_tif, raster_spatial_ref)
+        arcpy.DefineProjection_management(slope_tif, order_obj.spatial_ref_gcs)
         
         aspect_tif_pcs = os.path.join(config.scratch_folder,"aspect_pcs.tif")
-        arcpy.ProjectRaster_management(aspect_tif,aspect_tif_pcs, config.spatial_ref_pcs)
+        arcpy.ProjectRaster_management(aspect_tif,aspect_tif_pcs, order_obj.spatial_ref_pcs)
+        
+        #Calculate aspect
+        aspect_text, utm_x, utm_y = calculate_aspect(order_obj,aspect_tif_pcs)
+        site_elevation =  utility.get_elevation(order_obj.geometry.trueCentroid.X,order_obj.geometry.trueCentroid.Y)
+        
+        #Update DB
+        psr_obj = models.PSR()
+        psr_obj.update_order(order_obj.id,str(utm_x),str(utm_y),order_obj.spatial_ref_pcs.name, site_elevation, aspect_text)
                     
     end = timeit.default_timer()
     arcpy.AddMessage(('-- End generating PSR aspect map. Duration:', round(end -start,4)))
