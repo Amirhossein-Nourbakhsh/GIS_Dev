@@ -184,7 +184,7 @@ def export_to_jpg(env,imagepath,outputImage_jpg,order_geometry,auid):
             raise OracleBadReturn
     except OracleBadReturn:
         arcpy.AddError('status: ' + message_return[3]+ ' - '+ message_return[2])
-    ##############################
+
     mxd.saveACopy(os.path.join(arcpy.env.scratchFolder,auid+'_export.mxd'))
     arcpy.mapping.ExportToJPEG(mxd,outputImage_jpg,df,df_export_width=export_width,df_export_height=export_height,world_file=False,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 50)
     del mxd
@@ -202,8 +202,8 @@ if __name__ == '__main__':
     ### set input parameters
     order_id = arcpy.GetParameterAsText(0)
     auid = arcpy.GetParameterAsText(1)
-    order_id = '1035600'
-    auid = '1463645'
+    # order_id = '1035696'
+    # auid = '4019787'
     env = 'test'
     ## set scratch folder
     scratch_folder = arcpy.env.scratchFolder
@@ -258,11 +258,8 @@ if __name__ == '__main__':
                     ## setup image custom name year_DOQQ_AUI_ID
                     out_img_name = '%s_%s_%s'%(year,img_source,str(auid))
                     ## Read input image from job folder if there is a clip image, use it as input. If not use the original image in job folder)
-                    clipped_input_image = os.path.join(gc_image_folder,out_img_name + '_c.png')
                     raw_input_image_job = os.path.join(gc_image_folder , out_img_name + '.jpg')
-                    if os.path.exists(clipped_input_image):
-                        input_image = clipped_input_image
-                    elif os.path.exists(result_input_image_job): ## this is the image which is alreary georeferenced by us aerial app
+                    if os.path.exists(result_input_image_job): ## this is the image which is alreary georeferenced by us aerial app
                         input_image = result_input_image_job
                     else: # read from inventory
                         # make a copy of raw image in the local folder beacuse the TAB file along with image format on server make arcgis confused
