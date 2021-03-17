@@ -17,7 +17,7 @@ import sys
 import traceback
 import time
 
-import TOPO_US_func as tp
+import TOPO_US_utility as tp
 import TOPO_US_config as cfg
 
 from PyPDF2 import PdfFileReader, PdfFileWriter
@@ -73,7 +73,7 @@ if __name__ == '__main__':
         needtif = tf.mapExtent(df, mxd, srUTM)
 
         # set boundary
-        mxd, df, yesBoundary = tf.setBoundary(mxd, df, cfg.yesBoundary)                         # if mulitpage, set to 'fixed' if want to show boundary; need to return variables again or won't update
+        mxd, df, yesBoundary = tf.setBoundary(mxd, df, cfg.yesBoundary)                         # if multipage, set to 'fixed' if want to show boundary; need to return variables again or won't update
 
         # select topo records
         rowsMain, rowsAdj = tf.selectTopo(cfg.orderGeometryPR, cfg.extent, srUTM)
@@ -96,11 +96,11 @@ if __name__ == '__main__':
             arcpy.AddMessage("dict7575: " + str(dict7575.keys()))
             arcpy.AddMessage("dict1515: " + str(dict1515.keys()))
 
-            # remove blank maps flag
-            if cfg.delyearFlag == 'Y':
-                delyear75 = filter(None, str(raw_input("Years you want to delete in the 7.5min series (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))
-                delyear15 = filter(None, str(raw_input("Years you want to delete in the 15min series (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))
-                tf.delyear(delyear75, delyear15, dict7575, dict1515)
+            # # remove blank maps flag
+            # if cfg.delyearFlag == 'Y':
+            #     delyear75 = filter(None, str(raw_input("Years you want to delete in the 7.5min series (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))
+            #     delyear15 = filter(None, str(raw_input("Years you want to delete in the 15min series (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))
+            #     tf.delyear(delyear75, delyear15, dict7575, dict1515)
 
             # create map pages
             logger.debug("#5")
@@ -141,11 +141,6 @@ if __name__ == '__main__':
             output.write(outputStream)
             outputStream.close()
 
-            output = None
-            coverPages = None
-            summaryPages = None
-            summaryPages = None
-
             # save summary data to oracle
             tf.oracleSummary(dictlist, order_obj.number + "_US_Topo.pdf")
 
@@ -181,5 +176,5 @@ if __name__ == '__main__':
         handler.close()
 
     finish = time.clock()
-    arcpy.AddMessage(cfg.reportcheckFolder + "\\TopographicMaps\\" + order_obj.number + "_US_Topo.pdf")
+    # arcpy.AddMessage(cfg.reportcheckFolder + "\\TopographicMaps\\" + order_obj.number + "_US_Topo.pdf")
     arcpy.AddMessage("Finished in " + str(round(finish-start, 2)) + " secs")
