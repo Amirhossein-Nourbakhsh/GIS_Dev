@@ -154,10 +154,16 @@ class fim_us_rpt(object):
         return annotatedPdf
 
     def goCoverPage(self, coverPdf, NRF):
-        from reportlab.pdfgen import canvas
+        pagesize = portrait(letter)
+        [PAGE_WIDTH,PAGE_HEIGHT]=pagesize[:2]
+        PAGE_WIDTH = int(PAGE_WIDTH)
+        PAGE_HEIGHT = int(PAGE_HEIGHT)
+
+        AddressText = '%s\n%s %s %s'%(self.order_obj.address, self.order_obj.city, self.order_obj.province, self.order_obj.postal_code)
+
         c = canvas.Canvas(coverPdf,pagesize = portrait(letter))
-        from reportlab.lib.units import inch
         c.drawImage(cfg.coverPic,0,0, PAGE_WIDTH,PAGE_HEIGHT)
+
         leftsw= 54
         heights = 400
         rightsw = 200
@@ -170,8 +176,8 @@ class fim_us_rpt(object):
         c.drawString(leftsw, heights-6*space,"Date Completed:")
         c.setFont('Helvetica', 13)
         c.drawString(rightsw,heights-0*space, self.order_obj.site_name)
-        c.drawString(rightsw, heights-1*space,self.order_obj.address.split("\n")[0])
-        c.drawString(rightsw, heights-2*space,self.order_obj.address.split("\n")[1])
+        c.drawString(rightsw, heights-1*space,AddressText.split("\n")[0])
+        c.drawString(rightsw, heights-2*space,AddressText.split("\n")[1])
         c.drawString(rightsw, heights-3*space,self.order_obj.project_num)
         c.drawString(rightsw, heights-4*space,self.order_obj.company_desc)
         c.drawString(rightsw, heights-5*space,self.order_obj.number)
@@ -188,6 +194,11 @@ class fim_us_rpt(object):
         c.save()
 
     def myFirstSummaryPage(self, canvas,doc):
+        pagesize = portrait(letter)
+        [PAGE_WIDTH,PAGE_HEIGHT]=pagesize[:2]
+        PAGE_WIDTH = int(PAGE_WIDTH)
+        PAGE_HEIGHT = int(PAGE_HEIGHT)
+
         canvas.saveState()
         canvas.setFont('Helvetica', 9)
         canvas.drawImage(cfg.secondPic,0,0, PAGE_WIDTH,PAGE_HEIGHT)
@@ -200,6 +211,11 @@ class fim_us_rpt(object):
         del canvas
 
     def myLaterSummaryPage(self, canvas,doc):
+        pagesize = portrait(letter)
+        [PAGE_WIDTH,PAGE_HEIGHT]=pagesize[:2]
+        PAGE_WIDTH = int(PAGE_WIDTH)
+        PAGE_HEIGHT = int(PAGE_HEIGHT)
+
         canvas.saveState()
         canvas.drawImage(cfg.secondPic,0,0, PAGE_WIDTH,PAGE_HEIGHT)
         canvas.setFont('Helvetica', 9)
@@ -211,7 +227,11 @@ class fim_us_rpt(object):
         del canvas
 
     def goSummaryPage(self, summaryfile, summaryList):
-        years = summaryList.keys()
+        pagesize = portrait(letter)
+        [PAGE_WIDTH,PAGE_HEIGHT]=pagesize[:2]
+        PAGE_WIDTH = int(PAGE_WIDTH)
+        PAGE_HEIGHT = int(PAGE_HEIGHT)
+        styles = getSampleStyleSheet()
 
         doc = SimpleDocTemplate(summaryfile, pagesize = letter, topMargin=130,bottomMargin=123)
         Story = []
@@ -219,7 +239,8 @@ class fim_us_rpt(object):
         newdata = []
         newdata.append(['Date','City','State','Volume','Sheet Number(s)'])
         style = ParagraphStyle("cover",parent=styles['Normal'],fontName="Helvetica",fontSize=9,leading=9)
-
+        
+        years = summaryList.keys()
         for key in years:
             volumes = summaryList[key]
             for v in volumes.values():
@@ -326,6 +347,8 @@ class fim_us_rpt(object):
         return self.is_newLogo, self.is_aei, self.is_emg
 
     def createOrderGeometry(self, order_obj, projection):
+        arcpy.env.overwriteOutput = True
+
         point = arcpy.Point()
         array = arcpy.Array()
         sr = arcpy.SpatialReference()
@@ -477,7 +500,8 @@ class fim_us_rpt(object):
         try:
             expression = "select fim_viewer from order_viewer where order_id =" + str(self.order_obj.id)
             t = oracle(cfg.connectionString).query(expression)
-            if t != None:
+            print(t)
+            if t:
                 needViewer = t[0][0]
         except:
             raise
@@ -545,6 +569,10 @@ class fim_us_rpt(object):
             except Exception as e:
                 arcpy.AddError(e)
                 arcpy.AddError("### overlay_image_info failed...")
+
+        else:
+            arcpy.AddMessage("No viewer is needed. Do nothing.")
+
 
     def toReportCheck(self, pdfreport_name):
         pdfreport = os.path.join(cfg.scratch, pdfreport_name)
@@ -626,7 +654,7 @@ class fim_us_rpt(object):
         arcpy.RefreshActiveView()
         scale = dfmain.scale * 1.1
         dfmain.scale = ((int(scale)/100)+1)*100
-        dfmain.spatialReference = arcpy.SpatialReference(4326)
+        # dfmain.spatialReference = arcpy.SpatialReference(4326)
 
         # for lyr in arcpy.mapping.ListLayers(mxd, "", dfmain)[4:5]:
         #     ext = lyr.getExtent()
@@ -659,32 +687,6 @@ class fim_us_rpt(object):
         # arcpy.CopyFeatures_management(polygon, os.path.join(cfg.scratch, "Extent.shp"))
         # arcpy.DefineProjection_management(os.path.join(cfg.scratch, "Extent.shp"), arcpy.SpatialReference(4326))
 
-    def setMultipage(self, year, mxd, dfmain, gridsize, presentedFIPs):
-        # CREATES GRID        
-        Gridlrshp = os.path.join(cfg.scratch,"gridlr_" + str(year) + '.shp')        
-        expression = str('"YEAR" LIKE \'%' + str(year) + "%'")
-        arcpy.SelectLayerByAttribute_management(presentedFIPs,'NEW_SELECTION', expression)
-        arcpy.GridIndexFeatures_cartography(Gridlrshp, presentedFIPs, "", "", "", gridsize, gridsize)
-        arcpy.MakeFeatureLayer_management(Gridlrshp, "gridlr")
-
-        # SKIP BLANK GRIDS
-        newgridlr = arcpy.mapping.ListLayers(mxd,"Grid",dfmain)[0]
-        newgridlr.replaceDataSource(cfg.scratch, "SHAPEFILE_WORKSPACE","gridlr" + "_" + str(year))
-
-        # REFRESH VIEW
-        dfmain.extent = newgridlr.getExtent()
-        scale = dfmain.scale * 1.1
-
-        dfmain.scale = ((int(scale)/100)+1)*100
-
-        ddMMDDP = mxd.dataDrivenPages
-        ddMMDDP.refresh()
-        FIPpdfMM = os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'_multipage.pdf')
-        ddMMDDP.exportToPDF(FIPpdfMM, page_range_type="ALL",resolution=600)
-
-        del ddMMDDP
-        return FIPpdfMM
-
     def delyear(self, yeardel, summaryList):
         if yeardel:
             for item in summaryList:
@@ -692,7 +694,7 @@ class fim_us_rpt(object):
                     summaryList.remove(item)
         return summaryList
 
-    def createPDF(self, summaryList, is_aei, mxd, dfmain, dfinset, multipage, gridsize, presentedFIPs):
+    def createPDF(self, summaryList, is_aei, mxd, dfmain, dfinset, yesboundary, multipage, gridsize, presentedFIPs):
         years = summaryList.keys()
 
         if is_aei == 'Y':
@@ -703,8 +705,8 @@ class fim_us_rpt(object):
         count = 0
         for year in years:
             sheetnoText = ''
-            volumeNums = ''
-            imageLayer = arcpy.mapping.Layer(cfg.imagelyr)
+            # volumeNums = ''
+            # imageLayer = arcpy.mapping.Layer(cfg.imagelyr)
 
             items = summaryList[year]
             for item in items.values():
@@ -729,10 +731,9 @@ class fim_us_rpt(object):
                 if volseq == '' or volseq == ' ':
                     sheetnoText = sheetnoText + 'Volume NA: '
                 else:
-                    sheetnoText = sheetnoText + 'Volume ' + str(volseq) + ': '
-            
+                    sheetnoText = sheetnoText + 'Volume ' + str(volseq) + ': '            
                 sheetnoText = sheetnoText + ', '.join(sheetNos_noLetter[:14]) + ', '.join(sheetNos_noLetter[14:28]) + ', '.join(sheetNos_noLetter[28:42]) + ', '.join(sheetNos_noLetter[42:]) + '; ' + '\r\n'
-                volumeNums = volumeNums + item[0]
+                # volumeNums = volumeNums + item[0]
 
                 boundLayer = arcpy.mapping.ListLayers(mxd, "IMAGE_BOUNDARY", dfinset)[0]
                 boundLayer.replaceDataSource(volpath,"SHAPEFILE_WORKSPACE","IMAGE_BOUNDARY")
@@ -746,11 +747,45 @@ class fim_us_rpt(object):
             arcpy.mapping.ExportToPDF(mxd, FIPpdf, "PAGE_LAYOUT", 640, 480, 800, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "None", True, 90)
             mxd.saveACopy(os.path.join(cfg.scratch, "test_"+str(year)+".mxd"))
 
+            # merge annotation pdf to the map if yesBoundary == Y
+            if multipage != True and yesboundary == 'yes' and self.order_obj.geometry.type.lower() != 'point' and self.order_obj.geometry.type.lower() != 'multipoint':
+                self.annotatePdf(FIPpdf, cfg.annotPdf)
+
+            for lyr in arcpy.mapping.ListLayers(mxd, "", dfmain):
+                if lyr.name not in ["Project Property", "Buffer Outline", "Grid"]:
+                    arcpy.mapping.RemoveLayer(dfmain, lyr)
+
             # pdflist.append(FIPpdf1)
             arcpy.Delete_management("in_memory")
-            del imageLayer
-            del dfmain
-            del mxd
+            # del imageLayer
+
+    def setMultipage(self, year, mxd, dfmain, gridsize, presentedFIPs):
+        arcpy.MakeFeatureLayer_management(presentedFIPs, "presentedLayer")
+
+        # CREATES GRID        
+        Gridlrshp = os.path.join(cfg.scratch,"gridlr_" + str(year) + '.shp')        
+        expression = str('"YEAR" LIKE \'%' + str(year) + "%'")
+        arcpy.SelectLayerByAttribute_management("presentedLayer",'NEW_SELECTION', expression)
+        arcpy.GridIndexFeatures_cartography(Gridlrshp, "presentedLayer", "", "", "", gridsize, gridsize)
+        arcpy.MakeFeatureLayer_management(Gridlrshp, "gridlr")
+
+        newgridlr = arcpy.mapping.ListLayers(mxd,"Grid",dfmain)[0]
+        newgridlr.replaceDataSource(cfg.scratch, "SHAPEFILE_WORKSPACE","gridlr" + "_" + str(year))
+        newgridlr.visible = True
+
+        # REFRESH VIEW
+        dfmain.extent = newgridlr.getExtent()
+        scale = dfmain.scale * 1.1
+
+        dfmain.scale = ((int(scale)/100)+1)*100
+
+        FIPpdfMM = os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'_mm.pdf')
+        print(FIPpdfMM)
+        ddMMDDP = mxd.dataDrivenPages
+        ddMMDDP.refresh()
+        ddMMDDP.exportToPDF(out_pdf=FIPpdfMM, page_range_type="ALL",resolution=600, image_quality="BEST", georef_info = True)
+
+        del ddMMDDP
 
     def appendMapPages(self, output,summaryList, multipage, yesboundary):
         years = summaryList.keys()

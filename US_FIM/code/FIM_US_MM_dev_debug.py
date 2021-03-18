@@ -68,13 +68,9 @@ if __name__ == '__main__':
             #     pdfreport_name =  cfg.order_obj.number+"_MEX_FIM.pdf"
             
             # create map page
-            ff.createPDF(summaryList, is_aei, mxd, dfmain, dfinset, cfg.Multipage, cfg.gridsize, cfg.presentedFIPs)
+            ff.createPDF(summaryList, is_aei, mxd, dfmain, dfinset, cfg.yesBoundary, cfg.Multipage, cfg.gridsize, cfg.presentedFIPs)
 
-            pagesize = portrait(letter)
-            [PAGE_WIDTH,PAGE_HEIGHT]=pagesize[:2]
-            PAGE_WIDTH = int(PAGE_WIDTH)
-            PAGE_HEIGHT = int(PAGE_HEIGHT)
-            styles = getSampleStyleSheet()
+
 
             ff.goSummaryPage(cfg.summaryfile,summaryList)
             ff.goCoverPage(cfg.coverfile, cfg.NRF)

@@ -42,14 +42,16 @@ def createScratch():
 # order info
 order_obj = models.Order().get_order(20302000221)
 
+# parameters
 BufsizeText ='0.17'
 yesBoundary = "yes"
-gridsize = "0.3 KiloMeters"
+gridsize = "0.5 KiloMeters"
 selectionDist = '150 FEET'
 resolution = "800"
 
+# flags
 delyearFlag = "N"
-Multipage = True
+Multipage = False
 NRF = 'N'
 
 # scratch file
@@ -79,7 +81,7 @@ connectionPath = r"\\cabcvan1gis005\GISData\FIMS_USA"
 logopath =  os.path.join(connectionPath, "logos")
 
 # master file/folder
-mastergdb = r"\\CABCVAN1FPR009\USA_FIPs\US FIM Footprints\2020_12_08\FIM_US_STATES.gdb"
+mastergdb = r"\\CABCVAN1FPR009\USA_FIPs\US FIM Footprints\_master\FIM_US_STATES.gdb"
 excelfile = os.path.join(connectionPath,"master\MASTER_ALL_STATES.xlsx")
 
 # layer
@@ -91,7 +93,7 @@ orderGeomlyrfile_polygon =  os.path.join(connectionPath,r"layer\orderPoly.lyr")
 sheetLayer = os.path.join(connectionPath, r"layer\hallowsheet.lyr")
 
 # mxd
-FIMmxdfile = os.path.join(connectionPath, r"mxd\FIMLayout_MM.mxd")
+FIMmxdfile = os.path.join(connectionPath, r"mxd\FIMLayout.mxd")
 
 # pdf
 annot_poly =  os.path.join(connectionPath,r"mxd\annot_poly.pdf")
