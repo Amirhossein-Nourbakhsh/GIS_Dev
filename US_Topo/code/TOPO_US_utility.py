@@ -74,8 +74,9 @@ class oracle(object):
             arcpy.AddError("### oracle failed to close.")
         
 class topo_us_rpt(object):
-    def __init__(self,order_obj):
+    def __init__(self, order_obj, oracle):
         self.order_obj = order_obj
+        self.oracle = oracle
 
     def createAnnotPdf(self, myShapePdf):   # inputs cfg.shapePdf, outputs cfg.annotPdf
         '''there is a limitation on the number of vertices available to PDF annotations. 
@@ -174,10 +175,15 @@ class topo_us_rpt(object):
         return annotatedPdf
 
     def myFirstPage(self, canvas, doc):
+        pagesize = portrait(letter)
+        [PAGE_WIDTH,PAGE_HEIGHT]=pagesize[:2]
+        PAGE_WIDTH=int(PAGE_WIDTH)
+        PAGE_HEIGHT=int(PAGE_HEIGHT)
+
         canvas.saveState()
-        canvas.drawImage(cfg.summarypage,0,0, int(self.PAGE_WIDTH),int(self.PAGE_HEIGHT))
+        canvas.drawImage(cfg.summarypage,0,0, int(PAGE_WIDTH),int(PAGE_HEIGHT))
         canvas.setStrokeColorRGB(0.67,0.8,0.4)
-        canvas.line(50,100,int(self.PAGE_WIDTH-30),100)
+        canvas.line(50,100,int(PAGE_WIDTH-30),100)
         styles = getSampleStyleSheet()
         style = styles["Normal"]
 
@@ -301,16 +307,16 @@ class topo_us_rpt(object):
 
     def myCoverPage(self, canvas, doc):
         pagesize = portrait(letter)
-        [self.PAGE_WIDTH,self.PAGE_HEIGHT]=pagesize[:2]
-        self.PAGE_WIDTH=int(self.PAGE_WIDTH)
-        self.PAGE_HEIGHT=int(self.PAGE_HEIGHT)
+        [PAGE_WIDTH,PAGE_HEIGHT]=pagesize[:2]
+        PAGE_WIDTH=int(PAGE_WIDTH)
+        PAGE_HEIGHT=int(PAGE_HEIGHT)
 
         if len(self.order_obj.site_name) > 40:
                 self.order_obj.site_name = self.order_obj.site_name[0: self.order_obj.site_name[0:40].rfind(' ')] + '\n' + self.order_obj.site_name[self.order_obj.site_name[0:40].rfind(' ')+1:]
 
         AddressText = '%s\n%s %s %s'%(self.order_obj.address, self.order_obj.city, self.order_obj.province, self.order_obj.postal_code)
 
-        canvas.drawImage(cfg.coverPic,0,0, self.PAGE_WIDTH,self.PAGE_HEIGHT)
+        canvas.drawImage(cfg.coverPic,0,0, PAGE_WIDTH,PAGE_HEIGHT)
         leftsw= 54
         heights = 400
         rightsw = 200
@@ -425,8 +431,8 @@ class topo_us_rpt(object):
 
         myZipFile.close()
 
-    def log(self, logfile):
-        logger = logging.getLogger(cfg.logname)
+    def log(self, logfile, logname):
+        logger = logging.getLogger(logname)
         handler = logging.FileHandler(logfile)
         handler.setLevel(logging.DEBUG)
         logger.setLevel(logging.DEBUG)    
@@ -445,7 +451,7 @@ class topo_us_rpt(object):
         self.is_nova = 'N'
         try:
             expression = "select decode(c.company_id, 40385, 'Y', 'N') is_nova from orders o, customer c where o.customer_id = c.customer_id and o.order_id=" + str(order_obj.id)
-            self.is_nova = oracle(cfg.connectionString).query(expression)[0][0]
+            self.is_nova = self.oracle.query(expression)[0][0]
         except Exception as e:
             arcpy.AddWarning(e)
             arcpy.AddWarning("### is_nova failed...")
@@ -454,7 +460,7 @@ class topo_us_rpt(object):
         self.is_aei = 'N'
         try:
             function = 'ERIS_CUSTOMER.IsProductChron'
-            self.is_aei = oracle(cfg.connectionString).func(function, str, (str(order_obj.id),))
+            self.is_aei = self.oracle.func(function, str, (str(order_obj.id),))
         except Exception as e:
             arcpy.AddWarning(e)
             arcpy.AddWarning("### ERIS_CUSTOMER.IsProductChron failed...")
@@ -464,7 +470,7 @@ class topo_us_rpt(object):
         self.is_newLogo = 'N'
         try:
             function = 'ERIS_CUSTOMER.IsCustomLogo'
-            self.newlogofile = oracle(cfg.connectionString).func(function, str, (str(order_obj.id),))
+            self.newlogofile = self.oracle.func(function, str, (str(order_obj.id),))
 
             if self.newlogofile != None:
                 self.is_newLogo = 'Y'
@@ -907,7 +913,7 @@ class topo_us_rpt(object):
 
         try:
             function = 'eris_gis.AddTopoSummary'
-            orc_return = oracle(cfg.connectionString).func(function, str, (str(topassorc),))
+            orc_return = self.oracle.func(function, str, (str(topassorc),))
 
             if orc_return == 'Success':
                 arcpy.AddMessage("...Summary successfully populated to Oracle.")
@@ -956,8 +962,8 @@ class topo_us_rpt(object):
         needViewer = 'N'
         try:
             expression = "select topo_viewer from order_viewer where order_id =" + str(self.order_obj.id)
-            t = oracle(cfg.connectionString).query(expression)
-            if t != None:
+            t = self.oracle.query(expression)
+            if t:
                 needViewer = t[0][0]
         except:
             raise
@@ -973,11 +979,11 @@ class topo_us_rpt(object):
             # insert to oracle
             try:
                 expression  = "delete from overlay_image_info where order_id = %s and (type = 'topo75' or type = 'topo150' or type = 'topo15')" % str(self.order_obj.id)
-                oracle(cfg.connectionString).exe(expression)
+                self.oracle.exe(expression)
 
                 for item in metadata:
                     expression = "insert into overlay_image_info values (%s, %s, %s, %.5f, %.5f, %.5f, %.5f, %s, '', '')" % (str(self.order_obj.id), str(self.order_obj.number), "'" + item['type']+"'", item['lat_sw'], item['long_sw'], item['lat_ne'], item['long_ne'],"'"+item['imagename']+"'" )
-                    oracle(cfg.connectionString).exe(expression)
+                    self.oracle.exe(expression)
             except Exception as e:
                 arcpy.AddError(e)
                 arcpy.AddError("### overlay_image_info failed...")
@@ -1066,7 +1072,7 @@ class topo_us_rpt(object):
 
         try:
             procedure = 'eris_topo.processTopo'
-            oracle(cfg.connectionString).proc(procedure, (int(self.order_obj.id),))
+            self.oracle.proc(procedure, (int(self.order_obj.id),))
         except Exception as e:
             arcpy.AddError(e)
             arcpy.AddError("### eris_topo.processTopo failed...")

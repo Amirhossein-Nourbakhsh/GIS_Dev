@@ -5,7 +5,6 @@ import ConfigParser
 
 addpath = os.path.abspath(__file__).replace(os.path.relpath(__file__),"GIS_Dev")
 sys.path.insert(1,os.path.join(addpath,'DB_Framework'))
-import db_connections as con
 import models
 
 def server_loc_config(configpath,environment):
@@ -23,26 +22,36 @@ def server_loc_config(configpath,environment):
     else:
         return 'invalid server configuration'
 
-# arcpy parameters
-OrderIDText = arcpy.GetParameterAsText(0)
-BufsizeText = arcpy.GetParameterAsText(1)
-yesBoundary = arcpy.GetParameterAsText(2)
-multipage = arcpy.GetParameterAsText(3)
-gridsize = arcpy.GetParameterAsText(4)
-scratch = arcpy.env.scratchWorkspace
-scratchgdb = arcpy.env.scratchGDB
+def createScratch():
+    scratch = os.path.join(r"\\cabcvan1gis005\MISC_DataManagement\_AW\TOPO_US_SCRATCHY", "test123")
+    scratchgdb = "scratch.gdb"
+    if not os.path.exists(scratch):
+        os.mkdir(scratch)
+    if not os.path.exists(os.path.join(scratch, scratchgdb)):
+        arcpy.CreateFileGDB_management(scratch, "scratch.gdb")
+    return scratch, scratchgdb
+
+# # arcpy parameters
+# OrderIDText = arcpy.GetParameterAsText(0)
+# BufsizeText = arcpy.GetParameterAsText(1)
+# yesBoundary = arcpy.GetParameterAsText(2)
+# multipage = arcpy.GetParameterAsText(3)
+# gridsize = arcpy.GetParameterAsText(4)
+# scratch = arcpy.env.scratchWorkspace
+# scratchgdb = arcpy.env.scratchGDB
 
 # order info
-order_obj = models.Order().get_order(OrderIDText)
+order_obj = models.Order().get_order(21010800307)
 
-# # flags
-# multipage = "N"                     # Y/N, for multipages, set yesBoundary to 'fixed' (not 'yes') if want boundary to display
-# gridsize = "3 KiloMeters"           # for multipage grid
-# yesBoundary = "yes"               # fixed/yes/no
-# BufsizeText = "2.4"
-# delyearFlag = "N"                   # Y/N, for internal use only, blank maps, etc.
+# flags
+multipage = "N"                     # Y/N, for multipages, set yesBoundary to 'fixed' (not 'yes') if want boundary to display
+gridsize = "3 KiloMeters"           # for multipage grid
+yesBoundary = "yes"               # fixed/yes/no
+BufsizeText = "2.4"
+delyearFlag = "N"                   # Y/N, for internal use only, blank maps, etc.
 
 # scratch file/folder outputs
+scratch, scratchgdb = createScratch()
 summaryPdf = os.path.join(scratch,'summary.pdf')
 coverPdf = os.path.join(scratch,"cover.pdf")
 shapePdf = os.path.join(scratch, 'shape.pdf')
@@ -54,7 +63,7 @@ extent = os.path.join(scratch, scratchgdb, "extent")
 
 # connections/report outputs
 server_environment = 'test'
-server_config_file = con.server_config_file #r"\\cabcvan1gis005\GISData\ERISServerConfig.ini"
+server_config_file = r"\\cabcvan1gis005\GISData\ERISServerConfig.ini"
 server_config = server_loc_config(server_config_file,server_environment)
 
 reportcheckFolder = server_config["reportcheck"]

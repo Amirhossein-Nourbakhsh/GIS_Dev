@@ -50,13 +50,13 @@ if __name__ == '__main__':
 
     order_obj = cfg.order_obj
     oc = tp.oracle(cfg.connectionString)
-    tf = tp.topo_us_rpt(order_obj)
+    tf = tp.topo_us_rpt(order_obj, oc)
 
     arcpy.AddMessage("Order: " + str(order_obj.id) + ", " + str(order_obj.number))
     arcpy.AddMessage("multipage = " + cfg.multipage)
 
     try:
-        logger,handler = tf.log(cfg.logfile)
+        logger,handler = tf.log(cfg.logfile, cfg.logname)
 
         # get custom order flags
         is_nova, is_aei, is_newLogo = tf.customrpt(order_obj)
