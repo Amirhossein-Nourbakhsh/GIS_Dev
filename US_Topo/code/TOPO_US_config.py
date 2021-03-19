@@ -5,7 +5,6 @@ import ConfigParser
 
 addpath = os.path.abspath(__file__).replace(os.path.relpath(__file__),"GIS_Dev")
 sys.path.insert(1,os.path.join(addpath,'DB_Framework'))
-import db_connections as con
 import models
 
 def server_loc_config(configpath,environment):
@@ -35,7 +34,7 @@ scratchgdb = arcpy.env.scratchGDB
 # order info
 order_obj = models.Order().get_order(OrderIDText)
 
-# # flags
+# flags
 # multipage = "N"                     # Y/N, for multipages, set yesBoundary to 'fixed' (not 'yes') if want boundary to display
 # gridsize = "3 KiloMeters"           # for multipage grid
 # yesBoundary = "yes"               # fixed/yes/no
@@ -54,7 +53,7 @@ extent = os.path.join(scratch, scratchgdb, "extent")
 
 # connections/report outputs
 server_environment = 'test'
-server_config_file = con.server_config_file #r"\\cabcvan1gis005\GISData\ERISServerConfig.ini"
+server_config_file = r"\\cabcvan1gis005\GISData\ERISServerConfig.ini"
 server_config = server_loc_config(server_config_file,server_environment)
 
 reportcheckFolder = server_config["reportcheck"]
