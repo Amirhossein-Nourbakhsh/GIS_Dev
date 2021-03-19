@@ -192,7 +192,7 @@ def set_raster_background(input_raster):
     desc = arcpy.Describe(input_raster)
     for i in range(desc.bandCount):
         arcpy.SetRasterProperties_management(input_raster ,nodata= str(i+1) + ' 255')
-def ExportToOutputs(env,geroref_Image,outputImage_jpg,out_img_name,orderGeometry):
+def export_to_outputs(env,geroref_Image,outputImage_jpg,out_img_name,orderGeometry):
     ### Export georefed image as jpg file to jpg folder for US Aerial UI app
     output_image_jpg = os.path.join(outputImage_jpg,out_img_name + '.jpg')
     export_to_jpg(env,geroref_Image,output_image_jpg,orderGeometry,str(auid))
@@ -202,8 +202,8 @@ if __name__ == '__main__':
     ### set input parameters
     order_id = arcpy.GetParameterAsText(0)
     auid = arcpy.GetParameterAsText(1)
-    # order_id = '1035696'
-    # auid = '4019787'
+    # order_id = '1035794'
+    # auid = '277966'
     env = 'test'
     ## set scratch folder
     scratch_folder = arcpy.env.scratchFolder
@@ -278,7 +278,7 @@ if __name__ == '__main__':
                     ### Georeferencing
                     img_georeferenced = apply_georeferencing(input_image, src_points, gcp_points,OutputDirectory.georef_images, out_img_name, '', ResamplingType.BILINEAR)
                     ### ExportToOutputs
-                    ExportToOutputs(env,img_georeferenced, jpg_image_folder,out_img_name,order_geometry)
+                    export_to_outputs(env,img_georeferenced, jpg_image_folder,out_img_name,order_geometry)
                     
                     file_size = get_file_size(img_georeferenced)
                     strprod_update_path = str({"PROCEDURE":Oracle.erisapi_procedures["UpdateInventoryImagePath"],"AUI_ID": str(auid), "ORIGINAL_IMAGEPATH":img_georeferenced, "FILE_SIZE":file_size})
