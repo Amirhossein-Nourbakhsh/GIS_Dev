@@ -29,8 +29,8 @@ class oracle(object):
             self.con = cx_Oracle.connect(self.connectionString)
             self.cur = self.con.cursor()
         except cx_Oracle.Error as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### oracle connection failed.")
+            arcpy.AddError(e)
+            arcpy.AddError("### oracle connection failed.")
     
     def query(self, expression):
         try:
@@ -38,40 +38,40 @@ class oracle(object):
             t = self.cur.fetchall()
             return t
         except cx_Oracle.DatabaseError as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### database error.")
+            arcpy.AddError(e)
+            arcpy.AddError("### database error.")
 
     def exe(self, expression):
         try:
             self.cur.execute(expression)
             self.con.commit()
         except cx_Oracle.DatabaseError as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### database error.")
+            arcpy.AddError(e)
+            arcpy.AddError("### database error.")
 
     def proc(self, procedure, args):
         try:
             t = self.cur.callproc(procedure, args)
             return t
         except cx_Oracle.DatabaseError as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### database error.")
+            arcpy.AddError(e)
+            arcpy.AddError("### database error.")
 
     def func(self, function, type, args):
         try:
             t = self.cur.callfunc(function, type, args)
             return t
         except cx_Oracle.DatabaseError as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### database error.")
+            arcpy.AddError(e)
+            arcpy.AddError("### database error.")
 
     def close(self):
         try:
             self.cur.close()
             self.con.close()
         except cx_Oracle.Error as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### oracle failed to close.")
+            arcpy.AddError(e)
+            arcpy.AddError("### oracle failed to close.")
         
 class topo_us_rpt(object):
     def __init__(self,order_obj):
@@ -101,7 +101,7 @@ class topo_us_rpt(object):
                     break                           # get the first match only
                 previousline = line
             if geomString == "":
-                arcpy.AddMessage("### Failed to parse geomString...")
+                arcpy.AddWarning("### Failed to parse geomString...")
                 raise ValueError
         except:
             try:
@@ -111,13 +111,12 @@ class topo_us_rpt(object):
                         break                       # get the first match only
                     previousline = line
                 if geomString == "":
-                    arcpy.AddMessage("### Failed to parse geomString...")
+                    arcpy.AddWarning("### Failed to parse geomString...")
                     raise
             except:
                 geomString = mystr.split('S\r\n')[0].split('M\r\n')[1]
                 if geomString == "":
-                    arcpy.AddMessage("### Failed to parse geomString...")
-                raise
+                    arcpy.AddError("### Failed to parse geomString...")
 
         coordsString = [value for value in geomString.split(' ') if value not in ['m','l','', 'S']]
 
@@ -448,9 +447,8 @@ class topo_us_rpt(object):
             expression = "select decode(c.company_id, 40385, 'Y', 'N') is_nova from orders o, customer c where o.customer_id = c.customer_id and o.order_id=" + str(order_obj.id)
             self.is_nova = oracle(cfg.connectionString).query(expression)[0][0]
         except Exception as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### is_nova failed...")
-            pass
+            arcpy.AddWarning(e)
+            arcpy.AddWarning("### is_nova failed...")
         arcpy.AddMessage("is_nova = " + self.is_nova)
 
         self.is_aei = 'N'
@@ -458,8 +456,8 @@ class topo_us_rpt(object):
             function = 'ERIS_CUSTOMER.IsProductChron'
             self.is_aei = oracle(cfg.connectionString).func(function, str, (str(order_obj.id),))
         except Exception as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### ERIS_CUSTOMER.IsProductChron failed...")
+            arcpy.AddWarning(e)
+            arcpy.AddWarning("### ERIS_CUSTOMER.IsProductChron failed...")
             pass
         arcpy.AddMessage("is_aei = " + self.is_aei)
 
@@ -473,8 +471,8 @@ class topo_us_rpt(object):
                 if self.newlogofile =='RPS_RGB.gif':
                     self.newlogofile='RPS.png'
         except Exception as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### ERIS_CUSTOMER.IsCustomLogo failed...")
+            arcpy.AddWarning(e)
+            arcpy.AddWarning("### ERIS_CUSTOMER.IsCustomLogo failed...")
             pass
         arcpy.AddMessage("is_newLogo = " + self.is_newLogo)
 
@@ -660,9 +658,9 @@ class topo_us_rpt(object):
                     year2use = yeardict.get("date on map")
                     if year2use == "":
                         year2use = row["SourceYear"].strip()
-                        arcpy.AddMessage("### cannot determine year of the map from xml...get from csv instead")
+                        arcpy.AddMessage("### cannot determine year of the map from xml...get from csv instead..." + year2use)
 
-                    yearalldict[pdfname] = yeardict                                                 # {'WA_Seattle_243651_1992_100000_geo.pdf': {'aerial photo year': '1988', 'edit year': '1992', 'date on map': '1992'}], ['WA_Seattle_243652_1992_100000_geo.pdf', {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'},...}
+                    yearalldict[pdfname] = yeardict                                                 # {'WA_Seattle_243651_1992_100000_geo.pdf': {'aerial photo year': '1988', 'edit year': '1992', 'date on map': '1992'}], ['WA_Seattle_243652_1992_100000_geo.pdf', {'aerial photo year': '1988', 'edit year': '1992', 'date on map': '1992'},...}
                     infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"htmc", "rowsMain"])    # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963]
 
             f.seek(0)       # resets to beginning of csv
@@ -690,7 +688,7 @@ class topo_us_rpt(object):
 
                     if [row["Grid Size"],year2use,"htmc"] in [[y[1],y[3],y[4]] for y in infomatrix]:
                         if pdfname not in yearalldict:                                                  
-                            yearalldict[pdfname] = yeardict                                             # {'WA_Seattle_243651_1992_100000_geo.pdf': {'aerial photo year': '1988', 'edit year': '1992', 'date on map': '1992'}], ['WA_Seattle_243652_1992_100000_geo.pdf', {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'},...}
+                            yearalldict[pdfname] = yeardict                                             # {'WA_Seattle_243651_1992_100000_geo.pdf': {'aerial photo year': '1988', 'edit year': '1992', 'date on map': '1992'}], ['WA_Seattle_243652_1992_100000_geo.pdf', {'aerial photo year': '1988', 'edit year': '1992', 'date on map': '1992'},...}
                         infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"htmc", "rowsAdj"])    # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963, "htmc"]
 
         with open(csvfile_c, "rb") as f:
@@ -704,7 +702,7 @@ class topo_us_rpt(object):
                     if year2use == "" or year2use == None:
                         year2use = row["SourceYear"].strip()        # else get it from csv file
                         if year2use[0:2] != "20":
-                            arcpy.AddMessage("### Error in the year of the map..." + year2use)
+                            arcpy.AddWarning("### Error in the year of the map..." + year2use)
                     
                     yearalldict[pdfname] = {}
                     infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"topo", "rowsMain"])
@@ -719,7 +717,7 @@ class topo_us_rpt(object):
                     if year2use == "" or year2use == None:
                         year2use = row["SourceYear"].strip()
                         if year2use[0:2] != "20":
-                            arcpy.AddMessage("### Error in the year of the map..." + year2use)
+                            arcpy.AddWarning("### Error in the year of the map..." + year2use)
 
                     if [row["Grid Size"],year2use,"topo"] in [[y[1],y[3],y[4]] for y in infomatrix]:
                         if pdfname not in yearalldict:
@@ -730,7 +728,7 @@ class topo_us_rpt(object):
         maps1515 = []
         for row in infomatrix:
             if row[3] =="":
-                arcpy.AddMessage("...blank value in row: " + str(row))
+                arcpy.AddWarning("...blank value in row: " + str(row))
             else:
                 if row[1] == "7.5X7.5 GRID":
                     maps7575.append(row)
@@ -791,11 +789,11 @@ class topo_us_rpt(object):
 
                     quaddict[pdfname[0]] = quadname
             else:
-                arcpy.AddMessage("### tif file doesn't exist " + tifname)
+                arcpy.AddWarning("### tif file doesn't exist " + tifname)
                 if not os.path.exists(tifdir):
-                    arcpy.AddMessage("tif dir does NOT exist " + tifdir)
+                    arcpy.AddWarning("tif dir does NOT exist " + tifdir)
                 else:
-                    arcpy.AddMessage("tif dir does exist " + tifdir)
+                    arcpy.AddWarning("tif dir does exist " + tifdir)
 
             seq = seq + 1
         return quaddict
@@ -809,7 +807,7 @@ class topo_us_rpt(object):
             pdfname = key
             quadname = value
 
-            pdfyears =  yearalldict.get(pdfname)                    # {'WA_Seattle_243651_1992_100000_geo.pdf': {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'}], ['WA_Seattle_243652_1992_100000_geo.pdf', {'aerial photo year': '1988', 'imarcpy.AddMessage year': '1993', 'edit year': '1992', 'date on map': '1992'},...}
+            pdfyears =  yearalldict.get(pdfname)                    # {'WA_Seattle_243651_1992_100000_geo.pdf': {'aerial photo year': '1988', 'edit year': '1992', 'date on map': '1992'}], ['WA_Seattle_243652_1992_100000_geo.pdf', {'aerial photo year': '1988', 'edit year': '1992', 'date on map': '1992'},...}
             filteryears = {k: v for k, v in pdfyears.items() if k in ["aerial photo year","photo revision year"]}
             if filteryears:
                 seqno = "<SUB>(" + str(i) + ")</SUB>" 
@@ -855,17 +853,6 @@ class topo_us_rpt(object):
     def setBoundary(self, mxd, df, yesboundary):        
         # get yesboundary flag
         arcpy.AddMessage("yesboundary = " + yesboundary)
-        if yesboundary == "":
-            try:
-                expression = "SELECT * FROM ERIS.TOPO_AUDIT WHERE ORDER_ID  = " + str(self.order_obj.id)
-                result = oracle(cfg.connectionString).query(expression)
-
-                yesboundaryqry = str([row[3] for row in result if row[2]== "URL"][0])
-                yesboundary = re.search('(yesBoundary=)(\w+)(&)', yesboundaryqry).group(2).strip()            
-                arcpy.AddMessage("yesBoundary = " + yesboundary)
-            except:
-                arcpy.AddMessage("### no records in ERIS.TOPO_AUDIT.")
-                yesboundary = "yes"
 
         if yesboundary.lower() == 'fixed':
             for lyr in arcpy.mapping.ListLayers(mxd, "", df):
@@ -877,7 +864,6 @@ class topo_us_rpt(object):
         elif yesboundary.lower() == 'yes':
             if not os.path.exists(cfg.shapePdf) and not os.path.exists(cfg.annotPdf):
                 if self.order_obj.geometry.type.lower() == "polyline" or self.order_obj.geometry.type.lower() == "polygon":
-                    # remove all other layers
                     for lyr in arcpy.mapping.ListLayers(mxd, "", df):
                         if lyr.name == "Project Property":
                             lyr.visible = True
@@ -926,11 +912,10 @@ class topo_us_rpt(object):
             if orc_return == 'Success':
                 arcpy.AddMessage("...Summary successfully populated to Oracle.")
             else:
-                arcpy.AddMessage("...Summary failed to populate to Oracle, check DB admin.")
+                arcpy.AddWarning("...Summary failed to populate to Oracle, check DB admin.")
         except Exception as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### Oracle eris_gis.AddTopoSummary failed... " + str(e))
-            raise
+            arcpy.AddError(e)
+            arcpy.AddError("### Oracle eris_gis.AddTopoSummary failed... " + str(e))
 
     def appendMapPages(self, dictlist, output, yesboundary, multipage):
         n=0
@@ -994,9 +979,8 @@ class topo_us_rpt(object):
                     expression = "insert into overlay_image_info values (%s, %s, %s, %.5f, %.5f, %.5f, %.5f, %s, '', '')" % (str(self.order_obj.id), str(self.order_obj.number), "'" + item['type']+"'", item['lat_sw'], item['long_sw'], item['lat_ne'], item['long_ne'],"'"+item['imagename']+"'" )
                     oracle(cfg.connectionString).exe(expression)
             except Exception as e:
-                arcpy.AddMessage(e)
-                arcpy.AddMessage("### overlay_image_info failed...")
-                pass
+                arcpy.AddError(e)
+                arcpy.AddError("### overlay_image_info failed...")
 
             if os.path.exists(os.path.join(cfg.viewerFolder, self.order_obj.number+"_topo")):
                 shutil.rmtree(os.path.join(cfg.viewerFolder, self.order_obj.number+"_topo"))
@@ -1084,8 +1068,8 @@ class topo_us_rpt(object):
             procedure = 'eris_topo.processTopo'
             oracle(cfg.connectionString).proc(procedure, (int(self.order_obj.id),))
         except Exception as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### eris_topo.processTopo failed...")
+            arcpy.AddError(e)
+            arcpy.AddError("### eris_topo.processTopo failed...")
             pass
 
     def setMultipage(self, df, mxd, seriestext, year, projection, gridsize):

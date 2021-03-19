@@ -23,34 +23,26 @@ def server_loc_config(configpath,environment):
     else:
         return 'invalid server configuration'
 
-def createScratch():
-    scratch = os.path.join(r"\\cabcvan1gis005\MISC_DataManagement\_AW\TOPO_US_SCRATCHY", "test123")
-    scratchgdb = "scratch.gdb"
-    if not os.path.exists(scratch):
-        os.mkdir(scratch)
-    if not os.path.exists(os.path.join(scratch, scratchgdb)):
-        arcpy.CreateFileGDB_management(scratch, "scratch.gdb")
-    return scratch, scratchgdb
-
 # arcpy parameters
 OrderIDText = arcpy.GetParameterAsText(0)
 BufsizeText = arcpy.GetParameterAsText(1)
 yesBoundary = arcpy.GetParameterAsText(2)
+multipage = arcpy.GetParameterAsText(3)
+gridsize = arcpy.GetParameterAsText(4)
 scratch = arcpy.env.scratchWorkspace
 scratchgdb = arcpy.env.scratchGDB
 
 # order info
 order_obj = models.Order().get_order(OrderIDText)
 
-# flags
-delyearFlag = "N"                   # Y/N, for internal use only, blank maps, etc.
-multipage = "Y"                     # Y/N, for multipages, set yesBoundary to 'fixed' (not 'yes') if want boundary to display
-gridsize = "3 KiloMeters"           # for multipage grid
-# yesBoundary = "fixed"               # fixed/yes/no
+# # flags
+# multipage = "N"                     # Y/N, for multipages, set yesBoundary to 'fixed' (not 'yes') if want boundary to display
+# gridsize = "3 KiloMeters"           # for multipage grid
+# yesBoundary = "yes"               # fixed/yes/no
 # BufsizeText = "2.4"
+# delyearFlag = "N"                   # Y/N, for internal use only, blank maps, etc.
 
 # scratch file/folder outputs
-# scratch, scratchgdb = createScratch()
 summaryPdf = os.path.join(scratch,'summary.pdf')
 coverPdf = os.path.join(scratch,"cover.pdf")
 shapePdf = os.path.join(scratch, 'shape.pdf')
@@ -71,13 +63,13 @@ topouploadurl =  server_config["viewer_upload"] + r"/TopoUpload?ordernumber="
 connectionString = server_config["dbconnection"] #con.connection_string #'eris_gis/gis295@cabcvan1ora006.glaciermedia.inc:1521/GMTESTC'
 
 # folders
-testpath = r"\\cabcvan1gis005\GISData\Topo_USA"
-mxdpath = os.path.join(testpath, r"mxd")
+connectionPath = r"\\cabcvan1gis005\GISData\Topo_USA"
+mxdpath = os.path.join(connectionPath, r"mxd")
 
 # master data files\folders
-mastergdb = os.path.join(testpath, r"masterfile\MapIndices_National_GDB.gdb")
-csvfile_h = os.path.join(testpath, r"masterfile\All_HTMC_all_all_gda_results.csv")
-csvfile_c = os.path.join(testpath, r"masterfile\All_USTopo_T_7.5_gda_results.csv")
+mastergdb = os.path.join(connectionPath, r"masterfile\MapIndices_National_GDB.gdb")
+csvfile_h = os.path.join(connectionPath, r"masterfile\All_HTMC_all_all_gda_results.csv")
+csvfile_c = os.path.join(connectionPath, r"masterfile\All_USTopo_T_7.5_gda_results.csv")
 tifdir_h = r'\\cabcvan1fpr009\USGS_Topo\USGS_HTMC_Geotiff'
 tifdir_c = r'\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff'
 
@@ -110,6 +102,6 @@ coverPic = os.path.join(mxdpath, "coverPic", "ERIS_2018_ReportCover_Topographic 
 summarypage = os.path.join(mxdpath, "coverPic", "ERIS_2018_ReportCover_Second Page_F.jpg")
 
 # other
-logfile = os.path.join(testpath, r"log\USTopoSearch_Log.txt")
+logfile = os.path.join(connectionPath, r"log\USTopoSearch_Log.txt")
 logname = "TOPO_US_dev"
 readmefile = os.path.join(mxdpath,"readme.txt")
