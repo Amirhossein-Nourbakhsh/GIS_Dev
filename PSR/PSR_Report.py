@@ -20,7 +20,7 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 if __name__ == "__main__":
-    id = 21030400001
+    id = 1026370
     arcpy.AddMessage('Start PSR report...')
     start = timeit.default_timer()
     # ### set workspace
@@ -41,7 +41,7 @@ if __name__ == "__main__":
         if len(order_obj.psr.search_radius) > 0:
         ### set type of reports
             if_relief_report = False
-            if_topo_report = False
+            if_topo_report = True
             if_wetland_report = False
             if_flood_report = False
             if_geology_report = False

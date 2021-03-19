@@ -42,28 +42,29 @@ def generate_topo_report(order_obj):
         width = width + 6400     # add 2 miles to each side, for multipage
         height = height + 6400   # add 2 miles to each side, for multipage
         
-    point.X = x_centre_oid - width
-    point.Y = y_centre_oid + height
+    point.X = x_centre_oid-width
+    point.Y = y_centre_oid+height
     array.add(point)
-    point.X = x_centre_oid + width
-    point.Y = y_centre_oid + height
+    point.X = x_centre_oid+width
+    point.Y = y_centre_oid+height
     array.add(point)
-    point.X = x_centre_oid + width
-    point.Y = y_centre_oid - height
+    point.X = x_centre_oid+width
+    point.Y = y_centre_oid-height
     array.add(point)
-    point.X = x_centre_oid - width
-    point.Y = y_centre_oid - height
+    point.X = x_centre_oid-width
+    point.Y = y_centre_oid-height
     array.add(point)
-    point.X = x_centre_oid - width
-    point.Y = y_centre_oid + height
+    point.X = x_centre_oid-width
+    point.Y = y_centre_oid+height
     array.add(point)
-    feat = arcpy.Polygon(array,config.spatial_ref_pcs)
+    feat = arcpy.Polygon(array,order_obj.spatial_ref_pcs)
     array.removeAll()
     feature_list.append(feat)
     arcpy.CopyFeatures_management(feature_list, config.topo_frame)
+    arcpy.Project_management(config.topo_frame, config.topo_frame_gcs, order_obj.spatial_ref_gcs)
     
     topo_master_lyr = arcpy.mapping.Layer(config.topo_master_lyr)
-    arcpy.SelectLayerByLocation_management(topo_master_lyr,'intersect',config.topo_frame)
+    arcpy.SelectLayerByLocation_management(topo_master_lyr,'intersect',config.topo_frame_gcs)
     
     if(int((arcpy.GetCount_management(topo_master_lyr).getOutput(0))) == 0):
         arcpy.AddMessage('      - NO records selected')

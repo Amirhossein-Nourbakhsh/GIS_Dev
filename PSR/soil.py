@@ -8,11 +8,7 @@ sys.path.insert(1,os.path.join(os.getcwd(),'DB_Framework'))
 reload(sys)
 import models
 
-class Setting:
-    def __init__(self):
-        self.soil_lyr = None
-        self.report_data = []
-def create_map(order_obj, soil_setting):
+def create_map(order_obj):
     point = arcpy.Point()
     array = arcpy.Array()
     feature_list = []
@@ -51,14 +47,14 @@ def create_map(order_obj, soil_setting):
     point.X = xCentroid-width
     point.Y = yCentroid+height
     array.add(point)
-    feat = arcpy.Polygon(array,config.spatial_ref_pcs)
+    feat = arcpy.Polygon(array,order_obj.spatial_ref_pcs)
     array.removeAll()
     feature_list.append(feat)
         
     frame_soil = os.path.join(config.scratch_folder, "frame_soil.shp")
     arcpy.CopyFeatures_management(feature_list, frame_soil)
-    arcpy.SelectLayerByLocation_management(soil_setting.soil_lyr,'intersect',frame_soil)
-    arcpy.CopyFeatures_management(soil_setting.soil_lyr, config.soil_selectedby_frame)
+    arcpy.SelectLayerByLocation_management(config.soil_lyr,'intersect',frame_soil)
+    arcpy.CopyFeatures_management(config.soil_lyr, config.soil_selectedby_frame)
     
     # add another column to soil_disp just for symbology purpose
     arcpy.AddField_management(os.path.join(config.scratch_folder, config.soil_selectedby_frame), "FIDCP", "TEXT", "", "", "", "", "NON_NULLABLE", "REQUIRED", "")
@@ -71,7 +67,7 @@ def create_map(order_obj, soil_setting):
     ssurgo_lyr = arcpy.mapping.ListLayers(mxd_soil, "SSURGO*", df_soil)[0]
     ssurgo_lyr.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE", 'soil_selectedby_frame')
     ssurgo_lyr.symbology.addAllValues()
-    soil_setting.soil_lyr = ssurgo_lyr
+    config.soil_lyr = ssurgo_lyr
     
     utility.add_layer_to_mxd("order_buffer",df_soil,config.buffer_lyr_file, 1.1)
     utility.add_layer_to_mxd("order_geometry_pcs", df_soil,config.order_geom_lyr_file,1)
@@ -120,7 +116,7 @@ def create_map(order_obj, soil_setting):
         ssurgo_lyr = arcpy.mapping.ListLayers(mxd_mm_soil, "SSURGO*", df_mm_soil)[0]
         ssurgo_lyr.replaceDataSource(config.scratch_folder,"SHAPEFILE_WORKSPACE", "soil_selectedby_frame")
         ssurgo_lyr.symbology.addAllValues()
-        soil_setting.soil_lyr = ssurgo_lyr
+        config.soil_lyr = ssurgo_lyr
 
         grid_layer_mm = arcpy.mapping.ListLayers(mxd_mm_soil,"Grid" ,df_mm_soil)[0]
         grid_layer_mm.replaceDataSource(config.scratch_folder, "SHAPEFILE_WORKSPACE","grid_lyr_soil")
@@ -148,14 +144,14 @@ def create_map(order_obj, soil_setting):
         psr_obj = models.PSR()
         for i in range(1,page):
             psr_obj.insert_map(order_obj.id, 'SOIL', order_obj.number + str(i) + '.jpg', i + 1)
-    soil_Ids = []
+
     eris_id = 0
     ### Udpate DB
     psr_obj = models.PSR()
-    for map_unit in soil_setting.report_data:
+    for map_unit in config.report_data:
         eris_id = eris_id + 1
         mu_key = str(map_unit['Mukey'])
-        soil_Ids.append([map_unit['Musym'],eris_id])
+        config.soil_ids.append([map_unit['Musym'],eris_id])
         psr_obj.insert_order_detail(order_obj.id,eris_id, mu_key)
         psr_obj.insert_flex_rep(order_obj.id, eris_id, '9334', 2, 'S1', 1, 'Map Unit ' + map_unit['Musym'] + " (%s)" %map_unit["Soil_Percent"], '')  
         psr_obj.insert_flex_rep(order_obj.id, eris_id, '9334', 2, 'N', 2, 'Map Unit Name:', map_unit['Map Unit Name']) 
@@ -190,29 +186,28 @@ def generate_soil_report(order_obj):
     ### set scratch folder
     arcpy.env.workspace = config.scratch_folder
     arcpy.env.overwriteOutput = True   
-    soil_setting = Setting()
     ### extract buffer size for soil report
     eris_id = 0
     config.buffer_dist_soil = str(order_obj.psr.search_radius['9334']) + ' MILES'
     arcpy.Buffer_analysis(config.order_geometry_pcs_shp, config.order_buffer_shp, config.buffer_dist_soil) 
     
     if order_obj.province == 'HI':
-        data_path_soil = config.data_path_soil_HI
+        config.data_path_soil = config.data_path_soil_HI
     elif order_obj.province == 'AK':
-        data_path_soil = config.data_path_soil_AK
+        config.data_path_soil = config.data_path_soil_AK
     else:
-        data_path_soil = config.data_path_soil_CONUS
+        config.data_path_soil = config.data_path_soil_CONUS
         
-    data_soil = os.path.join(data_path_soil,'MUPOLYGON')
+    data_soil = os.path.join(config.data_path_soil,'MUPOLYGON')
     # select soil data by using spatial query of order buffere layer
-    soil_setting.soil_lyr = arcpy.MakeFeatureLayer_management(data_soil,'soil_lyr') 
-    arcpy.SelectLayerByLocation_management(soil_setting.soil_lyr, 'intersect',  config.order_buffer_shp)
-    arcpy.CopyFeatures_management(soil_setting.soil_lyr, config.soil_selectedby_order_shp)
+    config.soil_lyr = arcpy.MakeFeatureLayer_management(data_soil,'soil_lyr') 
+    arcpy.SelectLayerByLocation_management(config.soil_lyr, 'intersect',  config.order_buffer_shp)
+    arcpy.CopyFeatures_management(config.soil_lyr, config.soil_selectedby_order_shp)
     
-    table_muaggatt = os.path.join(data_path_soil,'muaggatt')
-    table_component = os.path.join(data_path_soil,'component')
-    table_chorizon = os.path.join(data_path_soil,'chorizon')
-    table_chtexturegrp = os.path.join(data_path_soil,'chtexturegrp')
+    table_muaggatt = os.path.join(config.data_path_soil,'muaggatt')
+    table_component = os.path.join(config.data_path_soil,'component')
+    table_chorizon = os.path.join(config.data_path_soil,'chorizon')
+    table_chtexturegrp = os.path.join(config.data_path_soil,'chtexturegrp')
     
     stable_muaggatt = os.path.join(config.temp_gdb,"muaggatt")
     stable_component = os.path.join(config.temp_gdb,"component")
@@ -305,17 +300,9 @@ def generate_soil_report(order_obj):
                     component_data = utility.return_componen_attribute_rv_indicator_Y(data_array,mukey)
                     map_unit_data['component'] = component_data
             map_unit_data["Soil_Percent"]  ="%s"%round(seq_array['SUM_Shape_'][i]/sum(seq_array['SUM_Shape_'])*100,2)+r'%'
-            soil_setting.report_data.append(map_unit_data)
-        # for map_unit in soil_setting.report_data:
-        #     arcpy.AddMessage('      - mapunit name: ' + map_unit['Map Unit Name'])
-        #     if 'component' in map_unit.keys():
-        #         arcpy.AddMessage('      -  Major component info are printed below')
-        #         for comp in map_unit['component']:
-        #             arcpy.AddMessage('      - component name is ' + comp[0][0])
-        #             for i in range(1,len(comp)):
-        #                 arcpy.AddMessage('      - ' + comp[i][0] +': '+ comp[i][1])
+            config.report_data.append(map_unit_data)
         # create the map
-        create_map(order_obj, soil_setting)
+        create_map(order_obj)
         
     end = timeit.default_timer()
     arcpy.AddMessage((' -- End generating PSR soil report. Duration:', round(end -start,4)))

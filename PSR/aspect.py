@@ -65,7 +65,7 @@ def generate_aspect_map(order_obj):
                 clipped_ras = clipped_ras + os.path.join(config.order_aspect_buffer, clip_name)+ ";"
                 i+=1
 
-            arcpy.MosaicToNewRaster_management(clipped_ras[0:-1], config.scratch_folder, dem_raster, config.spatial_ref_pcs, "32_BIT_FLOAT", "#","1", "FIRST", "#")
+            arcpy.MosaicToNewRaster_management(clipped_ras[0:-1], config.scratch_folder, dem_raster, order_obj.spatial_ref_pcs, "32_BIT_FLOAT", "#","1", "FIRST", "#")
                 
         numpy_array =  arcpy.RasterToNumPyArray(os.path.join(config.scratch_folder, dem_raster))
         x,y = gradient(numpy_array)

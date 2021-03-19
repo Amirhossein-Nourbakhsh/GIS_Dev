@@ -140,7 +140,7 @@ def generate_relief_report(order_obj):
     point.X = x_centr_oid - width
     point.Y = y_centr_oid + height
     array.add(point)
-    feat = arcpy.Polygon(array,config.spatial_ref_pcs)
+    feat = arcpy.Polygon(array,order_obj.spatial_ref_pcs)
     array.removeAll()
     feature_list.append(feat)
 

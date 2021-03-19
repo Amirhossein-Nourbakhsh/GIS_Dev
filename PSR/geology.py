@@ -111,7 +111,6 @@ def generate_geology_report(order_obj):
         psr_obj = models.PSR()
         psr_obj.insert_map(order_obj.id, 'GEOL', order_obj.number + '_US_GEOLOGY.jpg', 1)  #note type 'SOIL' or 'GEOL' is used internally
     else:
-        geology_IDs = []
         eris_id = 0
         psr_obj = models.PSR()
         in_rows = arcpy.SearchCursor(os.path.join(config.scratch_folder,config.geology_selectedby_order_shp))
@@ -125,7 +124,7 @@ def generate_geology_report(order_obj):
             # arcpy.AddMessage( in_row.UNITDESC)       # unit description
             # arcpy.AddMessage( in_row.ERIS_KEY_1)     # eris key created from upper(unit_link)
             eris_id = eris_id + 1
-            geology_IDs.append([in_row.ERIS_KEY_1,eris_id])
+            config.geology_ids.append([in_row.ERIS_KEY_1,eris_id])
             psr_obj.insert_order_detail(order_obj.id,eris_id, '10685')   
             psr_obj.insert_flex_rep(order_obj.id, eris_id, '10685', 2, 'S1', 1, 'Geologic Unit ' + in_row.ORIG_LABEL, '')
             psr_obj.insert_flex_rep(order_obj.id, eris_id, '10685', 2, 'N', 2, 'Unit Name: ', in_row.UNIT_NAME)

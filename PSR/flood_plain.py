@@ -169,7 +169,6 @@ def generate_flood_report(order_obj):
             del in_row
         del in_rows
 
-        flood_IDs =[]
         in_rows = arcpy.SearchCursor(os.path.join(config.scratch_folder,"summary_flood.dbf"))
         eris_id += 1
         psr_obj.insert_order_detail(order_obj.id , eris_id, '10683')
@@ -182,7 +181,7 @@ def generate_flood_report(order_obj):
             # arcpy.AddMessage('      : '+ (in_row.FIRST_ZONE))           # subtype
 
             eris_id += 1
-            flood_IDs.append([in_row.ERIS_CLASS,eris_id])
+            config.flood_ids.append([in_row.ERIS_CLASS,eris_id])
             
             psr_obj.insert_order_detail(order_obj.id,eris_id, '10683')   
             psr_obj.insert_flex_rep(order_obj.id, eris_id, '10683', 2, 'S1', 1, 'Flood Zone ' + in_row.ERIS_CLASS, '')
