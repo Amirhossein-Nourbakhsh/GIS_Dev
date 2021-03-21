@@ -70,7 +70,7 @@ if __name__ == '__main__':
         # open mxd and create map extent
         logger.debug("#1")
         mxd, df = tf.mapDocument(is_nova, srUTM)
-        needtif = tf.mapExtent(df, mxd, srUTM)
+        needtif = tf.mapExtent(df, mxd, srUTM, cfg.multipage)
 
         # set boundary
         mxd, df, yesBoundary = tf.setBoundary(mxd, df, cfg.yesBoundary)                         # if multipage, set to 'fixed' if want to show boundary; need to return variables again or won't update
@@ -109,14 +109,14 @@ if __name__ == '__main__':
                 comb7515 = {}
                 comb7515.update(dict7575)
                 comb7515.update(dict1515)
-                tf.createPDF(comb7515, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize)
+                tf.createPDF(comb7515, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize, needtif)
                 dictlist.append(comb7515)
             else:
                 if dict7575:
-                    tf.createPDF(dict7575, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize)
+                    tf.createPDF(dict7575, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize, needtif)
                     dictlist.append(dict7575)
                 if dict1515:
-                    tf.createPDF(dict1515, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize)
+                    tf.createPDF(dict1515, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize, needtif)
                     dictlist.append(dict1515)
 
             # create blank pdf and append cover and summary pages
@@ -166,9 +166,8 @@ if __name__ == '__main__':
         try:
             procedure = 'eris_topo.InsertTopoAudit'
             oc.proc(procedure, (order_obj.id, 'python-Error Handling',pymsg))
-        finally:
-            pass
-        raise                                   # raise the error again
+        except Exception as e:
+            raise                                   # raise the error again
 
     finally:
         oc.close()                              # close oracle connection

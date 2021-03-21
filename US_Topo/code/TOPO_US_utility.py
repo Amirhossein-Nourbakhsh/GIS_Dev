@@ -362,7 +362,7 @@ class topo_us_rpt(object):
                     del mapslist[index]
         return mapslist
 
-    def reorgByYear(self, maplist):            # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963, 'htmc', "rowsMain"]
+    def reorgByYear(self, maplist):                         # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963, 'htmc', "rowsMain"]
         # reorganize the pdf dictionary based on years
         # filter out irrelevant background years (which doesn't have a centre selected map)
         diction_pdf_inPresentationBuffer = {}
@@ -380,7 +380,7 @@ class topo_us_rpt(object):
                 diction_pdf_inPresentationBuffer[row[3]] = [row[4], seriesText, [[row[2],row[5]]]]
         return diction_pdf_inPresentationBuffer             # {'1946': ['htmc', '15', [['NY_Newburgh_130830_1946_62500_geo.pdf', 'rowsMain']]], '1903': ['htmc', '15', [['NY_Rosendale_129217_1903_62500_geo.pdf', 'rowsAdj'], ['NY_Newburg_144216_1903_62500_geo.pdf', 'rowsMain']]]}
 
-    def createPDF(self, diction, yearalldict, mxd, df, yesboundary, projection, multipage, gridsize):         # {'1946': ['htmc', '15', [['NY_Newburgh_130830_1946_62500_geo.pdf', 'rowsMain']]], '1903': ['htmc', '15', [['NY_Rosendale_129217_1903_62500_geo.pdf', 'rowsAdj'], ['NY_Newburg_144216_1903_62500_geo.pdf', 'rowsMain']]]}
+    def createPDF(self, diction, yearalldict, mxd, df, yesboundary, projection, multipage, gridsize, needtif):         # {'1946': ['htmc', '15', [['NY_Newburgh_130830_1946_62500_geo.pdf', 'rowsMain']]], '1903': ['htmc', '15', [['NY_Rosendale_129217_1903_62500_geo.pdf', 'rowsAdj'], ['NY_Newburg_144216_1903_62500_geo.pdf', 'rowsMain']]]}
         # create PDF and also make a copy of the geotiff files if the scale is too small
         years = diction.keys()
 
@@ -399,7 +399,7 @@ class topo_us_rpt(object):
 
             # multipage
             if multipage == "Y":
-                self.setMultipage(df, mxd, seriesText, year, projection, gridsize)
+                self.setMultipage(df, mxd, seriesText, year, projection, gridsize, needtif, yesboundary)
 
             # export mxd to pdf       
             outputpdf = os.path.join(cfg.scratch, "map_"+seriesText+"_"+year+".pdf")            
@@ -410,7 +410,7 @@ class topo_us_rpt(object):
             mxd.saveACopy(os.path.join(cfg.scratch, seriesText + "_" + year + ".mxd"))
 
             # merge annotation pdf to the map if yesBoundary == Y
-            if multipage != "Y" and yesboundary == 'yes' and self.order_obj.geometry.type.lower() != 'point' and self.order_obj.geometry.type.lower() != 'multipoint':
+            if yesboundary == 'yes' and self.order_obj.geometry.type.lower() != 'point' and self.order_obj.geometry.type.lower() != 'multipoint':
                 self.annotatePdf(outputpdf, cfg.annotPdf)
 
             for lyr in arcpy.mapping.ListLayers(mxd, "", df):
@@ -521,7 +521,7 @@ class topo_us_rpt(object):
         else:
             orderGeomlyrfile = cfg.orderGeomlyrfile_polygon
 
-        arcpy.Buffer_analysis(cfg.orderGeometryPR, cfg.orderBuffer, '1 KILOMETERS')                     # has to be not smaller than the search radius to void white page
+        arcpy.Buffer_analysis(cfg.orderGeometryPR, cfg.orderBuffer, '0.5 KILOMETERS')                     # has to be not smaller than the search radius to void white page
 
         orderGeomLayer = arcpy.mapping.Layer(orderGeomlyrfile)
         orderGeomLayer.replaceDataSource(os.path.join(cfg.scratch, cfg.scratchgdb),"FILEGDB_WORKSPACE","orderGeometryPR")
@@ -575,9 +575,12 @@ class topo_us_rpt(object):
         del point
         del array
 
-    def mapExtent(self, df, mxd, projection):
+    def mapExtent(self, df, mxd, projection, multipage):
         df.extent = arcpy.mapping.ListLayers(mxd, "Buffer Outline", df)[0].getSelectedExtent(True)
-        df.scale = df.scale * 1.1               # need to add 10% buffer or ordergeometry might touch dataframe boundary.
+        if multipage == "Y":
+            df.scale = df.scale * 1.3               # need to add 10% buffer or ordergeometry might touch dataframe boundary.
+        else:
+            df.scale = df.scale * 1.1
 
         needtif = False
         mscale = 24000      # change on 11/3/2016, to fix all maps to the same scale
@@ -695,7 +698,7 @@ class topo_us_rpt(object):
                     if [row["Grid Size"],year2use,"htmc"] in [[y[1],y[3],y[4]] for y in infomatrix]:
                         if pdfname not in yearalldict:                                                  
                             yearalldict[pdfname] = yeardict                                             # {'WA_Seattle_243651_1992_100000_geo.pdf': {'aerial photo year': '1988', 'edit year': '1992', 'date on map': '1992'}], ['WA_Seattle_243652_1992_100000_geo.pdf', {'aerial photo year': '1988', 'edit year': '1992', 'date on map': '1992'},...}
-                        infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"htmc", "rowsAdj"])    # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963, "htmc"]
+                            infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"htmc", "rowsAdj"])    # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963, "htmc"]
 
         with open(csvfile_c, "rb") as f:
             arcpy.AddMessage("___All USGS Current Topo List.")
@@ -728,7 +731,7 @@ class topo_us_rpt(object):
                     if [row["Grid Size"],year2use,"topo"] in [[y[1],y[3],y[4]] for y in infomatrix]:
                         if pdfname not in yearalldict:
                             yearalldict[pdfname] = {}
-                        infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"topo", "rowsAdj"])  # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963, "topo"]
+                            infomatrix.append([row["Cell ID"],row["Grid Size"],pdfname,year2use,"topo", "rowsAdj"])  # [64818, 15X15 GRID,  LA_Zachary_335142_1963_62500_geo.pdf,  1963, "topo"]
 
         maps7575 = []
         maps1515 = []
@@ -937,8 +940,12 @@ class topo_us_rpt(object):
                 
                 for year in years:
                     seriesText = d[year][1]
-                    if multipage == "Y":
+                    if yesboundary == "yes":
+                        pdf = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + "_a.pdf"),'rb'))
+                    else:
                         pdf = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + ".pdf"),'rb'))
+
+                    if multipage == "Y":
                         pdfmm = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + "_mm.pdf"),'rb'))
                         
                         output.addPage(pdf.getPage(0))
@@ -949,10 +956,6 @@ class topo_us_rpt(object):
                             n = n + 1
                         n = n + 1
                     else:
-                        if yesboundary == "yes":
-                            pdf = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + "_a.pdf"),'rb'))
-                        else:
-                            pdf = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + ".pdf"),'rb'))
                         output.addPage(pdf.getPage(0))
                         output.addBookmark(year + "_" + seriesText.replace("75", "7.5"), n+2)   #n+1 to accommodate the summary page
                         n = n + 1
@@ -1078,7 +1081,7 @@ class topo_us_rpt(object):
             arcpy.AddError("### eris_topo.processTopo failed...")
             pass
 
-    def setMultipage(self, df, mxd, seriestext, year, projection, gridsize):
+    def setMultipage(self, df, mxd, seriestext, year, projection, gridsize, needtif, yesboundary):
         gridname = seriestext + "_" + str(year)
 
         # clip topo image extents to buffer
@@ -1092,6 +1095,9 @@ class topo_us_rpt(object):
             if lyr.name == "Grid":
                 lyr.visible = True
                 gridLayer = lyr
+
+            if lyr.name == "Project Property" and yesboundary != "no":
+                lyr.visible = True
 
         rasterExtClip = os.path.join(cfg.scratch, cfg.scratchgdb, "extclip_" + gridname) 
         arcpy.Clip_analysis(rasterExt, cfg.orderBuffer, rasterExtClip)
@@ -1109,8 +1115,15 @@ class topo_us_rpt(object):
         mxdmm.refresh()
         mxdmm.exportToPDF(pdfmm, page_range_type="ALL", resolution=100, georef_info = True)
 
-        # get extent of whole grid for export of main map later
-        df.extent = gridLayer.getSelectedExtent(True)
-        df.scale = df.scale * 1.1
+        # reset extent
+        if needtif == True:
+            df.extent = arcpy.mapping.ListLayers(mxd, "Buffer Outline", df)[0].getSelectedExtent(True)
+            df.scale = df.scale * 1.3                               # need to add 10% buffer or ordergeometry might touch dataframe boundary.            
+        else:
+            df.scale = 24000
+
+        # reset boundary
+        if yesboundary != "fixed":
+            arcpy.mapping.ListLayers(mxd, "Project Property", df)[0].visible = False
 
         del mxdmm
