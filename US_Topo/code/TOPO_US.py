@@ -120,12 +120,12 @@ if __name__ == '__main__':
                     dictlist.append(dict1515)
 
             # create blank pdf and append cover and summary pages
-            output = PdfFileWriter()
             tf.goCoverPage(cfg.coverPdf)
             tf.goSummaryPage(dictlist, cfg.summaryPdf)
 
             coverPages = PdfFileReader(open(cfg.coverPdf,'rb'))
             summaryPages = PdfFileReader(open(cfg.summaryPdf,'rb'))
+            output = PdfFileWriter()
             output.addPage(coverPages.getPage(0))
             output.addPage(summaryPages.getPage(0))
             output.addBookmark("Cover Page",0)

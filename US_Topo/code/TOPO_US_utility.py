@@ -501,39 +501,6 @@ class topo_us_rpt(object):
         arcpy.AddMessage(self.srUTM.name)
         return self.srGCS83, self.srWGS84, self.srGoogle, self.srUTM
 
-    def mapDocument(self, is_nova, projection):
-        arcpy.env.overwriteOutput = True
-        arcpy.env.outputCoordinateSystem = projection
-        arcpy.env.workspace = cfg.mastergdb
-
-        if is_nova == 'Y':
-            mxd = arcpy.mapping.MapDocument(cfg.mxdfile_nova)
-        else:
-            mxd = arcpy.mapping.MapDocument(cfg.mxdfile)
-
-        df = arcpy.mapping.ListDataFrames(mxd,"*")[0]
-        df.spatialReference = projection
-
-        if self.order_obj.geometry.type.lower() == 'point' or self.order_obj.geometry.type.lower() == 'multipoint':
-            orderGeomlyrfile = cfg.orderGeomlyrfile_point
-        elif self.order_obj.geometry.type.lower() == 'polyline':
-            orderGeomlyrfile = cfg.orderGeomlyrfile_polyline
-        else:
-            orderGeomlyrfile = cfg.orderGeomlyrfile_polygon
-
-        arcpy.Buffer_analysis(cfg.orderGeometryPR, cfg.orderBuffer, '0.5 KILOMETERS')                     # has to be not smaller than the search radius to void white page
-
-        orderGeomLayer = arcpy.mapping.Layer(orderGeomlyrfile)
-        orderGeomLayer.replaceDataSource(os.path.join(cfg.scratch, cfg.scratchgdb),"FILEGDB_WORKSPACE","orderGeometryPR")
-
-        bufferLayer = arcpy.mapping.Layer(cfg.bufferlyrfile)
-        bufferLayer.replaceDataSource(os.path.join(cfg.scratch, cfg.scratchgdb),"FILEGDB_WORKSPACE","buffer")                       # change on 11/3/2016, fix all maps to the same scale
-        
-        arcpy.mapping.AddLayer(df,bufferLayer,"Top")
-        arcpy.mapping.AddLayer(df,orderGeomLayer,"Top")
-
-        return mxd, df
-
     def createordergeometry(self, order_obj, projection):
         arcpy.env.overwriteOutput = True
         point = arcpy.Point()
@@ -575,12 +542,44 @@ class topo_us_rpt(object):
         del point
         del array
 
+    def mapDocument(self, is_nova, projection):
+        arcpy.env.overwriteOutput = True
+        arcpy.env.outputCoordinateSystem = projection
+
+        if is_nova == 'Y':
+            mxd = arcpy.mapping.MapDocument(cfg.mxdfile_nova)
+        else:
+            mxd = arcpy.mapping.MapDocument(cfg.mxdfile)
+
+        df = arcpy.mapping.ListDataFrames(mxd,"*")[0]
+        df.spatialReference = projection
+
+        if self.order_obj.geometry.type.lower() == 'point' or self.order_obj.geometry.type.lower() == 'multipoint':
+            orderGeomlyrfile = cfg.orderGeomlyrfile_point
+        elif self.order_obj.geometry.type.lower() == 'polyline':
+            orderGeomlyrfile = cfg.orderGeomlyrfile_polyline
+        else:
+            orderGeomlyrfile = cfg.orderGeomlyrfile_polygon
+
+        arcpy.Buffer_analysis(cfg.orderGeometryPR, cfg.orderBuffer, '0.5 KILOMETERS')                     # has to be not smaller than the search radius to void white page
+
+        orderGeomLayer = arcpy.mapping.Layer(orderGeomlyrfile)
+        orderGeomLayer.replaceDataSource(os.path.join(cfg.scratch, cfg.scratchgdb),"FILEGDB_WORKSPACE","orderGeometryPR")
+
+        bufferLayer = arcpy.mapping.Layer(cfg.bufferlyrfile)
+        bufferLayer.replaceDataSource(os.path.join(cfg.scratch, cfg.scratchgdb),"FILEGDB_WORKSPACE","buffer")                       # change on 11/3/2016, fix all maps to the same scale
+        
+        arcpy.mapping.AddLayer(df,bufferLayer,"Top")
+        arcpy.mapping.AddLayer(df,orderGeomLayer,"Top")
+
+        return mxd, df
+
     def mapExtent(self, df, mxd, projection, multipage):
         df.extent = arcpy.mapping.ListLayers(mxd, "Buffer Outline", df)[0].getSelectedExtent(True)
         if multipage == "Y":
-            df.scale = df.scale * 1.3               # need to add 10% buffer or ordergeometry might touch dataframe boundary.
+            df.scale = df.scale * 1.3               
         else:
-            df.scale = df.scale * 1.1
+            df.scale = df.scale * 1.1               # need to add 10% buffer or ordergeometry might touch dataframe boundary.
 
         needtif = False
         mscale = 24000      # change on 11/3/2016, to fix all maps to the same scale
@@ -622,6 +621,46 @@ class topo_us_rpt(object):
         
         return needtif
 
+    def setBoundary(self, mxd, df, yesboundary):        
+        # get yesboundary flag
+        arcpy.AddMessage("yesboundary = " + yesboundary)
+
+        if yesboundary.lower() == 'fixed':
+            for lyr in arcpy.mapping.ListLayers(mxd, "", df):
+                if lyr.name == "Project Property":
+                    lyr.visible = True
+                else:
+                    lyr.visible = False
+
+        elif yesboundary.lower() == 'yes':
+            if not os.path.exists(cfg.shapePdf) and not os.path.exists(cfg.annotPdf):
+                if self.order_obj.geometry.type.lower() == "polyline" or self.order_obj.geometry.type.lower() == "polygon":
+                    for lyr in arcpy.mapping.ListLayers(mxd, "", df):
+                        if lyr.name == "Project Property":
+                            lyr.visible = True
+                        else:
+                            lyr.visible = False
+                    arcpy.mapping.ExportToPDF(mxd, cfg.shapePdf, "PAGE_LAYOUT", 640, 480, 250, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "LAYERS_AND_ATTRIBUTES", True, 90)
+                    for lyr in arcpy.mapping.ListLayers(mxd, "", df):
+                        lyr.visible = False
+
+                    # create the map_a.pdf with annotation just once
+                    self.createAnnotPdf(cfg.shapePdf)                   # creates annot.pdf
+
+                elif self.order_obj.geometry.type.lower() == "point" or self.order_obj.geometry.type.lower() == "multipoint":
+                    yesboundary = 'fixed'
+                    for lyr in arcpy.mapping.ListLayers(mxd, "", df):
+                        if lyr.name == "Project Property":
+                            lyr.visible = True
+                        else:
+                            lyr.visible = False
+
+        elif yesboundary.lower() == 'no':
+            for lyr in arcpy.mapping.ListLayers(mxd, "", df):
+                lyr.visible = False
+
+        return mxd, df, yesboundary
+        
     def selectTopo(self, orderGeometry, extent, projection):                
         arcpy.env.overwriteOutput = True
         arcpy.env.outputCoordinateSystem = projection
@@ -858,46 +897,6 @@ class topo_us_rpt(object):
         if self.is_newLogo == 'Y':     # custom logs
             logoE = arcpy.mapping.ListLayoutElements(mxd, "PICTURE_ELEMENT", "logo")[0]
             logoE.sourceImage = os.path.join(cfg.logopath, self.newlogofile)
-
-    def setBoundary(self, mxd, df, yesboundary):        
-        # get yesboundary flag
-        arcpy.AddMessage("yesboundary = " + yesboundary)
-
-        if yesboundary.lower() == 'fixed':
-            for lyr in arcpy.mapping.ListLayers(mxd, "", df):
-                if lyr.name == "Project Property":
-                    lyr.visible = True
-                else:
-                    lyr.visible = False
-
-        elif yesboundary.lower() == 'yes':
-            if not os.path.exists(cfg.shapePdf) and not os.path.exists(cfg.annotPdf):
-                if self.order_obj.geometry.type.lower() == "polyline" or self.order_obj.geometry.type.lower() == "polygon":
-                    for lyr in arcpy.mapping.ListLayers(mxd, "", df):
-                        if lyr.name == "Project Property":
-                            lyr.visible = True
-                        else:
-                            lyr.visible = False
-                    arcpy.mapping.ExportToPDF(mxd, cfg.shapePdf, "PAGE_LAYOUT", 640, 480, 250, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "LAYERS_AND_ATTRIBUTES", True, 90)
-                    for lyr in arcpy.mapping.ListLayers(mxd, "", df):
-                        lyr.visible = False
-
-                    # create the map_a.pdf with annotation just once
-                    self.createAnnotPdf(cfg.shapePdf)                   # creates annot.pdf
-
-                elif self.order_obj.geometry.type.lower() == "point" or self.order_obj.geometry.type.lower() == "multipoint":
-                    yesboundary = 'fixed'
-                    for lyr in arcpy.mapping.ListLayers(mxd, "", df):
-                        if lyr.name == "Project Property":
-                            lyr.visible = True
-                        else:
-                            lyr.visible = False
-
-        elif yesboundary.lower() == 'no':
-            for lyr in arcpy.mapping.ListLayers(mxd, "", df):
-                lyr.visible = False
-
-        return mxd, df, yesboundary
 
     def oracleSummary(self, dictlist, pdfreport):
         summarydata = []
