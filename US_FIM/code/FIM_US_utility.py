@@ -15,13 +15,6 @@ from reportlab.lib.units import inch
 from reportlab.lib.pagesizes import portrait, letter
 from reportlab.pdfgen import canvas
 from time import strftime
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler = logging.FileHandler(r"\\cabcvan1gis006\GISData\FIMS_USA\temp\USFIM_Log.txt")
-handler.setLevel(logging.INFO)
-logger.addHandler(handler)
-
 class oracle(object):    
     def __init__(self, connectionString):
         self.connectionString = connectionString
@@ -29,8 +22,8 @@ class oracle(object):
             self.con = cx_Oracle.connect(self.connectionString)
             self.cur = self.con.cursor()
         except cx_Oracle.Error as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### oracle connection failed.")
+            arcpy.AddError(e)
+            arcpy.AddError("### oracle connection failed.")
     
     def query(self, expression):
         try:
@@ -38,44 +31,45 @@ class oracle(object):
             t = self.cur.fetchall()
             return t
         except cx_Oracle.DatabaseError as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### database error.")
+            arcpy.AddError(e)
+            arcpy.AddError("### database error.")
 
     def exe(self, expression):
         try:
             self.cur.execute(expression)
             self.con.commit()
         except cx_Oracle.DatabaseError as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### database error.")
+            arcpy.AddError(e)
+            arcpy.AddError("### database error.")
 
     def proc(self, procedure, args):
         try:
             t = self.cur.callproc(procedure, args)
             return t
         except cx_Oracle.DatabaseError as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### database error.")
+            arcpy.AddError(e)
+            arcpy.AddError("### database error.")
 
     def func(self, function, type, args):
         try:
             t = self.cur.callfunc(function, type, args)
             return t
         except cx_Oracle.DatabaseError as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### database error.")
+            arcpy.AddError(e)
+            arcpy.AddError("### database error.")
 
     def close(self):
         try:
             self.cur.close()
             self.con.close()
         except cx_Oracle.Error as e:
-            arcpy.AddMessage(e)
-            arcpy.AddMessage("### oracle failed to close.")
+            arcpy.AddError(e)
+            arcpy.AddError("### oracle failed to close.")
 
 class fim_us_rpt(object):
-    def __init__(self,order_obj):
+    def __init__(self,order_obj, oracle):
         self.order_obj = order_obj
+        self.oracle = oracle
     
     def findpath(a,b):
         a = a.upper().replace(r"\\CABCVAN1FPR009", r"W:")
@@ -92,7 +86,6 @@ class fim_us_rpt(object):
         mystr = geomPage.getObject()['/Contents'].getData()
         # to pinpoint the string part: 1.19997 791.75999 m 1.19997 0.19466 l 611.98627 0.19466 l 611.98627 791.75999 l 1.19997 791.75999 l
         # the format seems to follow x1 y1 m x2 y2 l x3 y3 l x4 y4 l x5 y5 l
-        # print(mystr)
         geomString = mystr.split('S\r\n')[0].split('M\r\n')[1].replace("rg\r\n", "").replace("h\r\n", "")
         coordsString = [value for value in geomString.split(' ') if value not in ['m','l','']]
 
@@ -226,7 +219,7 @@ class fim_us_rpt(object):
         canvas.saveState()
         del canvas
 
-    def goSummaryPage(self, summaryfile, summaryList):
+    def goSummaryPage(self, summaryfile, mainList):
         pagesize = portrait(letter)
         [PAGE_WIDTH,PAGE_HEIGHT]=pagesize[:2]
         PAGE_WIDTH = int(PAGE_WIDTH)
@@ -240,9 +233,9 @@ class fim_us_rpt(object):
         newdata.append(['Date','City','State','Volume','Sheet Number(s)'])
         style = ParagraphStyle("cover",parent=styles['Normal'],fontName="Helvetica",fontSize=9,leading=9)
         
-        years = summaryList.keys()
+        years = mainList.keys()
         for key in years:
-            volumes = summaryList[key]
+            volumes = mainList[key]
             for v in volumes.values():
                 [state,city,vol,year,sheets] = v[2:7]
                 sheets = str([_ for _ in sheets]).replace("'","").replace("[","").replace("]","")
@@ -308,7 +301,7 @@ class fim_us_rpt(object):
         self.is_newLogo = 'N'
         try:
             function = 'ERIS_CUSTOMER.IsCustomLogo'
-            self.newlogofile = oracle(cfg.connectionString).func(function, str, (str(order_obj.id),))
+            self.newlogofile = self.oracle.func(function, str, (str(order_obj.id),))
 
             if self.newlogofile != None:
                 self.is_newLogo = 'Y'
@@ -327,7 +320,7 @@ class fim_us_rpt(object):
         self.is_aei = 'N'
         try:
             function = 'ERIS_CUSTOMER.IsProductChron'
-            self.is_aei = oracle(cfg.connectionString).func(function, str, (str(order_obj.id),))
+            self.is_aei = self.oracle.func(function, str, (str(order_obj.id),))
         except Exception as e:
             arcpy.AddMessage(e)
             arcpy.AddMessage("### ERIS_CUSTOMER.IsProductChron failed...")
@@ -337,7 +330,7 @@ class fim_us_rpt(object):
         self.is_emg= 'N'
         try:
             statement = "select decode(c.company_id, 35, 'Y', 'N') is_emg from orders o, customer c where o.customer_id = c.customer_id and o.order_id=" + str(order_obj.id)
-            self.is_emg = oracle(cfg.connectionString).query(statement)[0][0]
+            self.is_emg = self.oracle.query(statement)[0][0]
         except Exception as e:
             arcpy.AddMessage(e)
             arcpy.AddMessage("### ERIS_CUSTOMER.IsProductChron failed...")
@@ -346,7 +339,7 @@ class fim_us_rpt(object):
 
         return self.is_newLogo, self.is_aei, self.is_emg
 
-    def createOrderGeometry(self, order_obj, projection):
+    def createOrderGeometry(self, order_obj, projection, buffsize):
         arcpy.env.overwriteOutput = True
 
         point = arcpy.Point()
@@ -386,12 +379,12 @@ class fim_us_rpt(object):
         del array
 
         # create buffer
-        if order_obj.geometry.type.lower() == 'polygon' and float(cfg.BufsizeText) == 0 :
-            cfg.BufsizeText = "0.001"           # for polygon no buffer orders, buffer set to 1m, to avoid buffer clipping error
-        elif float(cfg.BufsizeText) < 0.01:     # for site orders, usually has a radius of 0.001
-            cfg.BufsizeText = "0.25"            # set the FIP search radius to 250m
+        if order_obj.geometry.type.lower() == 'polygon' and float(buffsize) == 0 :
+            buffsize = "0.001"           # for polygon no buffer orders, buffer set to 1m, to avoid buffer clipping error
+        elif float(buffsize) < 0.01:     # for site orders, usually has a radius of 0.001
+            buffsize = "0.25"            # set the FIP search radius to 250m
 
-        bufferDistance = cfg.BufsizeText + " KILOMETERS"    
+        bufferDistance = buffsize + " KILOMETERS"    
         if order_obj.geometry.type.lower() == "polygon" and order_obj.radius_type.lower() == "centre":
             # polygon order, buffer from Centre instead of edge
             # completely change the order geometry to the center point
@@ -400,187 +393,62 @@ class fim_us_rpt(object):
                 arcpy.Buffer_analysis(centreSHP, cfg.outBufferSHP, bufferDistance)
         else:
             arcpy.Buffer_analysis(cfg.orderGeometryPR, cfg.outBufferSHP, bufferDistance)            
-            # arcpy.Project_management(cfg.outBufferSHP,cfg.outBufferSHP_GCS,srGCS83)
 
-    def selectFim(self, mastergdb):
-        arcpy.env.workspace = mastergdb
+    def mapDocument(self, projection):
+        arcpy.env.overwriteOutput = True
+        arcpy.env.outputCoordinateSystem = projection
 
-        shplist = arcpy.ListFeatureClasses()
-        desc = arcpy.Describe(cfg.orderGeometry)
-        extent = desc.extent
-        xMax = extent.XMax
-        xMin = extent.XMin
-        yMax = extent.YMax
-        yMin = extent.YMin
+        mxd = arcpy.mapping.MapDocument(cfg.FIMmxdfile)
+        dfmain = arcpy.mapping.ListDataFrames(mxd,"main")[0]
+        dfinset = arcpy.mapping.ListDataFrames(mxd,"inset")[0]
+        dfmain.spatialReference = projection
+        dfinset.spatialReference = projection
 
-        j = 0
-        presentedlist = []
-
-        if arcpy.Exists(cfg.presentedFIPs):
-            arcpy.Delete_management(cfg.presentedFIPs)
-
-        for shp in shplist:
-            desc = arcpy.Describe(shp)
-            extent = desc.extent
-            if (xMax < extent.XMax and xMin > extent.XMin and yMax < extent.YMax and yMin > extent.YMin):        # algorithm optimization
-                print ("in extent: " + shp)
-
-                shpLayer = arcpy.mapping.Layer(shp)
-                arcpy.SelectLayerByLocation_management(shpLayer,'intersect', cfg.outBufferSHP, None, 'NEW_SELECTION')
-
-                if(int((arcpy.GetCount_management(shpLayer).getOutput(0))) >0):
-                    j = j + 1
-                    presented = "in_memory/presented" + str(j)
-                    arcpy.CopyFeatures_management(shpLayer, presented)
-                    logger.debug("j = "+str(j))
-                    presentedlist.append(presented)
-
-        if j > 0:
-            logger.debug("right before merge")
-            arcpy.Merge_management(presentedlist,cfg.presentedFIPs)
-            logger.debug("after merge")
-            arcpy.Delete_management("in_memory")
-
-        return presentedlist
-
-    def getFimRecords(self, presentedFIPs):
-        summaryList={}
-        # need to clear selection on the layer
-        presentedLayer = arcpy.MakeFeatureLayer_management(presentedFIPs)
-        
-        for row in arcpy.SearchCursor(presentedLayer):
-            voldict = {}
-            volumeNum = row.getValue('VOLUMENO')
-            volumeName_new  = row.getValue('VOLUMENAME')
-            state = row.getValue('STATE').title()
-            city = row.getValue('CITY').title()
-            volseq = row.getValue('VOLUME').title()
-            year = row.getValue('YEAR')
-            sheetNo = row.getValue('IMAGE_NO').lstrip("0").split('_')[0].split('-')[0].strip('A').strip('B').strip('C').strip('D').strip('E').strip('F').encode("utf-8")
-            imagepath = os.path.join(row.getValue('VOLUMEPATH'), volumeNum, "INDIVIDUAL_GEOREFERENCE", row.getValue('IMAGE_NO'))
-            volpath = os.path.join(row.getValue('VOLUMEPATH'), volumeNum)
-
-            t = [volumeNum, volumeName_new, state, city, volseq, year, [sheetNo], [imagepath],volpath]
-            if year in summaryList and volumeNum in summaryList[year]:
-                summaryList[year][volumeNum][6].append(sheetNo)
-                summaryList[year][volumeNum][7].append(imagepath)
-            elif year in summaryList and volumeNum not in summaryList[year]:
-                summaryList[year][volumeNum] = t
-            else:
-                voldict[volumeNum] = t
-                summaryList[year] = voldict
-
-        return summaryList
-
-    def mapSetElement(self, mxd, year, sheetnoText):
-        # refresh the view to reflect the updated image
-        # center and scale the image
-        # update map document with sheet numbers, orderID and address
-        yearTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "MainTitleText")[0]
-        yearTextE.text = str(year)
-
-        mapsheetTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "mapsheetText")[0]
-        mapsheetTextE.text = "Map sheet(s): " + '\r\n' + sheetnoText
-
-        orderIDTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "ordernumText")[0]
-        orderIDTextE.text = "Order Number " + self.order_obj.number
-
-        AddressText = '%s %s %s %s'%(self.order_obj.address, self.order_obj.city, self.order_obj.province, self.order_obj.postal_code)
-        AddressTextE= arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "AddressText")[0]
-        AddressTextE.text = "Address: " + AddressText + " "
-
-        if self.is_newLogo == 'Y' and self.is_emg == 'N':
-            logoE = arcpy.mapping.ListLayoutElements(mxd, "PICTURE_ELEMENT", "logo")[0]
-            logoE.sourceImage = os.path.join(cfg.logopath, self.newlogofile)
-
-        arcpy.RefreshTOC()
-
-    def toXplorer(self, summaryList, inprojection, outprojection):
-        needViewer = 'N'
-        try:
-            expression = "select fim_viewer from order_viewer where order_id =" + str(self.order_obj.id)
-            t = oracle(cfg.connectionString).query(expression)
-            print(t)
-            if t:
-                needViewer = t[0][0]
-        except:
-            raise
-
-        if needViewer == 'Y':
-            arcpy.AddMessage("...Viewer is needed.")
-
-            metadata = []
-
-            viewerdir = os.path.join(cfg.scratch,self.order_obj.number+'_fim')
-            if not os.path.exists(viewerdir):
-                os.mkdir(viewerdir)
-
-            tempdir = os.path.join(cfg.scratch,'viewertemp')
-            if not os.path.exists(tempdir):
-                os.mkdir(tempdir)
-
-            # to do: get the right year for each FIM
-            years = summaryList.keys()
-            for year in years:
-                mxdname = glob.glob(os.path.join(cfg.scratch,'test*'+str(year)+'.mxd'))[0]
-                mxd = arcpy.mapping.MapDocument(mxdname)
-                df = arcpy.mapping.ListDataFrames(mxd,"main")[0]    # the spatial reference here is UTM zone #, need to change to WGS84 Web Mercator
-                df.spatialReference = inprojection
-
-                imagename = str(year)+".jpg"
-                arcpy.mapping.ExportToJPEG(mxd, os.path.join(cfg.scratch, viewerdir, imagename), df,df_export_width= 7650,df_export_height=9900, color_mode='8-BIT_GRAYSCALE',world_file = True, jpeg_quality=80)
-
-                desc = arcpy.Describe(os.path.join(viewerdir, imagename))
-                featbound = arcpy.Polygon(arcpy.Array([desc.extent.lowerLeft, desc.extent.lowerRight, desc.extent.upperRight, desc.extent.upperLeft]), inprojection)
-                del desc
-
-                tempfeat = os.path.join(tempdir, "tilebnd_"+str(year)+ ".shp")
-                arcpy.Project_management(featbound, tempfeat, outprojection) #function requires output not be in_memory
-                del featbound
-                desc = arcpy.Describe(tempfeat)
-
-                metaitem = {}
-                metaitem['type'] = 'fim'
-                metaitem['imagename'] = imagename[:-4]+'.jpg'
-                metaitem['lat_sw'] = desc.extent.YMin
-                metaitem['long_sw'] = desc.extent.XMin
-                metaitem['lat_ne'] = desc.extent.YMax
-                metaitem['long_ne'] = desc.extent.XMax
-
-                metadata.append(metaitem)
-                del mxd, df
-
-            arcpy.env.outputCoordinateSystem = None
-
-            if os.path.exists(os.path.join(cfg.viewerFolder, self.order_obj.number+"_fim")):
-                shutil.rmtree(os.path.join(cfg.viewerFolder, self.order_obj.number+"_fim"))
-            shutil.copytree(os.path.join(cfg.scratch, self.order_obj.number+"_fim"), os.path.join(cfg.viewerFolder, self.order_obj.number+"_fim"))
-            url = cfg.uploadlink + self.order_obj.number
-            urllib.urlopen(url)
-
-            # insert to oracle
-            try:
-                expression  = "delete from overlay_image_info where  order_id = %s and (type = 'fim')" % str(self.order_obj.id)
-                oracle(cfg.connectionString).exe(expression)
-
-                for item in metadata:
-                    expression = "insert into overlay_image_info values (%s, %s, %s, %.5f, %.5f, %.5f, %.5f, %s, '', '')" % (str(self.order_obj.id), str(self.order_obj.number), "'" + item['type']+"'", item['lat_sw'], item['long_sw'], item['lat_ne'], item['long_ne'],"'"+item['imagename']+"'") 
-                    oracle(cfg.connectionString).exe(expression)
-            except Exception as e:
-                arcpy.AddError(e)
-                arcpy.AddError("### overlay_image_info failed...")
-
+        if self.order_obj.geometry.type.lower() == 'point' or self.order_obj.geometry.type.lower() == 'multipoint':
+            orderGeomlyrfile = cfg.orderGeomlyrfile_point
+        elif self.order_obj.geometry.type.lower() =='polyline':
+            orderGeomlyrfile = cfg.orderGeomlyrfile_polyline
         else:
-            arcpy.AddMessage("No viewer is needed. Do nothing.")
+            orderGeomlyrfile = cfg.orderGeomlyrfile_polygon
+        orderGeomLayer = arcpy.mapping.Layer(orderGeomlyrfile)
+        orderGeomLayer.replaceDataSource(cfg.scratch,"SHAPEFILE_WORKSPACE","orderGeometryPR")
+        arcpy.mapping.AddLayer(dfmain,orderGeomLayer,"TOP")
 
+        buffer = arcpy.mapping.ListLayers(mxd,"Buffer Outline",dfmain)[0]
+        buffer.replaceDataSource(cfg.scratch, "SHAPEFILE_WORKSPACE", "buffer")
 
-    def toReportCheck(self, pdfreport_name):
-        pdfreport = os.path.join(cfg.scratch, pdfreport_name)
+        return mxd, dfmain, dfinset
 
-        if os.path.exists(os.path.join(cfg.reportcheckFolder,"FIM", pdfreport_name)):
-            os.remove(os.path.join(cfg.reportcheckFolder, "FIM", pdfreport_name))
-        shutil.copyfile(pdfreport,os.path.join(cfg.reportcheckFolder, "FIM", pdfreport_name))
-        arcpy.SetParameterAsText(3, pdfreport)
+    def mapExtent(self, mxd, dfmain, dfinset, multipage):
+        # note buffer.shp won't work
+        dfmain.extent = arcpy.mapping.ListLayers(mxd,"Buffer Outline",dfmain)[0].getSelectedExtent(False)
+        arcpy.RefreshActiveView()
+        if multipage == True:
+            scale = dfmain.scale * 1.5
+        else:
+            scale = dfmain.scale * 1.1
+        dfmain.scale = ((int(scale)/100)+1)*100
+        # dfmain.spatialReference = arcpy.SpatialReference(4326)
+
+        # create df extent polygon
+        extent = dfmain.extent
+        XMAX = extent.XMax
+        XMIN = extent.XMin
+        YMAX = extent.YMax
+        YMIN = extent.YMin
+        pnt1 = arcpy.Point(XMIN, YMIN)
+        pnt2 = arcpy.Point(XMIN, YMAX)
+        pnt3 = arcpy.Point(XMAX, YMAX)
+        pnt4 = arcpy.Point(XMAX, YMIN)
+        array = arcpy.Array()
+        array.add(pnt1)
+        array.add(pnt2)
+        array.add(pnt3)
+        array.add(pnt4)
+        array.add(pnt1)
+        polygon = arcpy.Polygon(array)
+        arcpy.CopyFeatures_management(polygon, cfg.extent)
+
 
     def setBoundary(self, mxd, df, yesboundary):
         # get yesboundary flag
@@ -622,80 +490,127 @@ class fim_us_rpt(object):
 
         return mxd, df, yesboundary
 
-    def mapDocument(self, projection):
+    def selectFim(self, mastergdb, projection):
         arcpy.env.overwriteOutput = True
         arcpy.env.outputCoordinateSystem = projection
+        arcpy.env.workspace = mastergdb
 
-        mxd = arcpy.mapping.MapDocument(cfg.FIMmxdfile)
-        dfmain = arcpy.mapping.ListDataFrames(mxd,"main")[0]
-        dfinset = arcpy.mapping.ListDataFrames(mxd,"inset")[0]
-        dfmain.spatialReference = projection
-        dfinset.spatialReference = projection
+        shplist = arcpy.ListFeatureClasses()
+        desc = arcpy.Describe(cfg.orderGeometry)                    # must use orderGeometry in srGCS83 or can't select FIM mastershp boundaries as they are in srGWGS84
+        extent = desc.extent
+        xMax = extent.XMax
+        xMin = extent.XMin
+        yMax = extent.YMax
+        yMin = extent.YMin
 
-        if self.order_obj.geometry.type.lower() == 'point' or self.order_obj.geometry.type.lower() == 'multipoint':
-            orderGeomlyrfile = cfg.orderGeomlyrfile_point
-        elif self.order_obj.geometry.type.lower() =='polyline':
-            orderGeomlyrfile = cfg.orderGeomlyrfile_polyline
-        else:
-            orderGeomlyrfile = cfg.orderGeomlyrfile_polygon
-        orderGeomLayer = arcpy.mapping.Layer(orderGeomlyrfile)
-        orderGeomLayer.replaceDataSource(cfg.scratch,"SHAPEFILE_WORKSPACE","orderGeometry")
-        arcpy.mapping.AddLayer(dfmain,orderGeomLayer,"TOP")
+        j = 0
+        i = 0
+        mainlist = []
+        adjlist = []
 
-        buffer = arcpy.mapping.ListLayers(mxd,"Buffer Outline",dfmain)[0]
-        buffer.replaceDataSource(cfg.scratch, "SHAPEFILE_WORKSPACE", "buffer")
+        if arcpy.Exists(cfg.selectedmain):
+            arcpy.Delete_management(cfg.selectedmain)
 
-        return mxd, dfmain, dfinset
+        for shp in shplist:
+            desc = arcpy.Describe(shp)
+            extent = desc.extent
+            if (xMax < extent.XMax and xMin > extent.XMin and yMax < extent.YMax and yMin > extent.YMin):        # algorithm optimization
+                arcpy.Message("in extent: " + shp)
+                shpLayer = arcpy.mapping.Layer(shp)
 
-    def mapExtent(self, mxd, dfmain, dfinset):
-        # note buffer.shp won't work
+                # select main
+                arcpy.SelectLayerByLocation_management(shpLayer,'intersect', cfg.orderGeometry, None, 'NEW_SELECTION')
+                if(int((arcpy.GetCount_management(shpLayer).getOutput(0))) >0):
+                    j = j + 1
+                    selectedmain = "in_memory/selectedmain" + str(j)
+                    arcpy.CopyFeatures_management(shpLayer, selectedmain)
+                    mainlist.append(selectedmain)
 
-        dfmain.extent = arcpy.mapping.ListLayers(mxd,"Buffer Outline",dfmain)[0].getSelectedExtent(False)
-        arcpy.RefreshActiveView()
-        scale = dfmain.scale * 1.1
-        dfmain.scale = ((int(scale)/100)+1)*100
-        # dfmain.spatialReference = arcpy.SpatialReference(4326)
+                # select adjacent
+                arcpy.SelectLayerByLocation_management(shpLayer,'intersect', cfg.extent, None, 'NEW_SELECTION')
+                if(int((arcpy.GetCount_management(shpLayer).getOutput(0))) >0):
+                    i = i + 1
+                    selectedadj = "in_memory/selectedadj" + str(i)
+                    arcpy.CopyFeatures_management(shpLayer, selectedadj)
+                    adjlist.append(selectedadj)
 
-        # for lyr in arcpy.mapping.ListLayers(mxd, "", dfmain)[4:5]:
-        #     ext = lyr.getExtent()
-        #     xmin, xmax = ext.XMin, ext.XMax
-        #     ymin, ymax = ext.YMin, ext.YMax
+        if j > 0:
+            arcpy.Merge_management(mainlist,cfg.selectedmain)
 
-        # for lyr in arcpy.mapping.ListLayers(mxd, "", dfmain)[5:]:
-        #     ext = lyr.getExtent()
-        #     if ext.XMin < xMin:
-        #         xMin = ext.XMin
-        #     if ext.YMin < yMin:
-        #         yMin = ext.YMin
-        #     if ext.XMax > xMax:
-        #         xMax = ext.XMax
-        #     if ext.YMax > yMax:
-        #         yMax = ext.YMax
+        if i > 0:
+            arcpy.Merge_management(adjlist,cfg.selectedadj)
 
-        # pnt1 = arcpy.Point(xMin, yMin)
-        # pnt2 = arcpy.Point(xMin, yMax)
-        # pnt3 = arcpy.Point(xMax, yMax)
-        # pnt4 = arcpy.Point(xMax, yMin)
-        # array = arcpy.Array()
-        # array.add(pnt1)
-        # array.add(pnt2)
-        # array.add(pnt3)
-        # array.add(pnt4)
-        # array.add(pnt1)
-        # polygon = arcpy.Polygon(array, arcpy.SpatialReference(4326))
+        arcpy.Delete_management("in_memory")
 
-        # arcpy.CopyFeatures_management(polygon, os.path.join(cfg.scratch, "Extent.shp"))
-        # arcpy.DefineProjection_management(os.path.join(cfg.scratch, "Extent.shp"), arcpy.SpatialReference(4326))
+        return mainlist, adjlist
 
-    def delyear(self, yeardel, summaryList):
+    def getFimRecords(self, selectedmainSHP, selectedadjSHP):
+        mainList={}
+        adjacentList={}
+        selMainLayer = arcpy.MakeFeatureLayer_management(selectedmainSHP)
+        selAdjLayer = arcpy.MakeFeatureLayer_management(selectedadjSHP)
+        
+        # get main records
+        for row in arcpy.SearchCursor(selMainLayer):
+            voldict = {}
+            volumeNum = row.getValue('VOLUMENO').encode("utf-8")
+            volumeName  = row.getValue('VOLUMENAME')
+            state = row.getValue('STATE').title()
+            city = row.getValue('CITY').title()
+            volseq = row.getValue('VOLUME').title()
+            year = row.getValue('YEAR')
+            sheetNo = row.getValue('IMAGE_NO').lstrip("0").split('_')[0].split('-')[0].strip('A').strip('B').strip('C').strip('D').strip('E').strip('F').encode("utf-8")
+            imagepath = os.path.join(row.getValue('VOLUMEPATH'), volumeNum, "INDIVIDUAL_GEOREFERENCE", row.getValue('IMAGE_NO'))
+            volpath = os.path.join(row.getValue('VOLUMEPATH'), volumeNum)
+
+            t = [volumeNum, volumeName, state, city, volseq, year, [sheetNo], [imagepath],volpath]
+            if year in mainList and volumeNum in mainList[year]:
+                mainList[year][volumeNum][6].append(sheetNo)
+                mainList[year][volumeNum][7].append(imagepath)
+            elif year in mainList and volumeNum not in mainList[year]:
+                mainList[year][volumeNum] = t
+            else:
+                voldict[volumeNum] = t
+                mainList[year] = voldict
+
+        # get adjacent records
+        for row in arcpy.SearchCursor(selAdjLayer):
+            voldict = {}
+            volumeNum = row.getValue('VOLUMENO')
+            volumeName  = row.getValue('VOLUMENAME')
+            state = row.getValue('STATE').title()
+            city = row.getValue('CITY').title()
+            volseq = row.getValue('VOLUME').title()
+            year = row.getValue('YEAR')
+            sheetNo = row.getValue('IMAGE_NO').lstrip("0").split('_')[0].split('-')[0].strip('A').strip('B').strip('C').strip('D').strip('E').strip('F').encode("utf-8")
+            imagepath = os.path.join(row.getValue('VOLUMEPATH'), volumeNum, "INDIVIDUAL_GEOREFERENCE", row.getValue('IMAGE_NO'))
+            volpath = os.path.join(row.getValue('VOLUMEPATH'), volumeNum)
+            
+            # skip sheets that already exist in main
+            if volumeNum in [item for sublist in mainList.values() for item in sublist] and sheetNo in [v[6] for sublist in mainList.values() for k,v in sublist.items() if k == volumeNum][0]:
+                continue
+
+            t = [volumeNum, volumeName, state, city, volseq, year, [sheetNo], [imagepath],volpath]
+            if year in adjacentList and volumeNum in adjacentList[year]:
+                adjacentList[year][volumeNum][6].append(sheetNo)
+                adjacentList[year][volumeNum][7].append(imagepath)
+            elif year in adjacentList and volumeNum not in adjacentList[year]:
+                adjacentList[year][volumeNum] = t
+            else:
+                voldict[volumeNum] = t
+                adjacentList[year] = voldict
+
+        return mainList, adjacentList
+
+    def delyear(self, yeardel, mainList):
         if yeardel:
-            for item in summaryList:
+            for item in mainList:
                 if item[5] in yeardel:
-                    summaryList.remove(item)
-        return summaryList
+                    mainList.remove(item)
+        return mainList
 
-    def createPDF(self, summaryList, is_aei, mxd, dfmain, dfinset, yesboundary, multipage, gridsize, presentedFIPs):
-        years = summaryList.keys()
+    def createPDF(self, mainList, adjacentList, is_aei, mxd, dfmain, dfinset, yesboundary, multipage, gridsize, resolution):
+        years = mainList.keys()
 
         if is_aei == 'Y':
             years.sort(reverse = False)
@@ -705,13 +620,11 @@ class fim_us_rpt(object):
         count = 0
         for year in years:
             sheetnoText = ''
-            # volumeNums = ''
-            # imageLayer = arcpy.mapping.Layer(cfg.imagelyr)
 
-            items = summaryList[year]
-            for item in items.values():
-                (volumeNum, volumeName_new, state, city, volseq, year, sheetNos_noLetter, imagepaths, volpath) = item
-                for lyr in item[-2]:
+            # add main images to mxd
+            for item in mainList.get(year).values():
+                (volumeNum, volumeName, state, city, volseq, year, sheetNos_noLetter, imagepaths, volpath) = item
+                for lyr in imagepaths:
                     if os.path.exists(lyr+".tif"):
                         lyr+=".tif"
                     elif  os.path.exists(lyr+".jpg"):
@@ -728,67 +641,124 @@ class fim_us_rpt(object):
                     layer_temp = arcpy.mapping.Layer(layer_temp)
                     arcpy.mapping.AddLayer(dfmain, layer_temp,"Bottom")
 
+                # only display info from main records
                 if volseq == '' or volseq == ' ':
                     sheetnoText = sheetnoText + 'Volume NA: '
                 else:
                     sheetnoText = sheetnoText + 'Volume ' + str(volseq) + ': '            
                 sheetnoText = sheetnoText + ', '.join(sheetNos_noLetter[:14]) + ', '.join(sheetNos_noLetter[14:28]) + ', '.join(sheetNos_noLetter[28:42]) + ', '.join(sheetNos_noLetter[42:]) + '; ' + '\r\n'
-                # volumeNums = volumeNums + item[0]
 
+                # add image_boundary.shp to inset dataframe
                 boundLayer = arcpy.mapping.ListLayers(mxd, "IMAGE_BOUNDARY", dfinset)[0]
                 boundLayer.replaceDataSource(volpath,"SHAPEFILE_WORKSPACE","IMAGE_BOUNDARY")
 
-            self.mapSetElement(mxd, year, sheetnoText)
-            
-            if multipage == True:
-                self.setMultipage(year, mxd, dfmain, gridsize, presentedFIPs)               
+            # add adjacent images from the same year to mxd
+            if year in adjacentList:
+                for item in adjacentList.get(year).values():
+                    (volumeNum, volumeName, state, city, volseq, year, sheetNos_noLetter, imagepaths, volpath) = item
+                    for lyr in imagepaths:
+                        if os.path.exists(lyr+".tif"):
+                            lyr+=".tif"
+                        elif  os.path.exists(lyr+".jpg"):
+                            lyr+=".jpg"
 
+                        count+=1
+                        image_lyr_name = "%s"%(lyr.replace("\\","").replace(".","_"))
+                        image = arcpy.MakeRasterLayer_management(lyr,image_lyr_name)
+                        arcpy.ApplySymbologyFromLayer_management(image_lyr_name, cfg.sheetLayer)
+
+                        layer_temp = os.path.join(cfg.scratch,"image_%s.lyr"%(count))
+                        arcpy.SaveToLayerFile_management(image_lyr_name,layer_temp)
+
+                        layer_temp = arcpy.mapping.Layer(layer_temp)
+                        arcpy.mapping.AddLayer(dfmain, layer_temp,"Bottom")
+
+            # set map elements
+            self.mapSetElement(mxd, year, sheetnoText)
+
+            # set multipage
+            if multipage == True:
+                self.setMultipage(year, mxd, dfmain, gridsize, yesboundary)    
+
+            # export pdf and save mxd
             FIPpdf = os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'.pdf')
-            arcpy.mapping.ExportToPDF(mxd, FIPpdf, "PAGE_LAYOUT", 640, 480, 800, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "None", True, 90)
+            arcpy.mapping.ExportToPDF(mxd, FIPpdf, "PAGE_LAYOUT", 640, 480, resolution, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "None", True, 90)
             mxd.saveACopy(os.path.join(cfg.scratch, "test_"+str(year)+".mxd"))
 
             # merge annotation pdf to the map if yesBoundary == Y
-            if multipage != True and yesboundary == 'yes' and self.order_obj.geometry.type.lower() != 'point' and self.order_obj.geometry.type.lower() != 'multipoint':
+            if yesboundary == 'yes' and self.order_obj.geometry.type.lower() != 'point' and self.order_obj.geometry.type.lower() != 'multipoint':
                 self.annotatePdf(FIPpdf, cfg.annotPdf)
 
             for lyr in arcpy.mapping.ListLayers(mxd, "", dfmain):
                 if lyr.name not in ["Project Property", "Buffer Outline", "Grid"]:
                     arcpy.mapping.RemoveLayer(dfmain, lyr)
 
-            # pdflist.append(FIPpdf1)
             arcpy.Delete_management("in_memory")
-            # del imageLayer
 
-    def setMultipage(self, year, mxd, dfmain, gridsize, presentedFIPs):
-        arcpy.MakeFeatureLayer_management(presentedFIPs, "presentedLayer")
+    def mapSetElement(self, mxd, year, sheetnoText):
+        # refresh the view to reflect the updated image
+        # center and scale the image
+        # update map document with sheet numbers, orderID and address
+        yearTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "MainTitleText")[0]
+        yearTextE.text = str(year)
 
-        # CREATES GRID        
-        Gridlrshp = os.path.join(cfg.scratch,"gridlr_" + str(year) + '.shp')        
+        mapsheetTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "mapsheetText")[0]
+        mapsheetTextE.text = "Map sheet(s): " + '\r\n' + sheetnoText
+
+        orderIDTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "ordernumText")[0]
+        orderIDTextE.text = "Order No. " + self.order_obj.number
+
+        AddressText = '%s %s %s %s'%(self.order_obj.address, self.order_obj.city, self.order_obj.province, self.order_obj.postal_code)
+        AddressTextE= arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "AddressText")[0]
+        AddressTextE.text = "Address: " + AddressText + " "
+
+        if self.is_newLogo == 'Y' and self.is_emg == 'N':
+            logoE = arcpy.mapping.ListLayoutElements(mxd, "PICTURE_ELEMENT", "logo")[0]
+            logoE.sourceImage = os.path.join(cfg.logopath, self.newlogofile)
+
+        arcpy.RefreshTOC()
+
+    def setMultipage(self, year, mxd, dfmain, gridsize, yesboundary):
+        # reset boundary
+        if yesboundary != "no":
+            arcpy.mapping.ListLayers(mxd, "Project Property", dfmain)[0].visible = True
+
+        # create grid based on sheets clipped to buffer
         expression = str('"YEAR" LIKE \'%' + str(year) + "%'")
-        arcpy.SelectLayerByAttribute_management("presentedLayer",'NEW_SELECTION', expression)
-        arcpy.GridIndexFeatures_cartography(Gridlrshp, "presentedLayer", "", "", "", gridsize, gridsize)
-        arcpy.MakeFeatureLayer_management(Gridlrshp, "gridlr")
+        arcpy.MakeFeatureLayer_management(cfg.selectedmain, "selMainLayer")
+        arcpy.SelectLayerByAttribute_management("selMainLayer",'NEW_SELECTION', expression)
 
-        newgridlr = arcpy.mapping.ListLayers(mxd,"Grid",dfmain)[0]
-        newgridlr.replaceDataSource(cfg.scratch, "SHAPEFILE_WORKSPACE","gridlr" + "_" + str(year))
-        newgridlr.visible = True
+        clipSelected = os.path.join(cfg.scratch,"clip_"+str(year)+".shp")
+        arcpy.Clip_analysis("selMainLayer", cfg.outBufferSHP, clipSelected)
+        
+        Gridlrshp = os.path.join(cfg.scratch,"gridlr_" + str(year) + '.shp')   
+        arcpy.GridIndexFeatures_cartography(Gridlrshp, "selMainLayer", "NO_INTERSECTFEATURE", "", "", gridsize, gridsize)
 
-        # REFRESH VIEW
-        dfmain.extent = newgridlr.getExtent()
-        scale = dfmain.scale * 1.1
+        gridLayer = arcpy.mapping.ListLayers(mxd,"Grid",dfmain)[0]
+        gridLayer.replaceDataSource(cfg.scratch, "SHAPEFILE_WORKSPACE","gridlr" + "_" + str(year))
+        gridLayer.visible = True
 
-        dfmain.scale = ((int(scale)/100)+1)*100
-
-        FIPpdfMM = os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'_mm.pdf')
-        print(FIPpdfMM)
+        # export multipages
+        FIPpdfMM = os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'_multipage.pdf')
         ddMMDDP = mxd.dataDrivenPages
         ddMMDDP.refresh()
-        ddMMDDP.exportToPDF(out_pdf=FIPpdfMM, page_range_type="ALL",resolution=600, image_quality="BEST", georef_info = True)
+        ddMMDDP.exportToPDF(out_pdf=FIPpdfMM, page_range_type="ALL",resolution=600, image_quality="BEST", georef_info = True)                   # seems like layers (except fim images) need to be in same projection else will get: "AttributeError: PageLayoutObject: Error in exporting pages"
 
+        # REFRESH VIEW
+        dfmain.extent = arcpy.mapping.ListLayers(mxd,"Buffer Outline",dfmain)[0].getSelectedExtent(False)
+        scale = dfmain.scale * 1.5
+        dfmain.scale = ((int(scale)/100)+1)*100
+
+        # reset boundary
+        if yesboundary != "fixed":
+            arcpy.mapping.ListLayers(mxd, "Project Property", dfmain)[0].visible = False
+
+        del FIPpdfMM
         del ddMMDDP
+        return mxd, dfmain
 
-    def appendMapPages(self, output,summaryList, multipage, yesboundary):
-        years = summaryList.keys()
+    def appendMapPages(self, output,mainList, multipage, yesboundary):
+        years = mainList.keys()
         n=0
         if self.is_aei == 'Y':
             years.sort(reverse = False)
@@ -796,9 +766,13 @@ class fim_us_rpt(object):
             years.sort(reverse = True)
         
         for year in years:
+            if yesboundary == "yes":
+                pdf = PdfFileReader(open(os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'_a.pdf'),'rb'))
+            else:
+                pdf = PdfFileReader(open(os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'.pdf'),'rb'))
+
             if multipage == True:
-                pdf = PdfFileReader(open(os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'.pdf')),'rb')
-                pdfmm = PdfFileReader(open(os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'_multipage.pdf')),'rb')
+                pdfmm = PdfFileReader(open(os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'_multipage.pdf'),'rb'))
                 
                 output.addPage(pdf.getPage(0))
                 output.addBookmark(str(year), n+2)   #n+1 to accommodate the summary page                        
@@ -808,10 +782,110 @@ class fim_us_rpt(object):
                     n = n + 1
                 n = n + 1
             else:
-                if yesboundary == "yes":
-                    pdf = PdfFileReader(os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'_a.pdf'),'rb')
-                else:
-                    pdf = PdfFileReader(open(os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'.pdf')),'rb')
                 output.addPage(pdf.getPage(0))
                 output.addBookmark(str(year), n+2)   #n+1 to accommodate the summary page
                 n = n + 1
+
+    def toXplorer(self, mainList, inprojection, outprojection):
+        needViewer = 'N'
+        try:
+            expression = "select fim_viewer from order_viewer where order_id =" + str(self.order_obj.id)
+            t = self.oracle.query(expression)
+            if t:
+                needViewer = t[0][0]
+        except:
+            arcpy.AddError("### order_viewer failed...")
+
+        if needViewer == 'Y':
+            arcpy.AddMessage("...Viewer is needed.")
+            arcpy.env.outputCoordinateSystem = inprojection
+
+            metadata = []
+
+            viewerdir = os.path.join(cfg.scratch,self.order_obj.number+'_fim')
+            if not os.path.exists(viewerdir):
+                os.mkdir(viewerdir)
+
+            tempdir = os.path.join(cfg.scratch,'viewertemp')
+            if not os.path.exists(tempdir):
+                os.mkdir(tempdir)
+
+            # to do: get the right year for each FIM
+            years = mainList.keys()
+            for year in years:
+                mxdname = glob.glob(os.path.join(cfg.scratch,'test*'+str(year)+'.mxd'))[0]
+                mxd = arcpy.mapping.MapDocument(mxdname)
+                df = arcpy.mapping.ListDataFrames(mxd,"main")[0]                                        # the spatial reference here is UTM zone #, need to change to WGS84 Web Mercator
+                df.spatialReference = inprojection
+
+                for lyr in [x for x in arcpy.mapping.ListLayers(mxd, "", df) if x.name in ["Project Property","Buffer Outline", "Grid"]]:
+                        lyr.visible = False
+
+                imagename = str(year)+".jpg"
+                arcpy.mapping.ExportToJPEG(mxd, os.path.join(cfg.scratch, viewerdir, imagename), df, df_export_width= 7650, df_export_height=9900, color_mode='8-BIT_GRAYSCALE', world_file = True, jpeg_quality=80)
+
+                desc = arcpy.Describe(os.path.join(viewerdir, imagename))
+                featbound = arcpy.Polygon(arcpy.Array([desc.extent.lowerLeft, desc.extent.lowerRight, desc.extent.upperRight, desc.extent.upperLeft]), inprojection)
+
+                tempfeat = os.path.join(tempdir, "tilebnd_"+str(year)+ ".shp")
+                arcpy.Project_management(featbound, tempfeat, outprojection, None, inprojection)        # function requires output not be in_memory
+                desc = arcpy.Describe(tempfeat)
+
+                metaitem = {}
+                metaitem['type'] = 'fim'
+                metaitem['imagename'] = imagename[:-4]+'.jpg'
+                metaitem['lat_sw'] = desc.extent.YMin
+                metaitem['long_sw'] = desc.extent.XMin
+                metaitem['lat_ne'] = desc.extent.YMax
+                metaitem['long_ne'] = desc.extent.XMax
+
+                metadata.append(metaitem)
+                del desc
+                del featbound
+                del mxd, df
+
+            arcpy.env.outputCoordinateSystem = None
+
+            if os.path.exists(os.path.join(cfg.viewerFolder, self.order_obj.number+"_fim")):
+                shutil.rmtree(os.path.join(cfg.viewerFolder, self.order_obj.number+"_fim"))
+            shutil.copytree(os.path.join(cfg.scratch, self.order_obj.number+"_fim"), os.path.join(cfg.viewerFolder, self.order_obj.number+"_fim"))
+            url = cfg.uploadlink + self.order_obj.number
+            urllib.urlopen(url)
+
+            # insert to oracle
+            try:
+                expression  = "delete from overlay_image_info where  order_id = %s and (type = 'fim')" % str(self.order_obj.id)
+                self.oracle.exe(expression)
+
+                for item in metadata:
+                    expression = "insert into overlay_image_info values (%s, %s, %s, %.5f, %.5f, %.5f, %.5f, %s, '', '')" % (str(self.order_obj.id), str(self.order_obj.number), "'" + item['type']+"'", item['lat_sw'], item['long_sw'], item['lat_ne'], item['long_ne'],"'"+item['imagename']+"'") 
+                    self.oracle.exe(expression)
+            except Exception as e:
+                arcpy.AddError(e)
+                arcpy.AddError("### overlay_image_info failed...")
+
+        else:
+            arcpy.AddMessage("No viewer is needed. Do nothing.")
+
+    def toReportCheck(self, pdfreport_name):
+        pdfreport = os.path.join(cfg.scratch, pdfreport_name)
+
+        if os.path.exists(os.path.join(cfg.reportcheckFolder,"FIM", pdfreport_name)):
+            os.remove(os.path.join(cfg.reportcheckFolder, "FIM", pdfreport_name))
+        shutil.copyfile(pdfreport,os.path.join(cfg.reportcheckFolder, "FIM", pdfreport_name))
+        arcpy.SetParameterAsText(3, pdfreport)
+
+        try:
+            procedure = 'eris_fim.processFim'
+            self.oracle.proc(procedure, (int(self.order_obj.id),))
+        except Exception as e:
+            arcpy.AddError(e)
+            arcpy.AddError("### eris_fim.processFim failed...")
+
+    def log(self, logfile, logname):
+        logger = logging.getLogger(logname)
+        logger.setLevel(logging.INFO)
+        handler = logging.FileHandler(logfile)
+        handler.setLevel(logging.INFO)
+        logger.addHandler(handler)
+        return logger,handler

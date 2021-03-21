@@ -20,63 +20,91 @@ from PyPDF2 import PdfFileReader,PdfFileWriter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.pagesizes import portrait, letter
 
+'''
+select 
+a.order_id, a.order_num, a.site_name,
+b.customer_id, 
+c.company_id, c.company_desc,
+d.radius_type, d.geometry_type, d.geometry, length(d.geometry),
+e.fim_viewer
+from orders a, customer b, company c, eris_order_geometry d, order_viewer e
+where 
+a.customer_id = b.customer_id and
+b.company_id = c.company_id and
+a.order_id = d.order_id and
+a.order_id = e.order_id
+and upper(a.site_name) not like '%TEST%'
+and upper(a.site_name) not like '%DEMO%'
+--and upper(c.company_desc) like '%MID-ATLANTIC%'
+and d.geometry_type = 'POLYGON'
+and e.fim_viewer = 'Y'
+order by length(d.geometry),a.order_num  desc;
+'''
+
 if __name__ == '__main__':
+    arcpy.AddMessage("...starting..." + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     start = time.clock()
     
     order_obj = cfg.order_obj
-    ff = fp.fim_us_rpt(cfg.order_obj)
     oc = fp.oracle(cfg.connectionString)
+    ff = fp.fim_us_rpt(cfg.order_obj, oc)
 
-    # get custom order flags
-    is_newLogo, is_aei, is_emg = ff.customrpt(order_obj)
-    
-    # get spatial references
-    srGCS83,srWGS84,srGoogle,srUTM = ff.projlist(order_obj)
+    arcpy.AddMessage("Order: " + str(order_obj.id) + ", " + str(order_obj.number))
+    arcpy.AddMessage("multipage = " + str(cfg.multipage))
 
-    # create order geometry
-    ff.createOrderGeometry(order_obj, srGCS83)
+    try:        
+        # declare report name
+        if order_obj.country =='MX':
+            pdfreport_name =  cfg.order_obj.number+"_MEX_FIM.pdf"
+        else:
+            pdfreport_name = cfg.order_obj.number+"_US_FIM.pdf"
 
-    # open mxd and create map extent
-    mxd, dfmain, dfinset = ff.mapDocument(srUTM)
-    ff.mapExtent(mxd, dfmain, dfinset)
+        # logger
+        logger,handler = ff.log(cfg.logfile, cfg.logname)
 
-    # set boundary
-    mxd, df, yesBoundary = ff.setBoundary(mxd, dfmain, cfg.yesBoundary)                         # if multipage, set to 'fixed' if want to show boundary; need to return variables again or won't update
+        # get custom order flags
+        is_newLogo, is_aei, is_emg = ff.customrpt(order_obj)
+        
+        # get spatial references
+        srGCS83,srWGS84,srGoogle,srUTM = ff.projlist(order_obj)
 
-    try:
+        # create order geometry
+        ff.createOrderGeometry(order_obj, srUTM, cfg.BufsizeText)
+
+        # open mxd and create map extent
+        mxd, dfmain, dfinset = ff.mapDocument(srUTM)
+        ff.mapExtent(mxd, dfmain, dfinset, cfg.multipage)
+
+        # set boundary
+        mxd, df, yesBoundary = ff.setBoundary(mxd, dfmain, cfg.yesBoundary)                         # if multipage, set to 'fixed' if want to show boundary; need to return variables again or won't update
+
         # select FIM
-        presentedlist = ff.selectFim(cfg.mastergdb)
+        mainlist, adjlist = ff.selectFim(cfg.mastergdb, srUTM)
 
-
-
-        if len(presentedlist) == 0 :
-            print("...NO records selected, will print out NRF letter.")
+        if len(mainlist) == 0 or cfg.NRF == 'Y':
+            logger.info("order " + order_obj.number + ":    search completed. Will print out a NRF letter. ")
+            arcpy.AddMessage("...NO records selected, will print out NRF letter.")
             cfg.NRF = 'Y'
             ff.goCoverPage(cfg.coverfile, cfg.NRF)
             os.rename(cfg.coverfile, os.path.join(cfg.scratch, pdfreport_name))
         else:
             # get FIM records
-            summaryList = ff.getFimRecords(cfg.presentedFIPs)
+            mainList, adjacentList = ff.getFimRecords(cfg.selectedmain, cfg.selectedadj)
 
             # remove blank maps flag
             if cfg.delyearFlag == 'Y':
                 delyear = filter(None, str(raw_input("Years you want to delete (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))        # No quotes
-                ff.delyear(delyear, summaryList)
-
-            pdfreport_name = cfg.order_obj.number+"_US_FIM.pdf"
-            # if coverInfotext["COUNTRY"]=='MEX':
-            #     pdfreport_name =  cfg.order_obj.number+"_MEX_FIM.pdf"
+                ff.delyear(delyear, mainList)
             
             # create map page
-            ff.createPDF(summaryList, is_aei, mxd, dfmain, dfinset, cfg.yesBoundary, cfg.Multipage, cfg.gridsize, cfg.presentedFIPs)
+            ff.createPDF(mainList, adjacentList, is_aei, mxd, dfmain, dfinset, cfg.yesBoundary, cfg.multipage, cfg.gridsize, cfg.resolution)
 
-
-
-            ff.goSummaryPage(cfg.summaryfile,summaryList)
+            # create cover and summary pages
+            ff.goSummaryPage(cfg.summaryfile,mainList)
             ff.goCoverPage(cfg.coverfile, cfg.NRF)
 
+            # append pages to blank pdf
             output = PdfFileWriter()
-
             output.addPage(PdfFileReader(open(cfg.coverfile,'rb')).getPage(0))
             output.addBookmark("Cover Page",0)
 
@@ -84,23 +112,18 @@ if __name__ == '__main__':
                 output.addPage(PdfFileReader(open(cfg.summaryfile,'rb')).getPage(j))
                 output.addBookmark("Summary Page",j+1)
 
-            ff.appendMapPages(output,summaryList, cfg.Multipage, cfg.yesBoundary)
+            ff.appendMapPages(output,mainList, cfg.multipage, cfg.yesBoundary)
 
             outputStream = open(os.path.join(cfg.scratch, pdfreport_name),"wb")
             output.setPageMode('/UseOutlines')
             output.write(outputStream)
             outputStream.close()
 
-            ff.toXplorer(summaryList, srGoogle, srWGS84)
+            # upload to xplorer
+            ff.toXplorer(mainList, srGoogle, srWGS84)
 
+            # copy to report check
             ff.toReportCheck(pdfreport_name)
-
-            try:
-                procedure = 'eris_fim.processFim'
-                oc.proc(procedure, (order_obj.id))
-            except Exception as e:
-                arcpy.AddError(e)
-                arcpy.AddError("### eris_fim.processFim failed...")
 
     except:
         # Get the traceback object
@@ -110,19 +133,16 @@ if __name__ == '__main__':
         traceback.print_exc()
 
         try:
-            con = cx_Oracle.connect(cfg.connectionString)
-            cur = con.cursor()
-            cur.callproc('eris_fim.InsertFIMAudit', (order_obj.id, 'python-Error Handling',pymsg))
-        finally:
-            cur.close()
-            con.close()
-        raise       # raise the error again
+            procedure = 'eris_fim.InsertFIMAudit'
+            oc.proc(procedure, (order_obj.id, 'python-Error Handling',pymsg))
+        except Exception as e:
+            raise                                   # raise the error again
 
     finally:
         oc.close()
-        # logger.removeHandler(handler)
-        # handler.close()
+        logger.removeHandler(handler)
+        handler.close()
 
     finish = time.clock()
-    print("Final FIM report directory: " + (str(os.path.join(cfg.reportcheckFolder,"FIM", pdfreport_name))))
+    arcpy.AddMessage("Final FIM report directory: " + (str(os.path.join(cfg.reportcheckFolder,"FIM", pdfreport_name))))
     arcpy.AddMessage("Finished in " + str(round(finish-start, 2)) + " secs")
