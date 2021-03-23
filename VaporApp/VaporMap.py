@@ -29,7 +29,7 @@ except OSError as e:
 # connectionString = 'ERIS_GIS/gis295@GMTEST.glaciermedia.inc'
 connectionString = r'eris_gis/gis295@cabcvan1ora006.glaciermedia.inc:1521/GMTESTC'
 # report_path = r"\\cabcvan1obi002\ErisData\Reports\test\noninstant_reports"
-report_path = r"\\cancvan1eap006\ErisData\Reports\test\noninstant_reports"
+report_path = r"\\cabcvan1eap006\ErisData\Reports\test\noninstant_reports"
 
 
 # Layers

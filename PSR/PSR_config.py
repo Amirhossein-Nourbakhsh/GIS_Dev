@@ -1,27 +1,17 @@
 import arcpy,os
 import ConfigParser
 import arcpy
-def server_loc_config(configpath,environment):
-    configParser = ConfigParser.RawConfigParser()
-    configParser.read(configpath)
-    if environment == 'test':
-        reportcheck_test = configParser.get('server-config','reportcheck_test')
-        reportviewer_test = configParser.get('server-config','reportviewer_test')
-        reportinstant_test = configParser.get('server-config','instant_test')
-        reportnoninstant_test = configParser.get('server-config','noninstant_test')
-        upload_viewer = configParser.get('url-config','uploadviewer')
-        server_config = {'reportcheck':reportcheck_test,'viewer':reportviewer_test,'instant':reportinstant_test,'noninstant':reportnoninstant_test,'viewer_upload':upload_viewer}
-        return server_config
-    elif environment == 'prod':
-        reportcheck_prod = configParser.get('server-config','reportcheck_prod')
-        reportviewer_prod = configParser.get('server-config','reportviewer_prod')
-        reportinstant_prod = configParser.get('server-config','instant_prod')
-        reportnoninstant_prod = configParser.get('server-config','noninstant_prod')
-        upload_viewer = configParser.get('url-config','uploadviewer_prod')
-        server_config = {'reportcheck':reportcheck_prod,'viewer':reportviewer_prod,'instant':reportinstant_prod,'noninstant':reportnoninstant_prod,'viewer_upload':upload_viewer}
-        return server_config
-    else:
-        return 'invalid server configuration'
+def server_loc_config(config_path):
+    config_parser = ConfigParser.RawConfigParser()
+    config_parser.read(config_path)
+    report_check_test = config_parser.get('server-config','reportcheck_test')
+    report_viewer_test = config_parser.get('server-config','reportviewer_test')
+    report_instant_test = config_parser.get('server-config','instant_test')
+    report_noninstant_test = config_parser.get('server-config','noninstant_test')
+    upload_viewer = config_parser.get('url-config','uploadviewer')
+    server_config = {'reportcheck':report_check_test,'viewer':report_viewer_test,'instant':report_instant_test,'noninstant':report_noninstant_test,'viewer_upload':upload_viewer}
+    return server_config
+
 class Report_Type:
     wetland = 'wetland'
     ny_wetland = 'ny_wetland'
@@ -33,18 +23,16 @@ class Report_Type:
     soil = 'soil'
     wells = 'wells'
     
-server_environment = 'test'
 server_config_file = r'\\cabcvan1gis006\GISData\ERISServerConfig.ini'
-server_config = server_loc_config(server_config_file,server_environment)
-connectionString = 'eris_gis/gis295@cabcvan1ora006.glaciermedia.inc:1521/GMTESTC'
+server_config = server_loc_config(server_config_file)
+connection_string = 'eris_gis/gis295@cabcvan1ora006.glaciermedia.inc:1521/GMTESTC'
 report_path = server_config['noninstant']
 viewer_path = server_config['viewer']
-upload_link = server_config['viewer_upload']+r"/ErisInt/BIPublisherPortal_prod/Viewer.svc/"
-#production: upload_link = r"http://CABCVAN1OBI002/ErisInt/BIPublisherPortal_prod/Viewer.svc/"
-reportcheck_path = server_config['reportcheck']
-connectionPath = r"\\cabcvan1gis005\GISData\PSR\python"
+upload_link = server_config['viewer_upload']+r"/ErisInt/BIPublisherPortal_test/Viewer.svc/"
+report_check_path = server_config['reportcheck']
+connection_path = r"\\cabcvan1gis005\GISData\PSR\python"
 
-scratch_folder=  arcpy.env.scratchFolder
+scratch_folder = arcpy.env.scratchFolder
 # temp gdb in scratch folder
 temp_gdb = os.path.join(scratch_folder,r"temp.gdb")
 
@@ -117,7 +105,7 @@ path_shaded_relief = r"\\cabcvan1fpr009\US_DEM\hillshade13"
 relief_lyr_file = r"\\cabcvan1gis005\GISData\PSR\python\mxd\relief.lyr"
 data_shaded_relief = r"\\cabcvan1fpr009\US_DEM\CellGrid_1X1Degree_NW.shp"
 relief_frame = os.path.join(scratch_folder, "relief_frame.shp")
-
+relief_image_name = "relief.jpg"
 ### topo report paths config
 buffer_dist_topo = '1 MILES'
 mxd_file_topo = r"\\cabcvan1gis005\GISData\PSR\python\mxd\topo.mxd"

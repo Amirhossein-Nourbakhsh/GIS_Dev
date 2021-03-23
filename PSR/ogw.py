@@ -105,7 +105,7 @@ def generate_ogw_report(order_obj):
     for order_row in order_rows:
         # Set X and Y for start and end points
         geometry = order_row.SHAPE
-        geometry_gcs = geometry.projectAs(config.spatial_ref_gcs)
+        geometry_gcs = geometry.projectAs(order_obj.spatial_ref_gcs)
         site_elevation = psr_utility.get_elevation(geometry_gcs.trueCentroid.X,geometry_gcs.trueCentroid.Y)
         point.X = geometry.trueCentroid.X
         point.Y = geometry.trueCentroid.Y

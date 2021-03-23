@@ -169,4 +169,28 @@ class PSR(object):
         finally:
             cur.close()
             con.close()
-      
+class Overlay_Image(object):
+    order_id = None
+    @classmethod
+    def __init__(self,order_obj, meta_item):
+        self.order_id = order_obj.id
+        self.order_number = order_obj.number
+        self.meta_item = meta_item
+    def delete(self):
+        try:
+            con = cx_Oracle.connect(db_connections.connection_string)
+            cur = con.cursor()
+            ### insert data from overlay_image_info table when pdr type is relief
+            cur.execute("delete from overlay_image_info where  order_id = %s and (type = 'psrrelief')" % str(self.order_id))
+        finally:
+            cur.close()
+            con.close()
+    def insert(self):
+        try:
+            con = cx_Oracle.connect(db_connections.connection_string)
+            cur = con.cursor()
+            ### insert data from overlay_image_info table when pdr type is relief
+            cur.execute("insert into overlay_image_info values (%s, %s, %s, %.5f, %.5f, %.5f, %.5f, %s, '', '')" % (str(self.order_id), str(self.order_number), "'" + self.meta_item['type']+"'", self.meta_item['lat_sw'], self.meta_item['long_sw'], self.meta_item['lat_ne'], self.meta_item['long_ne'],"'"+self.meta_item['imagename']+"'" ) )
+        finally:
+            cur.close()
+            con.close()

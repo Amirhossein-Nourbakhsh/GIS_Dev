@@ -41,9 +41,9 @@ if __name__ == "__main__":
         if len(order_obj.psr.search_radius) > 0:
         ### set type of reports
             if_relief_report = False
-            if_topo_report = True
+            if_topo_report = False
             if_wetland_report = False
-            if_flood_report = False
+            if_flood_report = True
             if_geology_report = False
             if_soil_report = False
             if_ogw_report = False
