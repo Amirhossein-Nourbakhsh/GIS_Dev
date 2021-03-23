@@ -464,7 +464,6 @@ class topo_us_rpt(object):
         except Exception as e:
             arcpy.AddWarning(e)
             arcpy.AddWarning("### ERIS_CUSTOMER.IsProductChron failed...")
-            pass
         arcpy.AddMessage("is_aei = " + self.is_aei)
 
         self.is_newLogo = 'N'
@@ -479,7 +478,6 @@ class topo_us_rpt(object):
         except Exception as e:
             arcpy.AddWarning(e)
             arcpy.AddWarning("### ERIS_CUSTOMER.IsCustomLogo failed...")
-            pass
         arcpy.AddMessage("is_newLogo = " + self.is_newLogo)
 
         return self.is_nova, self.is_aei, self.is_newLogo
@@ -1078,7 +1076,6 @@ class topo_us_rpt(object):
         except Exception as e:
             arcpy.AddError(e)
             arcpy.AddError("### eris_topo.processTopo failed...")
-            pass
 
     def setMultipage(self, df, mxd, seriestext, year, projection, gridsize, needtif, yesboundary):
         gridname = seriestext + "_" + str(year)
