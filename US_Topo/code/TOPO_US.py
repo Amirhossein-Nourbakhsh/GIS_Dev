@@ -73,7 +73,7 @@ if __name__ == '__main__':
         needtif = tf.mapExtent(df, mxd, srUTM, cfg.multipage)
 
         # set boundary
-        mxd, df, yesBoundary = tf.setBoundary(mxd, df, cfg.yesBoundary)                         # if multipage, set to 'fixed' if want to show boundary; need to return variables again or won't update
+        mxd, df, yesBoundary = tf.setBoundary(mxd, df, cfg.yesBoundary)
 
         # select topo records
         rowsMain, rowsAdj = tf.selectTopo(cfg.orderGeometryPR, cfg.extent, srUTM)

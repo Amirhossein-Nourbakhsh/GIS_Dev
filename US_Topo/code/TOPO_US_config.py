@@ -41,7 +41,7 @@ scratch = arcpy.env.scratchWorkspace
 scratchgdb = arcpy.env.scratchGDB
 
 # order info
-order_obj = models.Order().get_order(20190216008)
+order_obj = models.Order().get_order(OrderIDText)
 
 # # flags
 # multipage = "Y"                     # Y/N, for multipages, set yesBoundary to 'fixed' (not 'yes') if want boundary to display
