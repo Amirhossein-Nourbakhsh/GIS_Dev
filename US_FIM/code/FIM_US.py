@@ -61,9 +61,6 @@ if __name__ == '__main__':
 
         # logger
         logger,handler = ff.log(cfg.logfile, cfg.logname)
-
-        # get custom order flags
-        is_newLogo, is_aei, is_emg = ff.customrpt(order_obj)
         
         # get spatial references
         srGCS83,srWGS84,srGoogle,srUTM = ff.projlist(order_obj)
@@ -74,9 +71,6 @@ if __name__ == '__main__':
         # open mxd and create map extent
         mxd, dfmain, dfinset = ff.mapDocument(srUTM)
         ff.mapExtent(mxd, dfmain, dfinset, cfg.multipage)
-
-        # set boundary
-        mxd, df, yesBoundary = ff.setBoundary(mxd, dfmain, cfg.yesBoundary)                         # if multipage, set to 'fixed' if want to show boundary; need to return variables again or won't update
 
         # select FIM
         mainlist, adjlist = ff.selectFim(cfg.mastergdb, srUTM)
@@ -91,13 +85,19 @@ if __name__ == '__main__':
             # get FIM records
             mainList, adjacentList = ff.getFimRecords(cfg.selectedmain, cfg.selectedadj)
 
+            # get custom order flags
+            is_newLogo, is_aei, is_emg = ff.customrpt(order_obj)
+
+            # set boundary
+            mxd, df, yesBoundary = ff.setBoundary(mxd, dfmain, cfg.yesBoundary)
+
             # remove blank maps flag
             if cfg.delyearFlag == 'Y':
                 delyear = filter(None, str(raw_input("Years you want to delete (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))        # No quotes
                 ff.delyear(delyear, mainList)
             
             # create map page
-            ff.createPDF(mainList, adjacentList, is_aei, mxd, dfmain, dfinset, cfg.yesBoundary, cfg.multipage, cfg.gridsize, cfg.resolution)
+            ff.createPDF(mainList, adjacentList, is_aei, mxd, dfmain, dfinset, yesBoundary, cfg.multipage, cfg.gridsize, cfg.resolution)
 
             # create cover and summary pages
             ff.goSummaryPage(cfg.summaryfile,mainList)
@@ -112,7 +112,7 @@ if __name__ == '__main__':
                 output.addPage(PdfFileReader(open(cfg.summaryfile,'rb')).getPage(j))
                 output.addBookmark("Summary Page",j+1)
 
-            ff.appendMapPages(output,mainList, cfg.multipage, cfg.yesBoundary)
+            ff.appendMapPages(output,mainList, yesBoundary, cfg.multipage)
 
             outputStream = open(os.path.join(cfg.scratch, pdfreport_name),"wb")
             output.setPageMode('/UseOutlines')

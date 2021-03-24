@@ -937,7 +937,7 @@ class topo_us_rpt(object):
                 
                 for year in years:
                     seriesText = d[year][1]
-                    if yesboundary == "yes":
+                    if yesboundary == "yes" and self.order_obj.geometry.type.lower() != 'point' and self.order_obj.geometry.type.lower() != 'multipoint':
                         pdf = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + "_a.pdf"),'rb'))
                     else:
                         pdf = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + ".pdf"),'rb'))
