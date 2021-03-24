@@ -159,10 +159,11 @@ def export_reportimage(imagepath,auid):
 if __name__ == '__main__':
     OrderID = '1035941'#arcpy.GetParameterAsText(0)#'934404'#arcpy.GetParameterAsText(0)
     AUI_ID = '7367819'#arcpy.GetParameterAsText(1)
-    ee_oid = ''#arcpy.GetParameterAsText(2)#'408212'#arcpy.GetParameterAsText(2)
-    scratch = r'C:\Users\JLoucks\Documents\JL\test4'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test1'#arcpy.env.scratchFolder
+    ee_oid = '408212'#arcpy.GetParameterAsText(2)
+    scratch = r'C:\Users\JLoucks\Documents\JL\test1'#arcpy.env.scratchFolder
     arcpy.env.overwriteOutput = True
     arcpy.CreateFileGDB_management(scratch, 'temp.gdb')
+    arcpy.env.workspace = os.path.join(scratch,'temp.gdb')
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     georeferenced_historical = r'\\cabcvan1nas003\historical\Georeferenced_Aerial_test'
     georeferenced_doqq = r'\\cabcvan1nas003\doqq\Georeferenced_DOQQ_test'
@@ -202,8 +203,7 @@ if __name__ == '__main__':
                     mosaicfp = os.path.join(scratch,'image_boundary.shp')
                     arcpy.CreateMosaicDataset_management(os.path.join(scratch,'temp.gdb'), 'doqq', 4326)
                     arcpy.AddRastersToMosaicDataset_management (os.path.join(scratch,'temp.gdb','doqq'), "Raster Dataset", imageuploadpath, 'NO_CELL_SIZES', True, False,spatial_reference = sr)
-                    arcpy.MakeMosaicLayer_management(os.path.join(scratch,'temp.gdb','doqq'),'footprintlayer')
-                    arcpy.CopyFeatures_management(r'footprintlayer\Footprint',mosaicfp)
+                    arcpy.ExportMosaicDatasetGeometry_management(os.path.join(scratch,'temp.gdb','raster'),mosaicfp,"OBJECTID = 1","FOOTPRINT")
                     cellsizeX = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEX')
                     cellsizeY = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEY')
                     if cellsizeY > cellsizeX:
@@ -233,8 +233,7 @@ if __name__ == '__main__':
                     mosaicfp = os.path.join(scratch,'image_boundary.shp')
                     arcpy.CreateMosaicDataset_management(os.path.join(scratch,'temp.gdb'), 'raster', 4326)
                     arcpy.AddRastersToMosaicDataset_management (os.path.join(scratch,'temp.gdb','raster'), "Raster Dataset", imageuploadpath, 'NO_CELL_SIZES', True, False,spatial_reference = sr)
-                    arcpy.MakeMosaicLayer_management(os.path.join(scratch,'temp.gdb','raster'),'footprintlayer')
-                    arcpy.CopyFeatures_management(r'footprintlayer\Footprint',mosaicfp)
+                    arcpy.ExportMosaicDatasetGeometry_management(os.path.join(scratch,'temp.gdb','raster'),mosaicfp,"OBJECTID = 1","FOOTPRINT")
                     cellsizeX = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEX')
                     cellsizeY = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEY')
                     if cellsizeY > cellsizeX:
