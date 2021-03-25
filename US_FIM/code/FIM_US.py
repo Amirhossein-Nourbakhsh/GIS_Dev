@@ -91,7 +91,7 @@ if __name__ == '__main__':
             # set boundary
             mxd, df, yesBoundary = ff.setBoundary(mxd, dfmain, cfg.yesBoundary)
 
-            # # remove blank maps flag
+            # # remove blank maps flag, for internal use
             # if cfg.delyearFlag == 'Y':
             #     delyear = filter(None, str(raw_input("Years you want to delete (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))        # No quotes
             #     ff.delyear(delyear, mainList)
@@ -144,5 +144,5 @@ if __name__ == '__main__':
         handler.close()
 
     finish = time.clock()
-    arcpy.AddMessage("Final FIM report directory: " + (str(os.path.join(cfg.reportcheckFolder,"FIM", pdfreport_name))))
+    # arcpy.AddMessage("Final FIM report directory: " + (str(os.path.join(cfg.reportcheckFolder,"FIM", pdfreport_name))))
     arcpy.AddMessage("Finished in " + str(round(finish-start, 2)) + " secs")
