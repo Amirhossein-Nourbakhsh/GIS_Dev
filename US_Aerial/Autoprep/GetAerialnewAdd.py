@@ -157,10 +157,10 @@ def export_reportimage(imagepath,auid):
         del mxd
 
 if __name__ == '__main__':
-    OrderID = '1035941'#arcpy.GetParameterAsText(0)#'934404'#arcpy.GetParameterAsText(0)
-    AUI_ID = '7367819'#arcpy.GetParameterAsText(1)
-    ee_oid = '408212'#arcpy.GetParameterAsText(2)
-    scratch = r'C:\Users\JLoucks\Documents\JL\test1'#arcpy.env.scratchFolder
+    OrderID = arcpy.GetParameterAsText(0)#'934404'#arcpy.GetParameterAsText(0)
+    AUI_ID = arcpy.GetParameterAsText(1)
+    ee_oid = arcpy.GetParameterAsText(2)
+    scratch = arcpy.env.scratchFolder
     arcpy.env.overwriteOutput = True
     arcpy.CreateFileGDB_management(scratch, 'temp.gdb')
     arcpy.env.workspace = os.path.join(scratch,'temp.gdb')
