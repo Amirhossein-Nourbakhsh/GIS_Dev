@@ -12,7 +12,7 @@ import re
 import time
 import cx_Oracle
 import xml.etree.ElementTree as ET
-import topo_us_config as cfg
+import TOPO_US_config as cfg
 
 from PyPDF2 import PdfFileReader, PdfFileWriter
 from PyPDF2.generic import NameObject, createStringObject, ArrayObject, FloatObject
