@@ -6,8 +6,8 @@ file_path =os.path.dirname(os.path.abspath(__file__))
 if 'arcgisserver' in file_path:
     model_path = os.path.join('D:/arcgisserver/directories/arcgissystem/arcgisinput/GPtools/DB_Framework')
 else:
-    main_path = os.path.abspath(__file__).replace(os.path.relpath(__file__),"GIS_Dev")
-    model_path = os.path.join(main_path,'DB_Framework')
+    main_path = os.path.dirname(file_path)
+    model_path = os.path.join(os.path.dirname(main_path),'DB_Framework')
 
 sys.path.insert(1,model_path)
 import models
