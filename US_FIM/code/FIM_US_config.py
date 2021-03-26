@@ -29,7 +29,7 @@ def server_loc_config(configpath,environment):
 #         os.mkdir(scratch)
 #     if not os.path.exists(os.path.join(scratch, scratchgdb)):
 #         arcpy.CreateFileGDB_management(scratch, "scratch.gdb")
-    return scratch, scratchgdb
+#     return scratch, scratchgdb
 
 # arcpy parameter
 OrderIDText = arcpy.GetParameterAsText(0) 
@@ -43,16 +43,16 @@ scratchgdb = arcpy.env.scratchGDB
 # order info
 order_obj = models.Order().get_order(OrderIDText)
 
-# parameters
-gridsize = "0.3 KiloMeters"
-resolution = "600"
-BufsizeText ='0.17'
+# # parameters
+# gridsize = "0.3 KiloMeters"
+# BufsizeText ='0.17'
+# resolution = "600"
 
-# flags
-multipage = False                   # True/False        
-yesBoundary = "yes"                 # yes/no/fixed
-delyearFlag = "N"                   # Y/N
-NRF = 'N'                           # Y/N
+# # flags
+# multipage = False                   # True/False        
+# yesBoundary = "yes"                 # yes/no/fixed
+# delyearFlag = "Y"                   # Y/N
+# nrf = 'N'                           # Y/N
 
 # scratch file
 # scratch, scratchgdb = createScratch()

@@ -15,6 +15,7 @@ from reportlab.lib.units import inch
 from reportlab.lib.pagesizes import portrait, letter
 from reportlab.pdfgen import canvas
 from time import strftime
+
 class oracle(object):    
     def __init__(self, connectionString):
         self.connectionString = connectionString
@@ -146,7 +147,7 @@ class fim_us_rpt(object):
         output = None
         return annotatedPdf
 
-    def goCoverPage(self, coverPdf, NRF):
+    def goCoverPage(self, coverPdf, nrf):
         pagesize = portrait(letter)
         [PAGE_WIDTH,PAGE_HEIGHT]=pagesize[:2]
         PAGE_WIDTH = int(PAGE_WIDTH)
@@ -175,7 +176,7 @@ class fim_us_rpt(object):
         c.drawString(rightsw, heights-4*space,self.order_obj.company_desc)
         c.drawString(rightsw, heights-5*space,self.order_obj.number)
         c.drawString(rightsw, heights-6*space,time.strftime('%B %d, %Y', time.localtime()))
-        if NRF=='Y':
+        if nrf == 'Y':
             c.setStrokeColorRGB(0.67,0.8,0.4)
             c.line(50,180,PAGE_WIDTH-60,180)
             c.setFont('Helvetica-Bold', 12)
@@ -252,7 +253,7 @@ class fim_us_rpt(object):
                 for sht in sheets:
                     sht = sht.lstrip("0").split('_')[0].split('-')[0].strip('A').strip('B').strip('C').strip('D').strip('E').strip('F') 
                     sheetnoText = sheetnoText + sht + ', '
-                sheetnoText = sheetnoText.rstrip(",")
+                sheetnoText = sheetnoText.rstrip(", ")
 
                 newdata.append([Paragraph(('<para alignment="left">%s</para>')%(_), style) for _ in [year,city,state,vol, sheetnoText]])
         table = Table(newdata,colWidths = [80,80,80,80, PAGE_WIDTH-420])
@@ -611,11 +612,10 @@ class fim_us_rpt(object):
 
         return mainList, adjacentList
 
-    def delyear(self, yeardel, mainList):
-        if yeardel:
-            for item in mainList:
-                if item[5] in yeardel:
-                    mainList.remove(item)
+    def delyear(self, delyear, mainList):
+        for year in delyear:
+            if any(year in key for key in mainList.keys()):
+                del mainList[year]
         return mainList
 
     def createPDF(self, mainList, adjacentList, is_aei, mxd, dfmain, dfinset, yesboundary, multipage, gridsize, resolution):
@@ -638,7 +638,7 @@ class fim_us_rpt(object):
                         lyr+=".tif"
                     elif  os.path.exists(lyr+".jpg"):
                         lyr+=".jpg"
-                    print(lyr)
+
                     count+=1
                     image_lyr_name = "%s"%(lyr.replace("\\","").replace(".","_"))
                     image = arcpy.MakeRasterLayer_management(lyr,image_lyr_name)
@@ -720,8 +720,6 @@ class fim_us_rpt(object):
             arcpy.Delete_management("in_memory")
 
     def mapSetElement(self, mxd, year, sheetnoText):
-        # refresh the view to reflect the updated image
-        # center and scale the image
         # update map document with sheet numbers, orderID and address
         yearTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "MainTitleText")[0]
         yearTextE.text = str(year)
@@ -766,7 +764,7 @@ class fim_us_rpt(object):
         FIPpdfMM = os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'_multipage.pdf')
         ddMMDDP = mxd.dataDrivenPages
         ddMMDDP.refresh()
-        ddMMDDP.exportToPDF(out_pdf=FIPpdfMM, page_range_type="ALL",resolution=600, image_quality="BEST", georef_info = True)                   # seems like layers (except fim images) need to be in same projection else will get: "AttributeError: PageLayoutObject: Error in exporting pages"
+        ddMMDDP.exportToPDF(out_pdf=FIPpdfMM, page_range_type="ALL",resolution=600, image_quality="BEST", georef_info = True)
 
         # reset view
         dfmain.extent = arcpy.mapping.ListLayers(mxd,"Buffer Outline",dfmain)[0].getSelectedExtent(False)
@@ -829,10 +827,6 @@ class fim_us_rpt(object):
             viewerdir = os.path.join(cfg.scratch,self.order_obj.number+'_fim')
             if not os.path.exists(viewerdir):
                 os.mkdir(viewerdir)
-
-            # tempdir = os.path.join(cfg.scratch,'viewertemp')
-            # if not os.path.exists(tempdir):
-            #     os.mkdir(tempdir)
 
             # to do: get the right year for each FIM
             years = mainList.keys()

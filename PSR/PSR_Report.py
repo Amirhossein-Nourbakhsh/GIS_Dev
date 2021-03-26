@@ -20,7 +20,9 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 if __name__ == "__main__":
-    id = 1026370
+    id = arcpy.GetParameterAsText(0)
+    # id = 1026370
+    id = 1014804
     arcpy.AddMessage('Start PSR report...')
     start = timeit.default_timer()
     # ### set workspace
@@ -39,47 +41,47 @@ if __name__ == "__main__":
         ### Populate radius list of PSR for this Order object
         order_obj.get_search_radius() # populate search radius
         if len(order_obj.psr.search_radius) > 0:
-        ### set type of reports
-            if_relief_report = False
-            if_topo_report = False
-            if_wetland_report = False
-            if_flood_report = True
-            if_geology_report = False
-            if_soil_report = False
-            if_ogw_report = False
-            if_radon_report = False
-            if_aspect_map = False
-            if_kml_output = True
+            ### set type of reports
+            config.if_relief_report = True
+            config.if_topo_report = True
+            config.if_wetland_report = True
+            config.if_flood_report = True
+            config.if_geology_report = True
+            config.if_soil_report = True
+            config.if_ogw_report = True
+            config.if_radon_report = True
+            config.if_aspect_map = True
+            config.if_kml_output = True
 
             # shaded releif map report
-            if if_relief_report:
+            if config.if_relief_report:
                 relief.generate_relief_report(order_obj)
             # topo map report
-            if if_topo_report:
+            if config.if_topo_report:
                 topo.generate_topo_report(order_obj)
             # Wetland report
-            if if_wetland_report:
+            if config.if_wetland_report:
                 wetland.generate_wetland_report(order_obj)
             # flood report
-            if if_flood_report:
+            if config.if_flood_report:
                 flood_plain.generate_flood_report(order_obj)
             # geology report
-            if if_geology_report:
+            if config.if_geology_report:
                 geology.generate_geology_report(order_obj)
             # soil report
-            if if_soil_report:
+            if config.if_soil_report:
                 soil.generate_soil_report(order_obj)
             # oil, gas and water wells report
-            if if_ogw_report:
+            if config.if_ogw_report:
                 ogw.generate_ogw_report(order_obj)
             # radon report
-            if if_radon_report:
+            if config.if_radon_report:
                 radon.generate_radon_report(order_obj)
             # multi_proc_test.generate_flood_report(order_obj)
-            if if_aspect_map:
+            if config.if_aspect_map:
                 aspect.generate_aspect_map(order_obj)
             # convert to kml for viewer
-            if if_kml_output:
+            if config.if_kml_output:
                 kml.convert_to_kml(order_obj)
         else:
             arcpy.AddMessage('No PSR is availabe for this order')

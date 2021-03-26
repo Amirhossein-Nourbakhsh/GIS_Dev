@@ -75,11 +75,11 @@ if __name__ == '__main__':
         # select FIM
         mainlist, adjlist = ff.selectFim(cfg.mastergdb, srUTM)
 
-        if len(mainlist) == 0 or cfg.NRF == 'Y':
+        if len(mainlist) == 0 or cfg.nrf == 'Y':
             logger.info("order " + order_obj.number + ":    search completed. Will print out a NRF letter. ")
             arcpy.AddMessage("...NO records selected, will print out NRF letter.")
-            cfg.NRF = 'Y'
-            ff.goCoverPage(cfg.coverfile, cfg.NRF)
+            cfg.nrf = 'Y'
+            ff.goCoverPage(cfg.coverfile, cfg.nrf)
             os.rename(cfg.coverfile, os.path.join(cfg.scratch, pdfreport_name))
         else:
             # get FIM records
@@ -91,17 +91,17 @@ if __name__ == '__main__':
             # set boundary
             mxd, df, yesBoundary = ff.setBoundary(mxd, dfmain, cfg.yesBoundary)
 
-            # remove blank maps flag
-            if cfg.delyearFlag == 'Y':
-                delyear = filter(None, str(raw_input("Years you want to delete (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))        # No quotes
-                ff.delyear(delyear, mainList)
+            # # remove blank maps flag, for internal use
+            # if cfg.delyearFlag == 'Y':
+            #     delyear = filter(None, str(raw_input("Years you want to delete (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))        # No quotes
+            #     ff.delyear(delyear, mainList)
             
             # create map page
             ff.createPDF(mainList, adjacentList, is_aei, mxd, dfmain, dfinset, yesBoundary, cfg.multipage, cfg.gridsize, cfg.resolution)
 
             # create cover and summary pages
             ff.goSummaryPage(cfg.summaryfile,mainList)
-            ff.goCoverPage(cfg.coverfile, cfg.NRF)
+            ff.goCoverPage(cfg.coverfile, cfg.nrf)
 
             # append pages to blank pdf
             output = PdfFileWriter()
@@ -144,5 +144,5 @@ if __name__ == '__main__':
         handler.close()
 
     finish = time.clock()
-    arcpy.AddMessage("Final FIM report directory: " + (str(os.path.join(cfg.reportcheckFolder,"FIM", pdfreport_name))))
+    # arcpy.AddMessage("Final FIM report directory: " + (str(os.path.join(cfg.reportcheckFolder,"FIM", pdfreport_name))))
     arcpy.AddMessage("Finished in " + str(round(finish-start, 2)) + " secs")

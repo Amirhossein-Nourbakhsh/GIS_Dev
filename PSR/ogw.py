@@ -124,6 +124,9 @@ def generate_ogw_report(order_obj):
     del array
     
     output_jpg_wells = config.output_jpg(order_obj,config.Report_Type.wells)
+    if '10685' not in order_obj.psr.search_radius.keys():
+        arcpy.AddMessage('      -- OGW search radius is not availabe')
+        return
     config.buffer_dist_ogw =  str(order_obj.psr.search_radius['10685']) + ' MILES'
     ds_oid_wells_max_radius = '10093'     # 10093 is a federal source, PWSV
     ds_oid_wells = []

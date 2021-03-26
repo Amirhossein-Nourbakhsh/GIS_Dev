@@ -168,8 +168,8 @@ try:
 
 # LOCAL #########################################################################
     OrderIDText = ''
-    OrderNumText = r"20200810053"
-    scratchfolder = os.path.join(r"C:\Users\awong\Downloads\PSR_SCRATCHY", OrderNumText)
+    OrderNumText = r"21021100004"
+    scratchfolder = os.path.join(r"C:\Users\HKiavarz\AppData\Local\Temp\scratch", OrderNumText)
     scratch = arcpy.CreateFileGDB_management(scratchfolder,r"scratch.gdb")   # for tables to make Querytable
     scratch = os.path.join(scratchfolder,r"scratch.gdb")
 #################################################################################
@@ -2918,3 +2918,5 @@ except:
 
 print ("Final PSR maps directory: " + (PSR_config.report_path + "\\PSRmaps\\" + str(OrderNumText)))
 print ("_____DONE")
+end = timeit.default_timer()
+arcpy.AddMessage(('End PSR report process. Duration:', round(end -start,4)))
