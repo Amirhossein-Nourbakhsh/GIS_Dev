@@ -464,7 +464,6 @@ class topo_us_rpt(object):
         except Exception as e:
             arcpy.AddWarning(e)
             arcpy.AddWarning("### ERIS_CUSTOMER.IsProductChron failed...")
-            pass
         arcpy.AddMessage("is_aei = " + self.is_aei)
 
         self.is_newLogo = 'N'
@@ -479,7 +478,6 @@ class topo_us_rpt(object):
         except Exception as e:
             arcpy.AddWarning(e)
             arcpy.AddWarning("### ERIS_CUSTOMER.IsCustomLogo failed...")
-            pass
         arcpy.AddMessage("is_newLogo = " + self.is_newLogo)
 
         return self.is_nova, self.is_aei, self.is_newLogo
@@ -939,7 +937,7 @@ class topo_us_rpt(object):
                 
                 for year in years:
                     seriesText = d[year][1]
-                    if yesboundary == "yes":
+                    if yesboundary == "yes" and self.order_obj.geometry.type.lower() != 'point' and self.order_obj.geometry.type.lower() != 'multipoint':
                         pdf = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + "_a.pdf"),'rb'))
                     else:
                         pdf = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + ".pdf"),'rb'))
@@ -1078,7 +1076,6 @@ class topo_us_rpt(object):
         except Exception as e:
             arcpy.AddError(e)
             arcpy.AddError("### eris_topo.processTopo failed...")
-            pass
 
     def setMultipage(self, df, mxd, seriestext, year, projection, gridsize, needtif, yesboundary):
         gridname = seriestext + "_" + str(year)

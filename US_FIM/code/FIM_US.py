@@ -61,9 +61,6 @@ if __name__ == '__main__':
 
         # logger
         logger,handler = ff.log(cfg.logfile, cfg.logname)
-
-        # get custom order flags
-        is_newLogo, is_aei, is_emg = ff.customrpt(order_obj)
         
         # get spatial references
         srGCS83,srWGS84,srGoogle,srUTM = ff.projlist(order_obj)
@@ -75,33 +72,36 @@ if __name__ == '__main__':
         mxd, dfmain, dfinset = ff.mapDocument(srUTM)
         ff.mapExtent(mxd, dfmain, dfinset, cfg.multipage)
 
-        # set boundary
-        mxd, df, yesBoundary = ff.setBoundary(mxd, dfmain, cfg.yesBoundary)                         # if multipage, set to 'fixed' if want to show boundary; need to return variables again or won't update
-
         # select FIM
         mainlist, adjlist = ff.selectFim(cfg.mastergdb, srUTM)
 
-        if len(mainlist) == 0 or cfg.NRF == 'Y':
+        if len(mainlist) == 0 or cfg.nrf == 'Y':
             logger.info("order " + order_obj.number + ":    search completed. Will print out a NRF letter. ")
             arcpy.AddMessage("...NO records selected, will print out NRF letter.")
-            cfg.NRF = 'Y'
-            ff.goCoverPage(cfg.coverfile, cfg.NRF)
+            cfg.nrf = 'Y'
+            ff.goCoverPage(cfg.coverfile, cfg.nrf)
             os.rename(cfg.coverfile, os.path.join(cfg.scratch, pdfreport_name))
         else:
             # get FIM records
             mainList, adjacentList = ff.getFimRecords(cfg.selectedmain, cfg.selectedadj)
 
-            # remove blank maps flag
-            if cfg.delyearFlag == 'Y':
-                delyear = filter(None, str(raw_input("Years you want to delete (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))        # No quotes
-                ff.delyear(delyear, mainList)
+            # get custom order flags
+            is_newLogo, is_aei, is_emg = ff.customrpt(order_obj)
+
+            # set boundary
+            mxd, df, yesBoundary = ff.setBoundary(mxd, dfmain, cfg.yesBoundary)
+
+            # # remove blank maps flag, for internal use
+            # if cfg.delyearFlag == 'Y':
+            #     delyear = filter(None, str(raw_input("Years you want to delete (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))        # No quotes
+            #     ff.delyear(delyear, mainList)
             
             # create map page
-            ff.createPDF(mainList, adjacentList, is_aei, mxd, dfmain, dfinset, cfg.yesBoundary, cfg.multipage, cfg.gridsize, cfg.resolution)
+            ff.createPDF(mainList, adjacentList, is_aei, mxd, dfmain, dfinset, yesBoundary, cfg.multipage, cfg.gridsize, cfg.resolution)
 
             # create cover and summary pages
             ff.goSummaryPage(cfg.summaryfile,mainList)
-            ff.goCoverPage(cfg.coverfile, cfg.NRF)
+            ff.goCoverPage(cfg.coverfile, cfg.nrf)
 
             # append pages to blank pdf
             output = PdfFileWriter()
@@ -112,7 +112,7 @@ if __name__ == '__main__':
                 output.addPage(PdfFileReader(open(cfg.summaryfile,'rb')).getPage(j))
                 output.addBookmark("Summary Page",j+1)
 
-            ff.appendMapPages(output,mainList, cfg.multipage, cfg.yesBoundary)
+            ff.appendMapPages(output,mainList, yesBoundary, cfg.multipage)
 
             outputStream = open(os.path.join(cfg.scratch, pdfreport_name),"wb")
             output.setPageMode('/UseOutlines')
@@ -144,5 +144,5 @@ if __name__ == '__main__':
         handler.close()
 
     finish = time.clock()
-    arcpy.AddMessage("Final FIM report directory: " + (str(os.path.join(cfg.reportcheckFolder,"FIM", pdfreport_name))))
+    # arcpy.AddMessage("Final FIM report directory: " + (str(os.path.join(cfg.reportcheckFolder,"FIM", pdfreport_name))))
     arcpy.AddMessage("Finished in " + str(round(finish-start, 2)) + " secs")

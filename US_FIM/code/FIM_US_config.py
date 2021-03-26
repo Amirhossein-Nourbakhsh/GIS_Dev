@@ -22,45 +22,46 @@ def server_loc_config(configpath,environment):
     else:
         return 'invalid server configuration'
 
-def createScratch():
-    scratch = os.path.join(r"W:\Data Analysts\Alison\_GIS\FIM_US_SCRATCHY", "test123")
-    scratchgdb = "scratch.gdb"
-    if not os.path.exists(scratch):
-        os.mkdir(scratch)
-    if not os.path.exists(os.path.join(scratch, scratchgdb)):
-        arcpy.CreateFileGDB_management(scratch, "scratch.gdb")
-    return scratch, scratchgdb
+# def createScratch():
+#     scratch = os.path.join(r"W:\Data Analysts\Alison\_GIS\FIM_US_SCRATCHY", "test2")
+#     scratchgdb = "scratch.gdb"
+#     if not os.path.exists(scratch):
+#         os.mkdir(scratch)
+#     if not os.path.exists(os.path.join(scratch, scratchgdb)):
+#         arcpy.CreateFileGDB_management(scratch, "scratch.gdb")
+#     return scratch, scratchgdb
 
 # arcpy parameter
-# OrderIDText = arcpy.GetParameterAsText(0) 
-# BufsizeText = arcpy.GetParameterAsText(1)
-# yesBoundary = arcpy.GetParameterAsText(2)
-# multipage = arcpy.GetParameterAsText(3)
-# gridsize = arcpy.GetParameterAsText(4)
-# scratchgdb = arcpy.env.scratchGDB
+OrderIDText = arcpy.GetParameterAsText(0) 
+BufsizeText = arcpy.GetParameterAsText(1)
+yesBoundary = arcpy.GetParameterAsText(2)
+multipage = arcpy.GetParameterAsText(3)
+gridsize = arcpy.GetParameterAsText(4)
+scratch = arcpy.env.scratchWorkspace
+scratchgdb = arcpy.env.scratchGDB
 
 # order info
-order_obj = models.Order().get_order(21013100011)
+order_obj = models.Order().get_order(OrderIDText)
 
-# parameters
-BufsizeText ='0.17'
-yesBoundary = "yes"
-gridsize = "0.3 KiloMeters"
-resolution = "600"
+# # parameters
+# gridsize = "0.3 KiloMeters"
+# BufsizeText ='0.17'
+# resolution = "600"
 
-# flags
-multipage = True
-delyearFlag = "N"
-NRF = 'N'
+# # flags
+# multipage = False                   # True/False        
+# yesBoundary = "yes"                 # yes/no/fixed
+# delyearFlag = "Y"                   # Y/N
+# nrf = 'N'                           # Y/N
 
 # scratch file
-scratch, scratchgdb = createScratch()
-orderGeometry= os.path.join(scratch, "orderGeometry.shp")
-orderGeometryPR = os.path.join(scratch, "orderGeometryPR.shp")
-outBufferSHP = os.path.join(scratch, "buffer.shp")
-selectedmain = os.path.join(scratch, "selectedmain.shp")
-selectedadj = os.path.join(scratch, "selectedadj.shp")
-extent = os.path.join(scratch, "extent.shp")
+# scratch, scratchgdb = createScratch()
+orderGeometry= os.path.join(scratch, scratchgdb, "orderGeometry")
+orderGeometryPR = os.path.join(scratch, scratchgdb, "orderGeometryPR")
+outBufferSHP = os.path.join(scratch, scratchgdb, "buffer")
+selectedmain = os.path.join(scratch, scratchgdb, "selectedmain")
+selectedadj = os.path.join(scratch, scratchgdb, "selectedadj")
+extent = os.path.join(scratch, scratchgdb, "extent")
 summaryfile = os.path.join(scratch, "summary.pdf")
 coverfile = os.path.join(scratch, "cover.pdf")
 shapePdf = os.path.join(scratch, "shape.pdf")
@@ -81,8 +82,9 @@ connectionPath = r"\\cabcvan1gis005\GISData\FIMS_USA"
 logopath = os.path.join(connectionPath, "logos")
 
 # master file/folder
-mastergdb = r"\\CABCVAN1FPR009\USA_FIPs\US FIM Footprints\_master\FIM_US_STATES.gdb"
-excelfile = os.path.join(connectionPath,"master\MASTER_ALL_STATES.xlsx")
+mastergdb = os.path.join(connectionPath,r"master\FIM_US_STATES.gdb")
+# excelfile = os.path.join(connectionPath,r"master\MASTER_ALL_STATES.xlsx")
+# mxexcelfile = os.path.join(connectionPath,r"master\MASTER_MX_STATES.xlsx")
 
 # layer
 imagelyr = os.path.join(connectionPath,r"layer\mosaic_jpg_255.lyr")
