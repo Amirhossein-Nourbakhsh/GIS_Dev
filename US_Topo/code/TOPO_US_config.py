@@ -3,8 +3,8 @@ import sys
 import arcpy
 import ConfigParser
 
-addpath = os.path.abspath(__file__).replace(os.path.relpath(__file__),"GIS_Dev")
-sys.path.insert(1,os.path.join(addpath,'DB_Framework'))
+add_path = os.path.abspath(__file__).replace(os.path.relpath(__file__),"GIS_Dev")
+sys.path.insert(1,os.path.join(add_path,'DB_Framework'))
 import models
 
 def server_loc_config(configpath,environment):
