@@ -7,7 +7,7 @@ if 'arcgisserver' in file_path:
     model_path = os.path.join(r'D:/arcgisserver/directories/arcgissystem/arcgisinput/GPtools/DB_Framework')
 else:
     main_path = os.path.abspath(os.path.join(__file__, os.pardir))
-    model_path = os.path.join(main_path.split('GIS-Dev')[0],'GIS-Dev','DB_Framework')
+    model_path = os.path.join(main_path.split('GIS_Dev')[0],'GIS_Dev','DB_Framework')
 
 sys.path.insert(1,model_path)
 import models
@@ -38,8 +38,8 @@ def server_loc_config(configpath,environment):
 
 # arcpy parameters
 OrderIDText = arcpy.GetParameterAsText(0)
-BufsizeText = arcpy.GetParameterAsText(1)
-yesBoundary = (arcpy.GetParameterAsText(2)).lower()
+yesBoundary = (arcpy.GetParameterAsText(1)).lower()
+BufsizeText = arcpy.GetParameterAsText(2)
 multipage = arcpy.GetParameterAsText(3)
 gridsize = arcpy.GetParameterAsText(4)
 scratch = arcpy.env.scratchWorkspace
