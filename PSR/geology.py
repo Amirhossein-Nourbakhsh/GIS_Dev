@@ -15,6 +15,10 @@ def generate_geology_report(order_obj):
     arcpy.env.workspace = config.scratch_folder
     arcpy.env.overwriteOutput = True   
     output_jpg_geology = config.output_jpg(order_obj,config.Report_Type.geology)
+    page = 1
+    if '10685' not in order_obj.psr.search_radius.keys():
+        arcpy.AddMessage('      -- Geology search radius is not availabe')
+        return
     config.buffer_dist_geology =  str(order_obj.psr.search_radius['10685']) + ' MILES'
 
     ### create buffer map based on order geometry

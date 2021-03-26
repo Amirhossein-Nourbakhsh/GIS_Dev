@@ -31,6 +31,17 @@ viewer_path = server_config['viewer']
 upload_link = server_config['viewer_upload']+r"/ErisInt/BIPublisherPortal_test/Viewer.svc/"
 report_check_path = server_config['reportcheck']
 connection_path = r"\\cabcvan1gis005\GISData\PSR\python"
+#Set the type of report
+if_relief_report = None
+if_topo_report = None
+if_wetland_report = None
+if_flood_report = None
+if_geology_report = None
+if_soil_report = None
+if_ogw_report = None
+if_radon_report = None
+if_aspect_map = None
+if_kml_output = None
 
 scratch_folder = arcpy.env.scratchFolder
 # temp gdb in scratch folder
@@ -128,6 +139,7 @@ mxd_mm_file_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\floodMM.mxd"
 order_buffer_flood_shp = os.path.join(scratch_folder,'order_buffer_flood.shp')
 flood_selectedby_order_shp = os.path.join(scratch_folder,"flood_selectedby_order.shp")
 flood_panel_selectedby_order_shp = os.path.join(scratch_folder,"flood_panel_selectedby_order.shp")
+flood_selectedby_frame = os.path.join(scratch_folder,"flood_selectedby_frame.shp")
 data_lyr_flood = r"\\cabcvan1gis005\GISData\PSR\python\mxd\flood.lyr"
 flood_ids = []
 ### geology report paths config

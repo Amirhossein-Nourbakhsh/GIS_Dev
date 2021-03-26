@@ -15,7 +15,9 @@ def generate_radon_report(order_obj):
     ### set scratch folder
     arcpy.env.workspace = config.scratch_folder
     arcpy.env.overwriteOutput = True  
-    
+    if '10689' not in order_obj.psr.search_radius.keys():
+        arcpy.AddMessage('      -- Radon search radius is not availabe')
+        return
     config.buffer_dist_radon =  str(order_obj.psr.search_radius['10689']) + ' MILES'
     
     ### create buffer map based on order geometry

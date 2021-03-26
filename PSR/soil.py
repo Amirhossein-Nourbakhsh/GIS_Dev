@@ -188,6 +188,10 @@ def generate_soil_report(order_obj):
     arcpy.env.overwriteOutput = True   
     ### extract buffer size for soil report
     eris_id = 0
+    
+    if '9334' not in order_obj.psr.search_radius.keys():
+        arcpy.AddMessage('      -- Soil search radius is not availabe')
+        return
     config.buffer_dist_soil = str(order_obj.psr.search_radius['9334']) + ' MILES'
     arcpy.Buffer_analysis(config.order_geometry_pcs_shp, config.order_buffer_shp, config.buffer_dist_soil) 
     

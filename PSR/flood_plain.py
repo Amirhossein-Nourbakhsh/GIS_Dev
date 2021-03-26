@@ -38,7 +38,9 @@ def generate_flood_report(order_obj):
     eris_id = 0
     Setting.output_jpg_flood = config.output_jpg(order_obj,config.Report_Type.flood)
     page = 1
-    
+    if '10683' not in order_obj.psr.search_radius.keys():
+        arcpy.AddMessage('      -- Flood search radius is not availabe')
+        return
     config.buffer_dist_flood = str(order_obj.psr.search_radius['10683']) + ' MILES'
     arcpy.Buffer_analysis(config.order_geometry_pcs_shp, config.order_buffer_shp, config.buffer_dist_flood) ### create buffer map based on order geometry
     

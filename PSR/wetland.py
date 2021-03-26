@@ -85,6 +85,9 @@ def generate_wetland_report(order_obj):
     output_jpg_ny_wetland = os.path.join(config.scratch_folder, str(order_obj.number)+'_NY_WETL.jpg')
 
     ### Wetland Map
+    if '10684' not in order_obj.psr.search_radius.keys():
+        arcpy.AddMessage('      -- Wetland search radius is not availabe')
+        return
     config.buffer_dist_wetland = str(order_obj.psr.search_radius['10684']) + ' MILES'
     arcpy.Buffer_analysis(config.order_geometry_pcs_shp, config.order_buffer_shp,  config.buffer_dist_wetland)
     mxd_wetland = arcpy.mapping.MapDocument(config.mxd_file_wetland)
@@ -173,7 +176,7 @@ def generate_wetland_report(order_obj):
                 if not os.path.exists(os.path.join(config.report_path, 'PSRmaps', order_obj.number)):
                     os.mkdir(os.path.join(config.report_path, 'PSRmaps', order_obj.number))
                 shutil.copy(output_jpg_ny_wetland[0:-4]+str(i)+".jpg", os.path.join(config.report_path, 'PSRmaps', order_obj.number))
-                arcpy.AddMessage('      - Wetland Output for NY state: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number))
+                arcpy.AddMessage('      -- Wetland Output for NY state: %s' % os.path.join(config.report_path, 'PSRmaps', order_obj.number))
             del mxd_mm_wetland_NY
             del df_mm_wetland_ny
             
