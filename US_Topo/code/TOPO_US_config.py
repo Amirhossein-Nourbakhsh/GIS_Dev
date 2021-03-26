@@ -3,7 +3,7 @@ import sys
 import arcpy
 import ConfigParser
 
-addpath = os.path.abspath(__file__).replace(os.path.relpath(__file__),"GIS_Dev")
+addpath = os.path.abspath(__file__).replace(os.path.relpath(__file__),"GIS-Dev")
 sys.path.insert(1,os.path.join(addpath,'DB_Framework'))
 import models
 

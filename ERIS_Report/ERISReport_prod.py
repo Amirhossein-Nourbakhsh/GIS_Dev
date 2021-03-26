@@ -1,4 +1,3 @@
-
 #-------------------------------------------------------------------------------
 # Name:        ERIS DATABASE MAP
 # Purpose:    Generates the maps for the ERIS DATABASE Reprt.
@@ -61,7 +60,7 @@ class Machine:
 
 class Credential:
     oracle_test = r"eris_gis/gis295@GMTESTC.glaciermedia.inc"
-    oracle_production = r'eris_gis/gis295@GMPRODC.glaciermedia.inc"
+    oracle_production = r'eris_gis/gis295@GMPRODC.glaciermedia.inc'
 
 class ReportPath:
     noninstant_reports_test = server_config['noninstant']
@@ -650,7 +649,7 @@ def exportViewerTable(ImagePath,FileName):
 if __name__ == '__main__':
     try:
         # INPUT #####################################
-        OrderIDText = '988390'#'#arcpy.GetParameterAsText(0).strip()#'736799'#
+        OrderIDText = '1044821'#'#arcpy.GetParameterAsText(0).strip()#'736799'#
         multipage = False #True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
         gridsize = '2 Miles'#arcpy.GetParameterAsText(2).strip()#0#
         code = 'usa'#arcpy.GetParameterAsText(3).strip()#'usa'#
