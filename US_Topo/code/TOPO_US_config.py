@@ -2,9 +2,14 @@ import os
 import sys
 import arcpy
 import ConfigParser
+file_path =os.path.dirname(os.path.abspath(__file__))
+if 'arcgisserver' in file_path:
+    model_path = os.path.join('D:/arcgisserver/directories/arcgissystem/arcgisinput/GPtools/DB_Framework')
+else:
+    main_path = os.path.abspath(__file__).replace(os.path.relpath(__file__),"GIS_Dev")
+    model_path = os.path.join(main_path,'DB_Framework')
 
-add_path = os.path.abspath(__file__).replace(os.path.relpath(__file__),"GIS_Dev")
-sys.path.insert(1,os.path.join(add_path,'DB_Framework'))
+sys.path.insert(1,model_path)
 import models
 
 def server_loc_config(configpath,environment):
@@ -45,7 +50,7 @@ order_obj = models.Order().get_order(OrderIDText)
 
 # # flags
 # multipage = "Y"                     # Y/N, for multipages, set yesBoundary to 'fixed' (not 'yes') if want boundary to display
-# gridsize = "3 KiloMeters"           # for multipage grid
+# gridsize =  0 # "3 KiloMeters"           # for multipage grid
 # yesBoundary = "yes"                 # fixed/yes/no
 # BufsizeText = "2.4"
 # delyearFlag = "N"                   # Y/N, for internal use only, blank maps, etc.

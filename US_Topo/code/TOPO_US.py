@@ -17,8 +17,8 @@ import sys
 import traceback
 import time
 
-import TOPO_US_utility as tp
-import TOPO_US_config as cfg
+import topo_us_utility as tp
+import topo_us_config as cfg
 
 from PyPDF2 import PdfFileReader, PdfFileWriter
 
