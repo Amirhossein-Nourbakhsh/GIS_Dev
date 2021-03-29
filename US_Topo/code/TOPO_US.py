@@ -17,8 +17,8 @@ import sys
 import traceback
 import time
 
-import topo_us_utility as tp
-import topo_us_config as cfg
+import TOPO_US_utility as tp
+import TOPO_US_config as cfg
 
 from PyPDF2 import PdfFileReader, PdfFileWriter
 
@@ -43,6 +43,13 @@ and d.geometry_type = 'POLYGON'
 and e.topo_viewer = 'Y'
 order by length(d.geometry),a.order_num  desc;
 '''
+OrderIDText = arcpy.GetParameterAsText(0)
+yesBoundary = (arcpy.GetParameterAsText(1)).lower()
+BufsizeText = arcpy.GetParameterAsText(2)
+multipage = arcpy.GetParameterAsText(3)
+gridsize = arcpy.GetParameterAsText(4)
+scratch = arcpy.env.scratchWorkspace
+scratchgdb = arcpy.env.scratchGDB
 
 if __name__ == '__main__':
     arcpy.AddMessage("...starting..." + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
