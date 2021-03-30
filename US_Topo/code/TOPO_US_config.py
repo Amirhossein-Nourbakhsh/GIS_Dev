@@ -2,7 +2,7 @@ import os
 import sys
 import arcpy
 import ConfigParser
-import TOPO_US as tpus
+
 file_path =os.path.dirname(os.path.abspath(__file__))
 if 'arcgisserver' in file_path:
     model_path = os.path.join(r'D:/arcgisserver/directories/arcgissystem/arcgisinput/GPtools/DB_Framework')
@@ -38,13 +38,13 @@ def server_loc_config(configpath,environment):
 #     return scratch, scratchgdb
 
 # arcpy parameters
-OrderIDText = tpus.OrderIDText
-yesBoundary = tpus.yesBoundary
-BufsizeText = tpus.BufsizeText
-multipage = tpus.multipage
-gridsize = tpus.gridsize
-scratch = tpus.scratch
-scratchgdb = tpus.scratchgdb
+OrderIDText = arcpy.GetParameterAsText(0)
+yesBoundary = (arcpy.GetParameterAsText(1)).lower()
+BufsizeText = arcpy.GetParameterAsText(2)
+multipage = arcpy.GetParameterAsText(3)
+gridsize = arcpy.GetParameterAsText(4)
+scratch = arcpy.env.scratchFolder
+scratchgdb = arcpy.env.scratchGDB
 
 # order info
 order_obj = models.Order().get_order(OrderIDText)
@@ -82,11 +82,12 @@ connectionPath = r"\\cabcvan1gis005\GISData\Topo_USA"
 mxdpath = os.path.join(connectionPath, r"mxd")
 
 # master data files\folders
-mastergdb = os.path.join(connectionPath, r"masterfile\MapIndices_National_GDB.gdb")
-csvfile_h = os.path.join(connectionPath, r"masterfile\All_HTMC_all_all_gda_results.csv")
-csvfile_c = os.path.join(connectionPath, r"masterfile\All_USTopo_T_7.5_gda_results.csv")
-tifdir_h = r'\\cabcvan1fpr009\USGS_Topo\USGS_HTMC_Geotiff'
-tifdir_c = r'\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff'
+masterfolder = r'\\cabcvan1fpr009\USGS_Topo'
+csvfile_h = os.path.join(masterfolder, r"USGS_MapIndice\All_HTMC_all_all_gda_results.csv")
+csvfile_c = os.path.join(masterfolder, r"USGS_MapIndice\All_USTopo_T_7.5_gda_results.csv")
+mastergdb = os.path.join(masterfolder, r"USGS_MapIndice\MapIndices_National_GDB.gdb")
+tifdir_h = os.path.join(masterfolder, "USGS_HTMC_Geotiff")
+tifdir_c = os.path.join(masterfolder, "USGS_currentTopo_Geotiff")
 
 # mxds
 mxdfile = os.path.join(mxdpath,"template.mxd")
