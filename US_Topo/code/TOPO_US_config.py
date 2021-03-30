@@ -5,7 +5,7 @@ import ConfigParser
 
 file_path =os.path.dirname(os.path.abspath(__file__))
 if 'arcgisserver' in file_path:
-    model_path = os.path.join(r'D:/arcgisserver/directories/arcgissystem/arcgisinput/GPtools/DB_Framework')
+    model_path = os.path.join(r'\\cabcvan1gis005\arcgisserver\directories\arcgisjobs\gptools\DB_Framework')
 else:
     main_path = os.path.abspath(os.path.join(__file__, os.pardir))
     model_path = os.path.join(main_path.split('GIS_Dev')[0],'GIS_Dev','DB_Framework')
@@ -16,13 +16,13 @@ import models
 def server_loc_config(configpath,environment):
     configParser = ConfigParser.RawConfigParser()
     configParser.read(configpath)
-    if environment == 'test':
-        dbconnection = configParser.get('server-config','dbconnection_test')
-        reportcheck = configParser.get('server-config','reportcheck_test')
-        reportviewer = configParser.get('server-config','reportviewer_test')
-        reportinstant = configParser.get('server-config','instant_test')
-        reportnoninstant = configParser.get('server-config','noninstant_test')
-        upload_viewer = configParser.get('url-config','uploadviewer_test')
+    if environment == 'dev':
+        dbconnection = configParser.get('server-config','dbconnection_dev')
+        reportcheck = configParser.get('server-config','reportcheck_dev')
+        reportviewer = configParser.get('server-config','reportviewer_dev')
+        reportinstant = configParser.get('server-config','instant_dev')
+        reportnoninstant = configParser.get('server-config','noninstant_dev')
+        upload_viewer = configParser.get('url-config','uploadviewer_dev')
         server_config = {'dbconnection':dbconnection,'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
         return server_config
     else:
@@ -68,8 +68,9 @@ orderBuffer = os.path.join(scratch, scratchgdb, "buffer")
 extent = os.path.join(scratch, scratchgdb, "extent")
 
 # connections/report outputs
-server_environment = 'test'
-server_config_file = r"\\cabcvan1gis005\GISData\ERISServerConfig.ini"
+server_environment = 'dev'
+serverpath = r"\\cabcvan1gis005"
+server_config_file = os.path.join(serverpath, r"GISData\ERISServerConfig.ini")
 server_config = server_loc_config(server_config_file,server_environment)
 
 reportcheckFolder = server_config["reportcheck"]
@@ -78,7 +79,7 @@ topouploadurl =  server_config["viewer_upload"] + r"/TopoUpload?ordernumber="
 connectionString = server_config["dbconnection"] #con.connection_string #'eris_gis/gis295@cabcvan1ora006.glaciermedia.inc:1521/GMTESTC'
 
 # folders
-connectionPath = r"\\cabcvan1gis005\GISData\Topo_USA"
+connectionPath = os.path.join(serverpath, r"GISData\Topo_USA")
 mxdpath = os.path.join(connectionPath, r"mxd")
 
 # master data files\folders
