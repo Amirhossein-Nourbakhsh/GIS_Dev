@@ -1,9 +1,16 @@
-import logging, time,json
-import arcpy, os, sys, glob
-import cx_Oracle, urllib, shutil
-import traceback
+import logging
+import time
+import json
+import arcpy
+import os
+import glob
+import urllib
+import shutil
 import re
+import sys
+import traceback
 import textwrap
+import cx_Oracle
 import fim_us_config as cfg
 
 from xlrd import open_workbook
