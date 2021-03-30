@@ -3,20 +3,26 @@ import sys
 import arcpy
 import ConfigParser
 
-addpath = os.path.abspath(__file__).replace(os.path.relpath(__file__),"GIS_Dev")
-sys.path.insert(1,os.path.join(addpath,'DB_Framework'))
+file_path =os.path.dirname(os.path.abspath(__file__))
+if 'arcgisserver' in file_path:
+    model_path = os.path.join(r'\\cabcvan1gis005\arcgisserver\directories\arcgissystem\arcgisinput\GPtools\DB_Framework)
+else:
+    main_path = os.path.abspath(os.path.join(__file__, os.pardir))
+    model_path = os.path.join(main_path.split('GIS_Dev')[0],'GIS_Dev','DB_Framework')
+
+sys.path.insert(1,model_path)
 import models
 
 def server_loc_config(configpath,environment):
     configParser = ConfigParser.RawConfigParser()
     configParser.read(configpath)
-    if environment == 'test':
-        dbconnection = configParser.get('server-config','dbconnection_test')
-        reportcheck = configParser.get('server-config','reportcheck_test')
-        reportviewer = configParser.get('server-config','reportviewer_test')
-        reportinstant = configParser.get('server-config','instant_test')
-        reportnoninstant = configParser.get('server-config','noninstant_test')
-        upload_viewer = configParser.get('url-config','uploadviewer_test')
+    if environment == 'dev':
+        dbconnection = configParser.get('server-config','dbconnection_dev')
+        reportcheck = configParser.get('server-config','reportcheck_dev')
+        reportviewer = configParser.get('server-config','reportviewer_dev')
+        reportinstant = configParser.get('server-config','instant_dev')
+        reportnoninstant = configParser.get('server-config','noninstant_dev')
+        upload_viewer = configParser.get('url-config','uploadviewer_dev')
         server_config = {'dbconnection':dbconnection,'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
         return server_config
     else:
@@ -37,7 +43,7 @@ BufsizeText = arcpy.GetParameterAsText(1)
 yesBoundary = arcpy.GetParameterAsText(2)
 multipage = arcpy.GetParameterAsText(3)
 gridsize = arcpy.GetParameterAsText(4)
-scratch = arcpy.env.scratchWorkspace
+scratch = arcpy.env.scratchFolder
 scratchgdb = arcpy.env.scratchGDB
 
 # order info
@@ -68,8 +74,9 @@ shapePdf = os.path.join(scratch, "shape.pdf")
 annotPdf = os.path.join(scratch, "annot.pdf")
 
 # connection/report output
-server_environment = 'test'
-server_config_file = r'\\cabcvan1gis005\GISData\ERISServerConfig.ini'
+server_environment = 'dev'
+serverpath = r"\\cabcvan1gis005"
+server_config_file = os.path.join(serverpath, r"GISData\ERISServerConfig.ini")
 server_config = server_loc_config(server_config_file,server_environment)
 
 connectionString = server_config["dbconnection"]
@@ -78,13 +85,11 @@ viewerFolder = server_config["viewer"]
 uploadlink =  server_config["viewer_upload"] + r"/FIMUpload?ordernumber="
 
 # folder
-connectionPath = r"\\cabcvan1gis005\GISData\FIMS_USA"
+connectionPath = os.path.join(serverpath, r"GISData\FIMS_USA")
 logopath = os.path.join(connectionPath, "logos")
 
 # master file/folder
-mastergdb = os.path.join(connectionPath,r"master\FIM_US_STATES.gdb")
-# excelfile = os.path.join(connectionPath,r"master\MASTER_ALL_STATES.xlsx")
-# mxexcelfile = os.path.join(connectionPath,r"master\MASTER_MX_STATES.xlsx")
+mastergdb = r"\\Cabcvan1fpr009\fim_data_usa\FIM_MASTERGDB\FIM_US_STATES.gdb"
 
 # layer
 imagelyr = os.path.join(connectionPath,r"layer\mosaic_jpg_255.lyr")

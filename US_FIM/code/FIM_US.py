@@ -13,8 +13,8 @@ import arcpy, os, sys
 import cx_Oracle
 import traceback
 import time
-import FIM_US_config as cfg
-import FIM_US_utility as fp
+import fim_us_config as cfg
+import fim_us_utility as fp
 
 from PyPDF2 import PdfFileReader,PdfFileWriter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle

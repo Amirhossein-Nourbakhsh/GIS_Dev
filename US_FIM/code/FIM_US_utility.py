@@ -4,7 +4,7 @@ import cx_Oracle, urllib, shutil
 import traceback
 import re
 import textwrap
-import FIM_US_config as cfg
+import fim_us_config as cfg
 
 from xlrd import open_workbook
 from PyPDF2 import PdfFileReader,PdfFileWriter
