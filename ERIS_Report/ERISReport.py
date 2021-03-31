@@ -52,7 +52,7 @@ def server_loc_config(configpath,environment):
     else:
         return 'invalid server configuration'
 
-server_environment = 'test'
+server_environment = 'test' #'test' for both dev and test
 server_config_file = r'\\cabcvan1gis006\GISData\ERISServerConfig.ini'
 server_config = server_loc_config(server_config_file,server_environment)
 #eris_report_path = r"gptools\ERISReport"
@@ -62,10 +62,12 @@ server_config = server_loc_config(server_config_file,server_environment)
 #world_aerial_arcGIS_online_URL = r"https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/0/query?f=json&returnGeometry=false&spatialRel=esriSpatialRelIntersects&maxAllowableOffset=0&geometryType=esriGeometryPoint&inSR=4326&outFields=SRC_DATE"
 
 class Machine:
+    machine_dev = r"\\cabcvan1gis005"
     machine_test = r"\\cabcvan1gis006"
     machine_prod = r"\\cabcvan1gis007"
 
 class Credential:
+    oracle_dev = r'eris_gis/gis295@cabcvan1ora005.glaciermedia.inc:1521/GMDEVC'
     oracle_test = r'eris_gis/gis295@GMTESTC.glaciermedia.inc'
     oracle_production = r'eris_gis/gis295@GMPRODC.glaciermedia.inc'
 
@@ -74,6 +76,17 @@ class ReportPath:
     noninstant_reports_prod = server_config['noninstant']
     instant_report_test = server_config['instant']
     instant_report_prod = server_config['instant']
+
+class DevConfig:
+    machine_path=Machine.machine_test
+    instant_reports =ReportPath.instant_report_test
+    noninstant_reports = ReportPath.noninstant_reports_test
+
+    def __init__(self,code):
+        machine_path=self.machine_path
+        self.LAYER=LAYER(machine_path)
+        self.DATA=DATA(machine_path)
+        self.MXD=MXD(machine_path,code)
 
 class TestConfig:
     machine_path=Machine.machine_test
@@ -214,6 +227,8 @@ class Oracle:
 
     def __init__(self,machine_name):
         # initiate connection credential
+        if machine_name.lower() =='dev':
+            self.oracle_credential = Credential.oracle_dev
         if machine_name.lower() =='test':
             self.oracle_credential = Credential.oracle_test
         elif machine_name.lower()=='prod':
@@ -651,21 +666,21 @@ def exportViewerTable(ImagePath,FileName):
 
     delete_query = "delete from overlay_image_info where order_id = '%s' and type = '%s' and filename = '%s'"%(OrderIDText,metaitem['type'],FileName)
     insert_query = "insert into overlay_image_info values (%s, %s, %s, %.5f, %.5f, %.5f, %.5f, %s, '', '')" % (str(OrderIDText), orderInfo['ORDER_NUM'], "'" + metaitem['type']+"'", metaitem['lat_sw'], metaitem['long_sw'], metaitem['lat_ne'], metaitem['long_ne'],"'"+metaitem['imagename']+"'" )
-    image_info = Oracle('test').insert_overlay(delete_query,insert_query)
+    image_info = Oracle('dev').insert_overlay(delete_query,insert_query)
 
 if __name__ == '__main__':
     try:
         # INPUT #####################################
-        OrderIDText = arcpy.GetParameterAsText(0).strip()#'736799'#
-        multipage = True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
-        gridsize = arcpy.GetParameterAsText(2).strip()#0#
-        code = arcpy.GetParameterAsText(3).strip()#'usa'#
-        isInstant = True if arcpy.GetParameterAsText(4).strip().lower()=='yes'else False
-        scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'
+        OrderIDText = '1050559'#arcpy.GetParameterAsText(0).strip()#'736799'#
+        multipage = False#True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
+        gridsize = '0'#arcpy.GetParameterAsText(2).strip()#0#
+        code = 'usa'#arcpy.GetParameterAsText(3).strip()#'usa'#
+        isInstant = False#True if arcpy.GetParameterAsText(4).strip().lower()=='yes'else False
+        scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'
 
         # Server Setting ############################
         code = 9093 if code.strip().lower()=='usa' else 9036 if code.strip().lower()=='can' else 9049 if code.strip().lower()=='mex' else ValueError
-        config = TestConfig(code)
+        config = DevConfig(code)
 
         # PARAMETERS ################################
         orderGeometry = r'orderGeometry.shp'
@@ -685,9 +700,9 @@ if __name__ == '__main__':
 
         # STEPS ####################################
         # 1  get order info by Oracle call
-        orderInfo= Oracle('test').call_function('getorderinfo',OrderIDText)
-        needTopo= Oracle('test').call_function('printTopo',OrderIDText)
-        xplorerflag= Oracle('test').call_procedure('xplorerflag',OrderIDText)[0]
+        orderInfo= Oracle('dev').call_function('getorderinfo',OrderIDText)
+        needTopo= Oracle('dev').call_function('printTopo',OrderIDText)
+        xplorerflag= Oracle('dev').call_procedure('xplorerflag',OrderIDText)[0]
         end = timeit.default_timer()
         arcpy.AddMessage(('call oracle', round(end -start1,4)))
         start=end
@@ -733,7 +748,7 @@ if __name__ == '__main__':
             start=end
 
         # 4-2 add ERIS points
-        erisPointsInfo = Oracle('test').call_function('geterispointdetails',OrderIDText)
+        erisPointsInfo = Oracle('dev').call_function('geterispointdetails',OrderIDText)
         # for i in erisPointsInfo:
         #     print(i)
         erisPointsLayer=addERISpoint(erisPointsInfo,map1,scratch)

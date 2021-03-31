@@ -2,12 +2,13 @@ import os
 import sys
 import arcpy
 import ConfigParser
+
 file_path =os.path.dirname(os.path.abspath(__file__))
 if 'arcgisserver' in file_path:
-    model_path = os.path.join('D:/arcgisserver/directories/arcgissystem/arcgisinput/GPtools/DB_Framework')
+    model_path = os.path.join(r'\\cabcvan1gis005\arcgisserver\directories\arcgissystem\arcgisinput\GPtools\DB_Framework')
 else:
-    main_path = os.path.dirname(file_path)
-    model_path = os.path.join(os.path.dirname(main_path),'DB_Framework')
+    main_path = os.path.abspath(os.path.join(__file__, os.pardir))
+    model_path = os.path.join(main_path.split('GIS_Dev')[0],'GIS_Dev','DB_Framework')
 
 sys.path.insert(1,model_path)
 import models
@@ -15,13 +16,13 @@ import models
 def server_loc_config(configpath,environment):
     configParser = ConfigParser.RawConfigParser()
     configParser.read(configpath)
-    if environment == 'test':
-        dbconnection = configParser.get('server-config','dbconnection_test')
-        reportcheck = configParser.get('server-config','reportcheck_test')
-        reportviewer = configParser.get('server-config','reportviewer_test')
-        reportinstant = configParser.get('server-config','instant_test')
-        reportnoninstant = configParser.get('server-config','noninstant_test')
-        upload_viewer = configParser.get('url-config','uploadviewer_test')
+    if environment == 'dev':
+        dbconnection = configParser.get('server-config','dbconnection_dev')
+        reportcheck = configParser.get('server-config','reportcheck_dev')
+        reportviewer = configParser.get('server-config','reportviewer_dev')
+        reportinstant = configParser.get('server-config','instant_dev')
+        reportnoninstant = configParser.get('server-config','noninstant_dev')
+        upload_viewer = configParser.get('url-config','uploadviewer_dev')
         server_config = {'dbconnection':dbconnection,'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
         return server_config
     else:
@@ -42,14 +43,14 @@ BufsizeText = arcpy.GetParameterAsText(1)
 yesBoundary = (arcpy.GetParameterAsText(2)).lower()
 multipage = arcpy.GetParameterAsText(3)
 gridsize = arcpy.GetParameterAsText(4)
-scratch = arcpy.env.scratchWorkspace
+scratch = arcpy.env.scratchFolder
 scratchgdb = arcpy.env.scratchGDB
 
 # order info
 order_obj = models.Order().get_order(OrderIDText)
 
 # # flags
-# multipage = "Y"                     # Y/N, for multipages, set yesBoundary to 'fixed' (not 'yes') if want boundary to display
+# multipage = "Y"                     # Y/N, for multipages
 # gridsize =  0 # "3 KiloMeters"           # for multipage grid
 # yesBoundary = "yes"                 # fixed/yes/no
 # BufsizeText = "2.4"
@@ -67,8 +68,9 @@ orderBuffer = os.path.join(scratch, scratchgdb, "buffer")
 extent = os.path.join(scratch, scratchgdb, "extent")
 
 # connections/report outputs
-server_environment = 'test'
-server_config_file = r"\\cabcvan1gis005\GISData\ERISServerConfig.ini"
+server_environment = 'dev'
+serverpath = r"\\cabcvan1gis005"
+server_config_file = os.path.join(serverpath, r"GISData\ERISServerConfig.ini")
 server_config = server_loc_config(server_config_file,server_environment)
 
 reportcheckFolder = server_config["reportcheck"]
@@ -77,15 +79,16 @@ topouploadurl =  server_config["viewer_upload"] + r"/TopoUpload?ordernumber="
 connectionString = server_config["dbconnection"] #con.connection_string #'eris_gis/gis295@cabcvan1ora006.glaciermedia.inc:1521/GMTESTC'
 
 # folders
-connectionPath = r"\\cabcvan1gis005\GISData\Topo_USA"
+connectionPath = os.path.join(serverpath, r"GISData\Topo_USA")
 mxdpath = os.path.join(connectionPath, r"mxd")
 
 # master data files\folders
-mastergdb = os.path.join(connectionPath, r"masterfile\MapIndices_National_GDB.gdb")
-csvfile_h = os.path.join(connectionPath, r"masterfile\All_HTMC_all_all_gda_results.csv")
-csvfile_c = os.path.join(connectionPath, r"masterfile\All_USTopo_T_7.5_gda_results.csv")
-tifdir_h = r'\\cabcvan1fpr009\USGS_Topo\USGS_HTMC_Geotiff'
-tifdir_c = r'\\cabcvan1fpr009\USGS_Topo\USGS_currentTopo_Geotiff'
+masterfolder = r'\\cabcvan1fpr009\USGS_Topo'
+csvfile_h = os.path.join(masterfolder, r"USGS_MapIndice\All_HTMC_all_all_gda_results.csv")
+csvfile_c = os.path.join(masterfolder, r"USGS_MapIndice\All_USTopo_T_7.5_gda_results.csv")
+mastergdb = os.path.join(masterfolder, r"USGS_MapIndice\MapIndices_National_GDB.gdb")
+tifdir_h = os.path.join(masterfolder, "USGS_HTMC_Geotiff")
+tifdir_c = os.path.join(masterfolder, "USGS_currentTopo_Geotiff")
 
 # mxds
 mxdfile = os.path.join(mxdpath,"template.mxd")
