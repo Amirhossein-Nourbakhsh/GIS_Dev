@@ -253,11 +253,11 @@ def export_reportimage(imagepath,ordergeometry,auid):
         print NW_corner, NE_corner, SW_corner, SE_corner
         clip_size = os.path.getsize(os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'))
         if clip_size <= 3000000:
-            clip_flag = '1'
+            clip_flag = 'Y'
         else:
-            clip_flag = '0'
+            clip_flag = 'N'
         try:
-            image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : OrderNumText,"AUI_ID":auid,"SWLAT":str(extent.YMin),"SWLONG":str(extent.XMin),"NELAT":(extent.YMax),"NELONG":str(extent.XMax),"CLIP_FLAG":clip_flag})
+            image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : OrderNumText,"AUI_ID":auid,"SWLAT":str(extent.YMin),"SWLONG":str(extent.XMin),"NELAT":(extent.YMax),"NELONG":str(extent.XMax),"INVALID_CLIPIMG_FLAG":clip_flag})
             message_return = Oracle('test').call_erisapi(image_extents)
             if message_return[3] != 'Y':
                 raise OracleBadReturn
