@@ -1,7 +1,12 @@
 import arcpy, os,sys,timeit
 from imp import reload
 file_path =os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(1,os.path.join(os.path.dirname(file_path),'DB_Framework'))
+if 'arcgisserver' in file_path:
+    model_path = os.path.join('D:/arcgisserver/directories/arcgissystem/arcgisinput/GPtools/DB_Framework')
+else:
+    model_path = os.path.join(os.path.dirname(file_path),'DB_Framework')
+    
+sys.path.insert(1,model_path)
 import models
 import psr_utility as utility
 import psr_config as config
@@ -15,14 +20,23 @@ import ogw
 import radon
 import aspect
 import kml
-import multi_proc_test
 reload(sys)
 sys.setdefaultencoding('utf8')
 
 if __name__ == "__main__":
-    id = arcpy.GetParameterAsText(0)
     # id = 1026370
-    id = 1014804
+    id = arcpy.GetParameterAsText(0)
+    config.if_relief_report = bool(arcpy.GetParameterAsText(1))
+    config.if_topo_report = bool(arcpy.GetParameterAsText(2))
+    config.if_wetland_report = bool(arcpy.GetParameterAsText(3))
+    config.if_flood_report = bool(arcpy.GetParameterAsText(4))
+    config.if_geology_report = bool(arcpy.GetParameterAsText(5))
+    config.if_soil_report = bool(arcpy.GetParameterAsText(6))
+    config.if_ogw_report = bool(arcpy.GetParameterAsText(7))
+    config.if_radon_report = bool(arcpy.GetParameterAsText(8))
+    config.if_aspect_map = bool(arcpy.GetParameterAsText(9))
+    config.if_kml_output =bool(arcpy.GetParameterAsText(10))
+    # id = 1026370
     arcpy.AddMessage('Start PSR report...')
     start = timeit.default_timer()
     # ### set workspace
@@ -41,17 +55,17 @@ if __name__ == "__main__":
         ### Populate radius list of PSR for this Order object
         order_obj.get_search_radius() # populate search radius
         if len(order_obj.psr.search_radius) > 0:
-            ### set type of reports
-            config.if_relief_report = True
-            config.if_topo_report = True
-            config.if_wetland_report = True
-            config.if_flood_report = True
-            config.if_geology_report = True
-            config.if_soil_report = True
-            config.if_ogw_report = True
-            config.if_radon_report = True
-            config.if_aspect_map = True
-            config.if_kml_output = True
+            
+            # config.if_relief_report = True
+            # config.if_topo_report = True
+            # config.if_wetland_report = True
+            # config.if_flood_report = True
+            # config.if_geology_report = True
+            # config.if_soil_report = True
+            # config.if_ogw_report = True
+            # config.if_radon_report = True
+            # config.if_aspect_map = True
+            # config.if_kml_output = True
 
             # shaded releif map report
             if config.if_relief_report:
