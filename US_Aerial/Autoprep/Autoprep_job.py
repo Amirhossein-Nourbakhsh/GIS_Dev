@@ -164,6 +164,21 @@ def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef
         cursor.insertRow([arcpy.Polygon(arcpy.Array([arcpy.Point(*coords) for coords in pntCoords]),spatialRef)])
     del cursor
     return outputSHP
+def getclipflag(collectiontype,mxd,df,geo_extent,jpg_image):
+    if image_collection != 'DOQQ':
+        df.extent = geo_extent
+        df.scale = ((df.scale/100)+1)*750
+        w_res = 5100
+        h_res = 6600
+        arcpy.RefreshActiveView()
+        arcpy.mapping.ExportToJPEG(mxd,os.path.join(scratch,jpg_image),df,df_export_width=w_res,df_export_height=h_res,world_file=True,color_mode = '8-BIT_GRAYSCALE', jpeg_quality = 70)
+        clip_size = os.path.getsize(os.path.join(scratch,jpg_image))
+    else:
+        clip_size = os.path.getsize(os.path.join(jpg_image_folder,jpg_image))
+    if clip_size <= 3000000:
+        return 'Y'
+    else:
+        return 'N'
 def export_reportimage(imagepath,ordergeometry,auid):
     ## In memory
     if os.path.exists(imagepath) == False:
@@ -204,7 +219,7 @@ def export_reportimage(imagepath,ordergeometry,auid):
             h_res= int((image_extent.height/image_extent.width)*w_res)"""
         if image_collection == 'DOQQ':
             df.extent = geo_extent
-            df.scale = ((df.scale/100)+1)*1500
+            df.scale = ((df.scale/100)+1)*400
             w_res = 5100
             h_res = 6600
         elif image_collection != 'DOQQ':
@@ -234,28 +249,40 @@ def export_reportimage(imagepath,ordergeometry,auid):
         #decribe # of bands for raster to determine output
         desc = arcpy.Describe(lyrpath)
         bandcount = desc.bandcount
+        jpg_image = image_year + '_' + image_source + '_' +auid + '.jpg'
         if bandcount == 1:
-            arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),df,df_export_width=w_res,df_export_height=h_res,world_file=True,color_mode = '8-BIT_GRAYSCALE', jpeg_quality = 70)
+            arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,jpg_image),df,df_export_width=w_res,df_export_height=h_res,world_file=True,color_mode = '8-BIT_GRAYSCALE', jpeg_quality = 70)
         else:
-            arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),df,df_export_width=w_res,df_export_height=h_res,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 70)
-        arcpy.DefineProjection_management(os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),sr2)
+            arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,jpg_image),df,df_export_width=w_res,df_export_height=h_res,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 70)
+        arcpy.DefineProjection_management(os.path.join(jpg_image_folder,jpg_image),sr2)
         #arcpy.env.compression = "JPEG 1"
         #arcpy.env.pyramid = "NONE"
         #print "projecting"
         #arcpy.ProjectRaster_management(os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'),os.path.join(scratch,image_year + '_' + image_source + '_' +auid + '_2.jpg'),sr)
         #extent =arcpy.Describe(os.path.join(scratch,image_year + '_' + image_source + '_' +auid + '_2.jpg')).extent
-        extent =arcpy.Describe(os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg')).extent
+        extent =arcpy.Describe(os.path.join(jpg_image_folder,jpg_image)).extent
         print "done projecting"
         NW_corner= str(extent.XMin) + ',' +str(extent.YMin)
         NE_corner= str(extent.XMax) + ',' +str(extent.YMax)
         SW_corner= str(extent.XMin) + ',' +str(extent.YMin)
         SE_corner= str(extent.XMax) + ',' +str(extent.YMin)
-        print NW_corner, NE_corner, SW_corner, SE_corner
-        clip_size = os.path.getsize(os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'))
-        if clip_size <= 3000000:
-            clip_flag = 'Y'
-        else:
-            clip_flag = 'N'
+        clip_flag = getclipflag(image_collection,mxd,df,geo_extent,jpg_image)
+        print clip_flag
+        print jpg_image
+        # if image_collection != 'DOQQ':
+        #     df.extent = geo_extent
+        #     df.scale = ((df.scale/100)+1)*1500
+        #     w_res = 5100
+        #     h_res = 6600
+        #     arcpy.RefreshActiveView()
+        #     arcpy.mapping.ExportToJPEG(mxd,os.path.join(scratch,image_year + '_' + image_source + '_' +auid + '.jpg'),df,df_export_width=w_res,df_export_height=h_res,world_file=True,color_mode = '8-BIT_GRAYSCALE', jpeg_quality = 70)
+        #     clip_size = os.path.getsize(os.path.join(scratch,image_year + '_' + image_source + '_' +auid + '.jpg'))
+        # else:
+        #     clip_size = os.path.getsize(os.path.join(jpg_image_folder,image_year + '_' + image_source + '_' +auid + '.jpg'))
+        # if clip_size <= 3000000:
+        #     clip_flag = 'Y'
+        # else:
+        #     clip_flag = 'N'
         try:
             image_extents = str({"PROCEDURE":Oracle.erisapi_procedures['passclipextent'], "ORDER_NUM" : OrderNumText,"AUI_ID":auid,"SWLAT":str(extent.YMin),"SWLONG":str(extent.XMin),"NELAT":(extent.YMax),"NELONG":str(extent.XMax),"INVALID_CLIPIMG_FLAG":clip_flag})
             message_return = Oracle('test').call_erisapi(image_extents)
@@ -273,8 +300,8 @@ def export_reportimage(imagepath,ordergeometry,auid):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '968770'#arcpy.GetParameterAsText(0)#'934465'#arcpy.GetParameterAsText(0)
-    AUI_ID = '7424603'#arcpy.GetParameterAsText(1)#''#arcpy.GetParameterAsText(1)
+    orderID = '1036071'#arcpy.GetParameterAsText(0)#'934465'#arcpy.GetParameterAsText(0)
+    AUI_ID = ''#arcpy.GetParameterAsText(1)#''#arcpy.GetParameterAsText(1)
     scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
