@@ -10,7 +10,6 @@
 #-------------------------------------------------------------------------------
 
 import arcpy, os, sys
-import cx_Oracle
 import traceback
 import time
 import fim_us_config as cfg

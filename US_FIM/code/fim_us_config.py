@@ -16,17 +16,14 @@ import models
 def server_loc_config(configpath,environment):
     configParser = ConfigParser.RawConfigParser()
     configParser.read(configpath)
-    if environment == 'dev':
-        dbconnection = configParser.get('server-config','dbconnection_dev')
-        reportcheck = configParser.get('server-config','reportcheck_dev')
-        reportviewer = configParser.get('server-config','reportviewer_dev')
-        reportinstant = configParser.get('server-config','instant_dev')
-        reportnoninstant = configParser.get('server-config','noninstant_dev')
-        upload_viewer = configParser.get('url-config','uploadviewer_dev')
-        server_config = {'dbconnection':dbconnection,'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
-        return server_config
-    else:
-        return 'invalid server configuration'
+    dbconnection = configParser.get('server-config','dbconnection_%s'%environment)
+    reportcheck = configParser.get('server-config','reportcheck_%s'%environment)
+    reportviewer = configParser.get('server-config','reportviewer_%s'%environment)
+    reportinstant = configParser.get('server-config','instant_%s'%environment)
+    reportnoninstant = configParser.get('server-config','noninstant_%s'%environment)
+    upload_viewer = configParser.get('url-config','uploadviewer_%s'%environment)
+    server_config = {'dbconnection':dbconnection,'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
+    return server_config
 
 # def createScratch():
 #     scratch = os.path.join(r"W:\Data Analysts\Alison\_GIS\FIM_US_SCRATCHY", "test2")
@@ -55,7 +52,7 @@ order_obj = models.Order().get_order(OrderIDText)
 # resolution = "600"
 
 # # flags
-# multipage = False                   # True/False        
+# multipage = True                   # True/False        
 # yesBoundary = "yes"                 # yes/no/fixed
 # delyearFlag = "Y"                   # Y/N
 # nrf = 'N'                           # Y/N
@@ -86,7 +83,7 @@ uploadlink =  server_config["viewer_upload"] + r"/FIMUpload?ordernumber="
 
 # folder
 connectionPath = os.path.join(serverpath, r"GISData\FIMS_USA")
-logopath = os.path.join(connectionPath, "logos")
+logopath = os.path.join(connectionPath, "logo")
 
 # master file/folder
 mastergdb = r"\\Cabcvan1fpr009\fim_data_usa\FIM_MASTERGDB\FIM_US_STATES.gdb"
@@ -112,4 +109,4 @@ secondPic = os.path.join(connectionPath, r"coverPic\ERIS_2018_ReportCover_Second
 
 # log
 logfile = os.path.join(connectionPath, r"log\USFIM_Log.txt")
-logname = "FIM_US_dev"
+logname = "FIM_US_%s"%server_environment
