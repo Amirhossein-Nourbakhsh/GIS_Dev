@@ -175,7 +175,7 @@ def getclipflag(collectiontype,mxd,df,geo_extent,jpg_image):
         clip_size = os.path.getsize(os.path.join(scratch,jpg_image))
     else:
         clip_size = os.path.getsize(os.path.join(jpg_image_folder,jpg_image))
-    if clip_size <= 3000000:
+    if clip_size <= 2500000:
         return 'Y'
     else:
         return 'N'
@@ -223,7 +223,13 @@ def export_reportimage(imagepath,ordergeometry,auid):
             w_res = 5100
             h_res = 6600
         elif image_collection != 'DOQQ':
+            w_res=7140
+            h_res= int((image_extent.height/image_extent.width)*w_res)
+            df.elementHeight = h_res
+            df.elementWidth = w_res
             df.extent = image_extent
+            print df.extent
+            print image_extent
             df.scale = ((df.scale/100))*85 #very important setting as it defines how much of the image will be displayed to FE
             w_res=7140
             h_res= int((image_extent.height/image_extent.width)*w_res)
@@ -262,10 +268,6 @@ def export_reportimage(imagepath,ordergeometry,auid):
         #extent =arcpy.Describe(os.path.join(scratch,image_year + '_' + image_source + '_' +auid + '_2.jpg')).extent
         extent =arcpy.Describe(os.path.join(jpg_image_folder,jpg_image)).extent
         print "done projecting"
-        NW_corner= str(extent.XMin) + ',' +str(extent.YMin)
-        NE_corner= str(extent.XMax) + ',' +str(extent.YMax)
-        SW_corner= str(extent.XMin) + ',' +str(extent.YMin)
-        SE_corner= str(extent.XMax) + ',' +str(extent.YMin)
         clip_flag = getclipflag(image_collection,mxd,df,geo_extent,jpg_image)
         print clip_flag
         print jpg_image
@@ -300,7 +302,7 @@ def export_reportimage(imagepath,ordergeometry,auid):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '1036071'#arcpy.GetParameterAsText(0)#'934465'#arcpy.GetParameterAsText(0)
+    orderID = '1042067'#arcpy.GetParameterAsText(0)#'934465'#arcpy.GetParameterAsText(0)
     AUI_ID = ''#arcpy.GetParameterAsText(1)#''#arcpy.GetParameterAsText(1)
     scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'

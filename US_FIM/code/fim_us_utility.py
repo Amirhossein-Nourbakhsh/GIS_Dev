@@ -898,7 +898,7 @@ class fim_us_rpt(object):
         if os.path.exists(os.path.join(cfg.reportcheckFolder,"FIM", pdfreport_name)):
             os.remove(os.path.join(cfg.reportcheckFolder, "FIM", pdfreport_name))
         shutil.copyfile(pdfreport,os.path.join(cfg.reportcheckFolder, "FIM", pdfreport_name))
-        arcpy.SetParameterAsText(3, pdfreport)
+        arcpy.SetParameterAsText(5, pdfreport)
 
         try:
             procedure = 'eris_fim.processFim'
