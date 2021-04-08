@@ -1,13 +1,3 @@
-#-------------------------------------------------------------------------------
-# Name:        USFIM rework
-# Purpose:
-#
-# Author:      cchen
-#
-# Created:     01/12/2019
-# Copyright:   (c) cchen 2019
-# Licence:     <your licence>
-#-------------------------------------------------------------------------------
 
 import logging, time,json
 import arcpy, os, sys, glob
