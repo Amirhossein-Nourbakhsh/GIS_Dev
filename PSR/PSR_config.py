@@ -151,9 +151,9 @@ mxd_mm_file_geology = r"\\cabcvan1gis005\GISData\PSR\python\mxd\geologyMM.mxd"
 geology_ids = []
 ### soil report paths config
 buffer_dist_soil = None
-data_path_soil_HI =r'\\cabcvan1gis005\GISData\Data\CONUS_2015\gSSURGO_HI.gdb'  ## WGS84
-data_path_soil_AK =r'\\cabcvan1gis005\GISData\Data\CONUS_2015\gSSURGO_AK.gdb'  ## WGS84
-data_path_soil_CONUS =r'\\cabcvan1gis005\GISData\Data\CONUS_2015\gSSURGO_CONUS_10m.gdb'  ## WGS84
+data_path_soil_HI =r'\\cabcvan1gis005\GISData\Data\PSR\gSSURGO_HI.gdb'  ## WGS84
+data_path_soil_AK =r'\\cabcvan1gis005\GISData\Data\PSR\gSSURGO_AK.gdb'  ## WGS84
+data_path_soil_CONUS =r'\\cabcvan1gis005\GISData\Data\PSR\gSSURGO_CONUS.gdb'  ## WGS84
 data_path_soil = None
 report_data = []
 soil_ids = []
