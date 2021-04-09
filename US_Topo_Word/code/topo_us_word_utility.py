@@ -78,7 +78,7 @@ class topo_us_word_rpt(object):
         SITENAME = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "siteText")[0]
         SITENAME.text = order_obj.site_name
         ADDRESS = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "addressText")[0]
-        ADDRESS.text = order_obj.address + "\r\n" + order_obj.city + " " + order_obj.province + " " + order_obj.postal_code
+        ADDRESS.text = order_obj.address + "\r\n" + order_obj.city + " " + order_obj.province + " " + str(order_obj.postal_code).replace("None", "")
         PROJECT_NUM = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "projectidText")[0]
         PROJECT_NUM.text = order_obj.project_num
         COMPANY_NAME = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "companyText")[0]
@@ -227,7 +227,7 @@ class topo_us_word_rpt(object):
         return needtif
 
     # create PDF and also make a copy of the geotiff files if the scale is too small
-    def createDOCX(self, dictlist, yearalldict, mxd, df, custom_profile, app):
+    def createDOCX(self, yesboundary, dictlist, yearalldict, mxd, df, custom_profile, app):
         worddoclist = []
 
         if not custom_profile:
@@ -261,7 +261,7 @@ class topo_us_word_rpt(object):
 
                 # remove all the raster layers
                 for lyr in arcpy.mapping.ListLayers(mxd, "", df):
-                    if lyr.name != "Project Property":
+                    if lyr.name not in ["Project Property","Buffer Outline", "Grid"]:
                         arcpy.mapping.RemoveLayer(df, lyr)      # remove the clipFrame layer
 
                 # copy over the unzipped directory
@@ -269,18 +269,24 @@ class topo_us_word_rpt(object):
                 # zip up to .docx and change text
 
                 # copy the images to the docx template folder and zip as docx
-                shutil.copyfile(os.path.join(cfg.scratch,"map_"+seriesText+"_"+year+".jpg"), os.path.join(cfg.zipMap,"word\media\image2.jpg"))
-                shutil.copyfile(cfg.boundaryEMF, os.path.join(cfg.zipMap,"word\media\image3.emf"))
+                imageemf = os.path.join(cfg.zipMap,"word\media\image1.emf")
+                topojpg = os.path.join(cfg.zipMap,"word\media\image3.jpg")
+
+                shutil.copyfile(os.path.join(cfg.scratch,"map_"+seriesText+"_"+year+".jpg"), topojpg)              # replace topo image in template folder
+
+                if yesboundary.lower() == "yes" or yesboundary.lower() == "y":
+                    shutil.copyfile(cfg.boundaryEMF, imageemf)                                                          # replace boundary image in template folder
+
                 self.zipdir_noroot(os.path.join(cfg.scratch,'tozip'),seriesText+"_"+year+".docx")
                 worddoclist.append(os.path.join(cfg.scratch,seriesText+"_"+year+".docx"))
 
                 # set text elements in word
-                self.setDocxText(app, quaddict, yearalldict, seriesText, year, custom_profile)
+                self.setDocxText(app, quaddict, yearalldict, seriesText, year, yesboundary)
 
         del mxd
         return worddoclist, app
 
-    def setDocxText(self, app, quaddict, yearalldict, seriesText, year, custom_profile):
+    def setDocxText(self, app, quaddict, yearalldict, seriesText, year, yesboundary):
         # the word template has been copied, the image files have also been copied, need to refresh and replace the text fields, save
 
         # get quad and years info
@@ -301,7 +307,7 @@ class topo_us_word_rpt(object):
                 quadText = quadText + quadname + "; "
         quads = 'TOPOGRAPHIC MAP IMAGE COURTESY OF THE U.S. GEOLOGICAL SURVEY\r' + seriesText.replace("75", "7.5") + ' Minute Series - '+ str(year) + '\r' + "QUADRANGLES INCLUDE: " + quadText.rstrip("; ")
         
-        siteCityState = self.order_obj.city + ", " + self.lookupstate(self.order_obj.province) + " " + self.order_obj.postal_code
+        siteCityState = self.order_obj.city + ", " + self.lookupstate(self.order_obj.province) + " " + str(self.order_obj.postal_code).replace("None", "")
         
         expression = "select address1, address2, city, provstate, postal_code from customer where customer_id = (select customer_id from orders where order_id = " + self.order_obj.id + ")"
         t = self.oracle.query(expression)[0]
@@ -331,6 +337,8 @@ class topo_us_word_rpt(object):
                 item.TextFrame.TextRange.Text = self.order_obj.number
             elif item.Title == "date":
                 item.TextFrame.TextRange.Text = time.strftime('%Y-%m-%d', time.localtime())
+            elif item.Title == "boundaryEMF" and (yesboundary == "fixed" or yesboundary == "no" or yesboundary == "n"):
+                item.Delete()
 
         doc.Save()
         doc.Close()
@@ -412,10 +420,32 @@ class topo_us_word_rpt(object):
             sel.InsertFile(aDoc)
             if npages < len(worddoclist):
                 sel.InsertBreak()
-
+        
         finaldoc.Save()
         finaldoc.Close()
         app.Application.Quit()
+
+    def unzipDocx(self, file):          # adds password protected string (copied from map template directory settings.xml to final report docx to prevent editing)
+        settingsfile = os.path.join(file[:-5], r"word\settings.xml")
+        docProtStr = r'<w:documentProtection w:edit="readOnly" w:enforcement="1" w:cryptProviderType="rsaFull" w:cryptAlgorithmClass="hash" w:cryptAlgorithmType="typeAny" w:cryptAlgorithmSid="4" w:cryptSpinCount="100000" w:hash="EMDyQW9Uyt2eymkd3v1mSeHQxRU=" w:salt="pVAanRWeb0Qx/V/eRR5AIA=="/>'
+
+        # rename docx to zip and extract files
+        os.rename(file, file[:-4] + "zip")
+        with zipfile.ZipFile(file[:-4] + "zip", "r") as zipobj:
+            os.mkdir(file[:-4])
+            zipobj.extractall(file[:-4])
+
+        # read data from settings.xml
+        with open(settingsfile, "r") as f:
+            filedata = f.read()
+
+        # insert the string near the end but inside parent tag
+        with open(settingsfile, 'w') as f:
+            f.write(filedata.replace("</w:settings>", docProtStr + "</w:settings>"))
+
+        self.zipdir_noroot(file[:-4], file.split("\\")[-1])
+
+        os.remove(file[:-4] + "zip")
 
     def zipdir_noroot(self, path, zipfilename):
         myZipFile = zipfile.ZipFile(os.path.join(cfg.scratch,zipfilename),"w")
@@ -461,10 +491,18 @@ class topo_us_word_rpt(object):
         if yesboundary.lower() == 'arrow':
             yesboundary = 'yes'
             custom_profile = True
+            arcpy.AddMessage('...custom profile set.')
         else:
-            print('...no custom profile set.')
+            arcpy.AddMessage('...no custom profile set.')
 
-        if yesboundary.lower() == 'fixed' or yesboundary.lower() == 'yes' or yesboundary.lower() == 'y':
+        if yesboundary.lower() == 'fixed':
+            for lyr in arcpy.mapping.ListLayers(mxd, "", df):
+                if lyr.name == "Project Property":
+                    lyr.visible = True
+                else:
+                    lyr.visible = False
+
+        elif  yesboundary.lower() == 'yes' or yesboundary.lower() == 'y':
             for lyr in arcpy.mapping.ListLayers(mxd, "", df):
                 if lyr.name == "Project Property":
                     lyr.visible = True
@@ -850,12 +888,12 @@ class topo_us_word_rpt(object):
             if os.path.exists(reportcheckzip):
                 os.remove(reportcheckzip)
             shutil.copyfile(scratchzip,reportcheckzip)
-            arcpy.SetParameterAsText(5, scratchzip)
+            arcpy.SetParameterAsText(3, scratchzip)
         else:
             if os.path.exists(reportcheckpdf):
                 os.remove(reportcheckpdf)
             shutil.copyfile(scratchpdf,reportcheckpdf)
-            arcpy.SetParameterAsText(5, scratchpdf)
+            arcpy.SetParameterAsText(3, scratchpdf)
 
         try:
             procedure = 'eris_topo.processTopo'
@@ -863,3 +901,12 @@ class topo_us_word_rpt(object):
         except Exception as e:
             arcpy.AddError(e)
             arcpy.AddError("### eris_topo.processTopo failed...")
+
+    def delyear(self, yeardel7575, yeardel1515, dict7575, dict1515):
+        if yeardel7575:
+            for y in yeardel7575:
+                del dict7575[y]
+        if yeardel1515:
+            for y in yeardel1515:
+                del dict1515[y]
+        return dict7575, dict1515

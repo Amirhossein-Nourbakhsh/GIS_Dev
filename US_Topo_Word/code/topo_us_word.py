@@ -102,11 +102,11 @@ if __name__ == '__main__':
             if dict1515:
                 dictlist.append(dict1515)
             
-            # # remove blank maps flag
-            # if cfg.delyearFlag == 'Y':
-            #     delyear75 = filter(None, str(raw_input("Years you want to delete in the 7.5min series (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))
-            #     delyear15 = filter(None, str(raw_input("Years you want to delete in the 15min series (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))
-            #     tf.delyear(delyear75, delyear15, dict7575, dict1515)
+            # remove blank maps flag
+            if cfg.delyearFlag == 'Y':
+                delyear75 = filter(None, str(raw_input("Years you want to delete in the 7.5min series (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))
+                delyear15 = filter(None, str(raw_input("Years you want to delete in the 15min series (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))
+                tf.delyear(delyear75, delyear15, dict7575, dict1515)
 
             # run word application
             app = win32com.client.DispatchEx("Word.Application")
@@ -117,10 +117,13 @@ if __name__ == '__main__':
             tf.goSummaryPage(dictlist)
 
             # create map page
-            worddoclist, app = tf.createDOCX(dictlist, yearalldict, mxd, df, custom_profile, app)
+            worddoclist, app = tf.createDOCX(yesboundary, dictlist, yearalldict, mxd, df, custom_profile, app)
 
             # append all pages to final docx
             tf.appendPages(app, worddoclist, order_obj)
+
+            # convert docx to zip and add edit restriction
+            tf.unzipDocx(os.path.join(cfg.scratch, order_obj.number + "_US_Topo.docx"))
 
             # save summary data to oracle
             tf.oracleSummary(dictlist, order_obj.number + "_US_Topo.docx")
@@ -137,22 +140,20 @@ if __name__ == '__main__':
             tf.toReportCheck(needtif, order_obj.number + "_US_Topo.docx")
             
     except Exception:
-        # # Get the traceback object
-        # tb = sys.exc_info()[2]
-        # tbinfo = traceback.format_tb(tb)[0]
-        # pymsg = "Order ID: %s PYTHON ERRORS:\nTraceback info:\n"%order_obj.id + tbinfo + "\nError Info:\n" + str(sys.exc_info()[1])
+        # Get the traceback object
+        tb = sys.exc_info()[2]
+        tbinfo = traceback.format_tb(tb)[0]
+        pymsg = "Order ID: %s PYTHON ERRORS:\nTraceback info:\n"%order_obj.id + tbinfo + "\nError Info:\n" + str(sys.exc_info()[1])
 
-        # try:
-        #     procedure = 'eris_topo.InsertTopoAudit'
-        #     oc.proc(procedure, (order_obj.id, 'python-Error Handling',pymsg))
-        # except:
-            raise                                   # raise the error again
+        procedure = 'eris_topo.InsertTopoAudit'
+        oc.proc(procedure, (order_obj.id, 'python-Error Handling',pymsg))
+
+        raise                                   # raise the error again
 
     finally:
         oc.close()                              # close oracle connection
         logger.removeHandler(handler)
         handler.close()
-        app.Application.Quit()
                 
         tasklist = os.popen('tasklist /v').read().strip()
         if "winword.exe" in tasklist:
@@ -160,5 +161,5 @@ if __name__ == '__main__':
             os.system('TASKKILL /F /IM winword.exe')
 
     finish = time.clock()
-    arcpy.AddMessage(cfg.reportcheckFolder + "\\TopographicMaps\\" + order_obj.number + "_US_Topo.docx")
+    # arcpy.AddMessage(cfg.reportcheckFolder + "\\TopographicMaps\\" + order_obj.number + "_US_Topo.docx")
     arcpy.AddMessage("Finished in " + str(round(finish-start, 2)) + " secs")

@@ -25,33 +25,33 @@ def server_loc_config(configpath,environment):
     server_config = {'dbconnection':dbconnection,'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
     return server_config
 
-def createScratch():
-    scratch = os.path.join(r"\\cabcvan1gis005\MISC_DataManagement\_AW\TOPO_US_word_scratchy", "test1")
-    scratchgdb = "scratch.gdb"
-    if not os.path.exists(scratch):
-        os.mkdir(scratch)
-    if not os.path.exists(os.path.join(scratch, scratchgdb)):
-        arcpy.CreateFileGDB_management(scratch, "scratch.gdb")
-    return scratch, scratchgdb
+# def createScratch():
+#     scratch = os.path.join(r"\\cabcvan1gis005\MISC_DataManagement\_AW\TOPO_US_word_scratchy", "test4")
+#     scratchgdb = "scratch.gdb"
+#     if not os.path.exists(scratch):
+#         os.mkdir(scratch)
+#     if not os.path.exists(os.path.join(scratch, scratchgdb)):
+#         arcpy.CreateFileGDB_management(scratch, "scratch.gdb")
+#     return scratch, scratchgdb
 
-# # arcpy parameters
-# OrderIDText = arcpy.GetParameterAsText(0)
-# BufsizeText = arcpy.GetParameterAsText(1)
-# yesBoundary = (arcpy.GetParameterAsText(2)).lower()
-# scratch = arcpy.env.scratchFolder
-# scratchgdb = arcpy.env.scratchGDB
+# arcpy parameters
+OrderIDText = arcpy.GetParameterAsText(0)
+BufsizeText = arcpy.GetParameterAsText(1)
+yesBoundary = (arcpy.GetParameterAsText(2)).lower()
+scratch = arcpy.env.scratchFolder
+scratchgdb = arcpy.env.scratchGDB
 
 # order info
-order_obj = models.Order().get_order(20200806256)
+order_obj = models.Order().get_order(OrderIDText)
 
-# flags
-yesBoundary = "yes"                 # fixed/yes/no
-BufsizeText = "2.4"
-delyearFlag = "N"                   # Y/N, for internal use only, blank maps, etc.
+# # flags
+# yesBoundary = "fixed"                 # fixed/yes/no/arrow
+# BufsizeText = "2.4"
+# delyearFlag = "N"                   # Y/N, for internal use only, blank maps, etc.
 custom_profile = False
 
 # scratch file/folder outputs
-scratch, scratchgdb = createScratch()
+# scratch, scratchgdb = createScratch()
 
 orderGeometry = os.path.join(scratch, scratchgdb, "orderGeometry")
 orderGeometryPR = os.path.join(scratch, scratchgdb, "orderGeometryPR")
@@ -104,8 +104,8 @@ orderGeomlyrfile_polygon = os.path.join(connectionPath,r"layer\orderPoly.lyr")
 coverTemplate = os.path.join(connectionPath,r"templates\CoverPage")
 summaryTemplate = os.path.join(connectionPath,r"templates\SummaryPage")
 marginTemplate = os.path.join(connectionPath,r"templates\margin.docx")
-customdocxTemplate =os.path.join(connectionPath,r"templates\Environmental-Portrait_TopoOnly_noarrow_fin")
-docxTemplate =os.path.join(connectionPath,r"templates\Environmental-Portrait_TopoOnly_dev_fin")
+customdocxTemplate =os.path.join(connectionPath,r"templates\template_noarrow")
+docxTemplate =os.path.join(connectionPath,r"templates\template")
 
 # mxd
 Summarymxdfile = os.path.join(connectionPath, r"mxd\SummaryPage.mxd")
@@ -113,6 +113,6 @@ Covermxdfile = os.path.join(connectionPath, r"mxd\CoverPage.mxd")
 mxdfile = os.path.join(connectionPath,r"mxd\template.mxd")
 
 # other
-readmefile = os.path.join(connectionPath,r"python\templates\readme.txt")
+readmefile = os.path.join(connectionPath,r"templates\readme.txt")
 logfile = os.path.join(connectionPath, r"log\USTopoSearch_Terracon_Log.txt")
 logname = "TOPO_US_word_%s"%server_environment
