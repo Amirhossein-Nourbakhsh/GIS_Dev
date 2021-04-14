@@ -281,7 +281,8 @@ class topo_us_word_rpt(object):
                 worddoclist.append(os.path.join(cfg.scratch,seriesText+"_"+year+".docx"))
 
                 # set text elements in word
-                self.setDocxText(app, quaddict, yearalldict, seriesText, year, yesboundary)
+                if quaddict:
+                    self.setDocxText(app, quaddict, yearalldict, seriesText, year, yesboundary)
 
         del mxd
         return worddoclist, app
@@ -398,9 +399,9 @@ class topo_us_word_rpt(object):
             else:
                 arcpy.AddWarning("### tif file doesn't exist " + tifname)
                 if not os.path.exists(tifdir):
-                    arcpy.AddWarning("tif dir does NOT exist " + tifdir)
+                    arcpy.AddWarning("\ttif dir does NOT exist " + tifdir)
                 else:
-                    arcpy.AddWarning("tif dir does exist " + tifdir)
+                    arcpy.AddWarning("\ttif dir does exist " + tifdir)
 
             seq = seq + 1
         return quaddict
@@ -660,6 +661,9 @@ class topo_us_word_rpt(object):
             for row in reader:                                              # grab main topo records
                 if row["Cell ID"] in rowsMain:
                     pdfname = row["Filename"].strip()
+                    if not os.path.exists(os.path.join(cfg.tifdir_h, pdfname.replace(".pdf", "_t.tif"))):
+                        continue
+
                     xmlname = pdfname[0:-3] + "xml"                         # read the year from .xml file
                     xmlpath = os.path.join(cfg.tifdir_h,xmlname)
                     tree = ET.parse(xmlpath)
@@ -686,6 +690,9 @@ class topo_us_word_rpt(object):
             for row in reader:              
                 if row["Cell ID"] in rowsAdj:                               # grab surrounding topo records
                     pdfname = row["Filename"].strip()
+                    if not os.path.exists(os.path.join(cfg.tifdir_h, pdfname.replace(".pdf", "_t.tif"))):
+                        continue
+
                     xmlname = pdfname[0:-3] + "xml"                         # read the year from .xml file
                     xmlpath = os.path.join(cfg.tifdir_h,xmlname)
                     tree = ET.parse(xmlpath)
@@ -715,6 +722,9 @@ class topo_us_word_rpt(object):
             for row in reader:
                 if row["Cell ID"] in rowsMain:
                     pdfname = row["Filename"].strip()
+                    if not os.path.exists(os.path.join(cfg.tifdir_c, pdfname.replace(".pdf", "_t.tif"))):
+                        continue
+
                     year2use = row["Filename"].split("_")[-3][:4]   # for current topos, read the year from the geopdf file name
 
                     if year2use == "" or year2use == None:
@@ -730,6 +740,9 @@ class topo_us_word_rpt(object):
             for row in reader:
                 if row["Cell ID"] in rowsAdj:                               # grab surrounding topo records
                     pdfname = row["Filename"].strip()
+                    if not os.path.exists(os.path.join(cfg.tifdir_c, pdfname.replace(".pdf", "_t.tif"))):
+                        continue
+
                     year2use = row["Filename"].split("_")[-3][:4]
 
                     if year2use == "" or year2use == None:
@@ -888,12 +901,12 @@ class topo_us_word_rpt(object):
             if os.path.exists(reportcheckzip):
                 os.remove(reportcheckzip)
             shutil.copyfile(scratchzip,reportcheckzip)
-            arcpy.SetParameterAsText(3, scratchzip)
+            arcpy.SetParameterAsText(2, scratchzip)
         else:
             if os.path.exists(reportcheckpdf):
                 os.remove(reportcheckpdf)
             shutil.copyfile(scratchpdf,reportcheckpdf)
-            arcpy.SetParameterAsText(3, scratchpdf)
+            arcpy.SetParameterAsText(2, scratchpdf)
 
         try:
             procedure = 'eris_topo.processTopo'
