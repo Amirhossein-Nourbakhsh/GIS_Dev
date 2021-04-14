@@ -102,11 +102,11 @@ if __name__ == '__main__':
             if dict1515:
                 dictlist.append(dict1515)
             
-            # remove blank maps flag
-            if cfg.delyearFlag == 'Y':
-                delyear75 = filter(None, str(raw_input("Years you want to delete in the 7.5min series (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))
-                delyear15 = filter(None, str(raw_input("Years you want to delete in the 15min series (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))
-                tf.delyear(delyear75, delyear15, dict7575, dict1515)
+            # # remove blank maps flag
+            # if cfg.delyearFlag == 'Y':
+            #     delyear75 = filter(None, str(raw_input("Years you want to delete in the 7.5min series (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))
+            #     delyear15 = filter(None, str(raw_input("Years you want to delete in the 15min series (comma-delimited):\n>>> ")).replace(" ", "").strip().split(","))
+            #     tf.delyear(delyear75, delyear15, dict7575, dict1515)
 
             # run word application
             app = win32com.client.DispatchEx("Word.Application")

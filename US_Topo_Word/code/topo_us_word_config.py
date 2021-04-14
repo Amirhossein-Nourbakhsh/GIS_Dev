@@ -26,7 +26,7 @@ def server_loc_config(configpath,environment):
     return server_config
 
 # def createScratch():
-#     scratch = os.path.join(r"\\cabcvan1gis005\MISC_DataManagement\_AW\TOPO_US_word_scratchy", "test4")
+#     scratch = os.path.join(r"\\cabcvan1gis005\MISC_DataManagement\_AW\TOPO_US_word_scratchy", "test2")
 #     scratchgdb = "scratch.gdb"
 #     if not os.path.exists(scratch):
 #         os.mkdir(scratch)
@@ -36,8 +36,7 @@ def server_loc_config(configpath,environment):
 
 # arcpy parameters
 OrderIDText = arcpy.GetParameterAsText(0)
-BufsizeText = arcpy.GetParameterAsText(1)
-yesBoundary = (arcpy.GetParameterAsText(2)).lower()
+yesBoundary = (arcpy.GetParameterAsText(1)).lower()
 scratch = arcpy.env.scratchFolder
 scratchgdb = arcpy.env.scratchGDB
 
@@ -45,14 +44,12 @@ scratchgdb = arcpy.env.scratchGDB
 order_obj = models.Order().get_order(OrderIDText)
 
 # # flags
-# yesBoundary = "fixed"                 # fixed/yes/no/arrow
-# BufsizeText = "2.4"
+# yesBoundary = "yes"                 # fixed/yes/no/arrow
 # delyearFlag = "N"                   # Y/N, for internal use only, blank maps, etc.
 custom_profile = False
 
 # scratch file/folder outputs
 # scratch, scratchgdb = createScratch()
-
 orderGeometry = os.path.join(scratch, scratchgdb, "orderGeometry")
 orderGeometryPR = os.path.join(scratch, scratchgdb, "orderGeometryPR")
 orderBuffer = os.path.join(scratch, scratchgdb, "buffer")
