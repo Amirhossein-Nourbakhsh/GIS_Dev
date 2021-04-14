@@ -142,7 +142,7 @@ class work():
 
         p = MyPool(processes)
 
-        for x in p.map(self.poolworker,modlist):                      # RUN WORKER AND RETRUN DICT (STILL IN LIST FORM)                             
+        for x in p.map(self.poolworker,modlist):                      # RUN WORKER AND RETURN DICT (STILL IN LIST FORM)                             
             xmldict.update(x)                                         # CONVERT LIST TO BACK DICT
         # 4.59 mins 1 chunk
         # 4.68 mins 1 chunk
