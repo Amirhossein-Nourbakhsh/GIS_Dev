@@ -104,9 +104,9 @@ gridlyr = os.path.join(mxdpath,"grid.lyr")
 # pdfs
 annot_poly = os.path.join(mxdpath,"annot_poly.pdf")
 annot_line = os.path.join(mxdpath,"annot_line.pdf")
+annot_point = os.path.join(mxdpath,"annot_point.pdf")
 annot_poly_c = os.path.join(mxdpath,"annot_poly_red.pdf")
 annot_line_c = os.path.join(mxdpath,"annot_line_red.pdf")
-pdfsymbolfile = os.path.join(mxdpath, "US Topo Map Symbols v7.4.pdf")
 
 # logos
 logopath = os.path.join(mxdpath,"logos")
