@@ -432,6 +432,7 @@ class fim_us_rpt(object):
             orderGeomlyrfile = cfg.orderGeomlyrfile_polyline
         else:
             orderGeomlyrfile = cfg.orderGeomlyrfile_polygon
+            
         orderGeomLayer = arcpy.mapping.Layer(orderGeomlyrfile)
         orderGeomLayer.replaceDataSource(os.path.join(cfg.scratch, cfg.scratchgdb),"FILEGDB_WORKSPACE","orderGeometryPR")
         arcpy.mapping.AddLayer(dfmain,orderGeomLayer,"TOP")
@@ -497,12 +498,9 @@ class fim_us_rpt(object):
                     self.createAnnotPdf(cfg.shapePdf)                   # creates annot.pdf
 
                 elif self.order_obj.geometry.type.lower() == "point" or self.order_obj.geometry.type.lower() == "multipoint":
-                    yesboundary = 'fixed'
+                    shutil.copy(cfg.annot_point, os.path.join(cfg.scratch, "annot.pdf"))
                     for lyr in arcpy.mapping.ListLayers(mxd, "", df):
-                        if lyr.name == "Project Property":
-                            lyr.visible = True
-                        else:
-                            lyr.visible = False
+                        lyr.visible = False
 
         elif yesboundary.lower() == 'no':
             for lyr in arcpy.mapping.ListLayers(mxd, "", df):
@@ -713,7 +711,7 @@ class fim_us_rpt(object):
             mxd.saveACopy(os.path.join(cfg.scratch, "test_"+str(year)+".mxd"))
 
             # merge annotation pdf to the map if yesBoundary == Y
-            if yesboundary == 'yes' and self.order_obj.geometry.type.lower() != 'point' and self.order_obj.geometry.type.lower() != 'multipoint':
+            if yesboundary == 'yes':
                 self.annotatePdf(FIPpdf, cfg.annotPdf)
 
             # remove layers
@@ -795,7 +793,7 @@ class fim_us_rpt(object):
             years.sort(reverse = True)
         
         for year in years:
-            if yesboundary == "yes" and self.order_obj.geometry.type.lower() != 'point' and self.order_obj.geometry.type.lower() != 'multipoint':
+            if yesboundary == "yes":
                 pdf = PdfFileReader(open(os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'_a.pdf'),'rb'))
             else:
                 pdf = PdfFileReader(open(os.path.join(cfg.scratch, 'FIPExport_'+str(year)+'.pdf'),'rb'))

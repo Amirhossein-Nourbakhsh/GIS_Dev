@@ -131,11 +131,10 @@ if __name__ == '__main__':
         pymsg = "Order ID: %s PYTHON ERRORS:\nTraceback info:\n"%order_obj.id + tbinfo + "\nError Info:\n" + str(sys.exc_info()[1])
         traceback.print_exc()
 
-        try:
-            procedure = 'eris_fim.InsertFIMAudit'
-            oc.proc(procedure, (order_obj.id, 'python-Error Handling',pymsg))
-        except Exception as e:
-            raise                                   # raise the error again
+        procedure = 'eris_fim.InsertFIMAudit'
+        oc.proc(procedure, (order_obj.id, 'python-Error Handling',pymsg))
+
+        raise                                   # raise the error again
 
     finally:
         oc.close()

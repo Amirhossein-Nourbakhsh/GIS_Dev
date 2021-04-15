@@ -49,13 +49,13 @@ order_obj = models.Order().get_order(OrderIDText)
 # # parameters
 # gridsize = "0.3 KiloMeters"
 # BufsizeText ='0.17'
-# resolution = "600"
+resolution = "600"
 
 # # flags
-# multipage = True                   # True/False        
+# multipage = False                   # True/False        
 # yesBoundary = "yes"                 # yes/no/fixed
 # delyearFlag = "Y"                   # Y/N
-# nrf = 'N'                           # Y/N
+nrf = 'N'                           # Y/N
 
 # scratch file
 # scratch, scratchgdb = createScratch()
@@ -102,6 +102,7 @@ FIMmxdfile = os.path.join(connectionPath, r"mxd\FIMLayout.mxd")
 # pdf
 annot_poly = os.path.join(connectionPath,r"mxd\annot_poly.pdf")
 annot_line = os.path.join(connectionPath,r"mxd\annot_line.pdf")
+annot_point = os.path.join(connectionPath,r"mxd\annot_point.pdf")
 
 # coverPic
 coverPic = os.path.join(connectionPath, r"coverPic\ERIS_2018_ReportCover_Fire Insurance Maps_F.jpg")
