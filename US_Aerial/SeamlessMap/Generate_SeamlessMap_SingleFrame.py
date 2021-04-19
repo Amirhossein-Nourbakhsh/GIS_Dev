@@ -173,7 +173,7 @@ def get_county(netpath):
     county = netpath.split('\\')[6].upper()
     return county
 
-master_xl = r"C:\Users\JLoucks\Desktop\historical\historical_02072021.csv"
+master_xl = r"C:\Users\JLoucks\Desktop\historical\historical_04022021.csv"
 data = []
 v = open(master_xl)
 r = csv.reader(v)
@@ -232,7 +232,7 @@ for item in r:
         item.append('NA')
     print item
     data.append(item)
-with open(r"C:\Users\JLoucks\Desktop\historical\meta_historical_02072021.csv",'wb') as result_file:
+with open(r"C:\Users\JLoucks\Desktop\historical\meta_historical_04022021.csv",'wb') as result_file:
     wr = csv.writer(result_file,dialect='excel')
     wr.writerows(data)
 result_file.close()

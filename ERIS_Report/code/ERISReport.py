@@ -67,7 +67,7 @@ class Machine:
     machine_prod = r"\\cabcvan1gis007"
 
 class Credential:
-    oracle_dev = r'eris_gis/gis295@cabcvan1ora005.glaciermedia.inc:1521/GMDEVC'
+    oracle_dev = r'eris_gis/gis295@cabcvan1ora005.glaciermedia.inc:1521/GMDEVC'#r'eris_gis/gis295@cabcvan1ora005.glaciermedia.inc:1521/GMDEVC'
     oracle_test = r'eris_gis/gis295@GMTESTC.glaciermedia.inc'
     oracle_production = r'eris_gis/gis295@GMPRODC.glaciermedia.inc'
 
@@ -78,7 +78,7 @@ class ReportPath:
     instant_report_prod = server_config['instant']
 
 class DevConfig:
-    machine_path=Machine.machine_test
+    machine_path=Machine.machine_dev
     instant_reports =ReportPath.instant_report_test
     noninstant_reports = ReportPath.noninstant_reports_test
 
@@ -229,7 +229,7 @@ class Oracle:
         # initiate connection credential
         if machine_name.lower() =='dev':
             self.oracle_credential = Credential.oracle_dev
-        if machine_name.lower() =='test':
+        elif machine_name.lower() =='test':
             self.oracle_credential = Credential.oracle_test
         elif machine_name.lower()=='prod':
             self.oracle_credential = Credential.oracle_production
@@ -671,7 +671,7 @@ def exportViewerTable(ImagePath,FileName):
 if __name__ == '__main__':
     try:
         # INPUT #####################################
-        OrderIDText = '1050559'#arcpy.GetParameterAsText(0).strip()#'736799'#
+        OrderIDText = '959826'#arcpy.GetParameterAsText(0).strip()#'736799'#
         multipage = False#True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
         gridsize = '0'#arcpy.GetParameterAsText(2).strip()#0#
         code = 'usa'#arcpy.GetParameterAsText(3).strip()#'usa'#
@@ -749,6 +749,7 @@ if __name__ == '__main__':
 
         # 4-2 add ERIS points
         erisPointsInfo = Oracle('dev').call_function('geterispointdetails',OrderIDText)
+        print erisPointsInfo
         # for i in erisPointsInfo:
         #     print(i)
         erisPointsLayer=addERISpoint(erisPointsInfo,map1,scratch)
