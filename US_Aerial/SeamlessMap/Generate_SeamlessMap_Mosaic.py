@@ -225,10 +225,10 @@ if __name__ == '__main__':
     inputRaster = arcpy.GetParameterAsText(0)
     # DQQQ_footprint_FC = r'\\cabcvan1nas003\doqq\DOQQ_ALL_11202020\DOQQ_ALL_WGS84.shp'
     logfile = r'C:\Users\HKiavarz\Documents\log_DOQQ_seamless_duplicate_path.txt'
-    DQQQ_ALL_FC = r'\\cabcvan1nas003\doqq\DOQQ_ALL_11202020\DOQQ_ALL_WGS84.shp'
+    DQQQ_ALL_FC = r'\\cabcvan1nas003\doqq\AutoRebuild\LOGS\DOQQ_ALL_INCREMENTAL_02152021-04022021\DOQQ_ALL_INCREMENTAL_rectangle.shp'
     # DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\DOQQ_seamless_map'
     # DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\DOQQ_Seamless_map_unknowPath'
-    DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\DOQQ_Seamless_map_path_correction'
+    DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic'
 
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.WARNING)
@@ -244,73 +244,42 @@ if __name__ == '__main__':
 
     # expression = "FID >= 170000 AND FID <= 170691"
     # expression = "FID = 35"
-    list = [
-162942,
-163357,
-163358,
-162602,
-170082,
-170430,
-170326,
-170317,
-171824,
-171544,
-171549,
-171805,
-171812,
-171563,
-171719,
-171569,
-171765,
-171583,
-171595,
-171881,
-171602,
-171795,
-171714,
-171605,
-171606,
-171753,
-171628,
-171682,
-171887,
-171630
-]
     # list = [139282]
-    for item in list:
-        expression = "FID = " + str(item)
-        startDataset = timeit.default_timer()
-        arcpy.AddMessage('-------------------------------------------------------------------------------------------------')
-        rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE','SHAPE@'],expression)
-        i=0
-        for row in rows:
-            arcpy.AddMessage('Start FID: ' + str(row[0]) + ' - processing Dataset: ' + row[1])
-            tabfile_org = row[1].replace('nas2520','cabcvan1nas003')
-            tabfile_path = ''
-            tab_file_name = os.path.basename(tabfile_org)
-            tab_file_org_path = os.path.dirname(tabfile_org)
-            if os.path.exists(tabfile_org) > 0:
-                tabfile_path = tab_file_org_path
-            else:
-                tabfile_path = find_file(tab_file_org_path, tab_file_name)
-            if os.path.exists(tabfile_path):
-                tab_file = os.path.join(tabfile_path, tab_file_name)
-                img_path_info = get_ImagePathandExt(tab_file)
-                if len(img_path_info[0]) > 0:
-                    if img_path_info[1].lower() in ['.tif','.jpg','.sid','.png','.tiff','.jpeg','.jp2','.ecw']:
-                        metaData = get_Image_Metadata(img_path_info[0],img_path_info[1],row[0])
-                        # footprint_Polygon = get_Footprint(image_Path)
-                        footprint_Polygon = row[2].projectAs(srWGS84)
-                        UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
-                    else:
-                        arcpy.AddWarning("FID : {} - Input raster: is not the type of Composite Geodataset, or does not exist".format(row[0]))
-                        logger.warning("FID :, {}, Input raster: is not the type of Composite Geodataset, or does not exist:, {} ".format(row[0], row[1]))
+    # for item in list:
+    # expression = "FID = " + str(item)
+    startDataset = timeit.default_timer()
+    arcpy.AddMessage('-------------------------------------------------------------------------------------------------')
+    # rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE','SHAPE@'],expression)
+    rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE','SHAPE@'])
+    i=0
+    for row in rows:
+        arcpy.AddMessage('Start FID: ' + str(row[0]) + ' - processing Dataset: ' + row[1])
+        tabfile_org = row[1].replace('nas2520','cabcvan1nas003')
+        tabfile_path = ''
+        tab_file_name = os.path.basename(tabfile_org)
+        tab_file_org_path = os.path.dirname(tabfile_org)
+        if os.path.exists(tabfile_org) > 0:
+            tabfile_path = tab_file_org_path
+        else:
+            tabfile_path = find_file(tab_file_org_path, tab_file_name)
+        if os.path.exists(tabfile_path):
+            tab_file = os.path.join(tabfile_path, tab_file_name)
+            img_path_info = get_ImagePathandExt(tab_file)
+            if len(img_path_info[0]) > 0:
+                if img_path_info[1].lower() in ['.tif','.jpg','.sid','.png','.tiff','.jpeg','.jp2','.ecw']:
+                    metaData = get_Image_Metadata(img_path_info[0],img_path_info[1],row[0])
+                    # footprint_Polygon = get_Footprint(image_Path)
+                    footprint_Polygon = row[2].projectAs(srWGS84)
+                    UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
                 else:
-                    arcpy.AddWarning("FID :  {} -  Images is not available forthis path : {} ".format(row[0], row[1]))
-                    logger.warning("FID : , {}, Images is not available for this path :, {} ".format(row[0], row[1]))
+                    arcpy.AddWarning("FID : {} - Input raster: is not the type of Composite Geodataset, or does not exist".format(row[0]))
+                    logger.warning("FID :, {}, Input raster: is not the type of Composite Geodataset, or does not exist:, {} ".format(row[0], row[1]))
             else:
-                arcpy.AddWarning("FID : {} - Tab file Path is not valid or available for: ".format(row[0]))
-                logger.warning("FID : , {}, Tab file Path is not valid or available for:, {} ".format(row[0], row[1]))
+                arcpy.AddWarning("FID :  {} -  Images is not available forthis path : {} ".format(row[0], row[1]))
+                logger.warning("FID : , {}, Images is not available for this path :, {} ".format(row[0], row[1]))
+        else:
+            arcpy.AddWarning("FID : {} - Tab file Path is not valid or available for: ".format(row[0]))
+            logger.warning("FID : , {}, Tab file Path is not valid or available for:, {} ".format(row[0], row[1]))
 
     endTotal= timeit.default_timer()
     arcpy.AddMessage(('Total Duration:', round(endTotal -startTotal,4)))
