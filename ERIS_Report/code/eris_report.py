@@ -247,7 +247,7 @@ class Oracle:
         self.cursor.close()
         self.oracle_connection.close()
 
-    def call_function(self,function_name,OrderIDText):
+    def call_function(self,function_name,order_id):
         self.connect_to_oracle()
         cursor = self.cursor
         try:
@@ -255,11 +255,11 @@ class Oracle:
             func = [self.oracle_functions[_] for _ in self.oracle_functions.keys() if function_name.lower() ==_.lower()]
             if func != [] and len(func) == 1:
                 try:
-                    output=json.loads(cursor.callfunc(func[0],outType,((str(OrderIDText)),)).read())
+                    output=json.loads(cursor.callfunc(func[0],outType,((str(order_id)),)).read())
                 except ValueError:
-                    output = cursor.callfunc(func[0],outType,((str(OrderIDText)),)).read()
+                    output = cursor.callfunc(func[0],outType,((str(order_id)),)).read()
                 except AttributeError:
-                    output = cursor.callfunc(func[0],outType,((str(OrderIDText)),))
+                    output = cursor.callfunc(func[0],outType,((str(order_id)),))
             return output
         except cx_Oracle.Error as e:
             raise Exception(("Oracle Failure",e.message))
@@ -270,7 +270,7 @@ class Oracle:
         finally:
             self.close_connection()
 
-    def call_procedure(self,procedure_name,OrderIDText):
+    def call_procedure(self,procedure_name,order_id):
         self.connect_to_oracle()
         cursor = self.cursor
         try:
@@ -278,11 +278,11 @@ class Oracle:
             func = [self.oracle_procedures[_] for _ in self.oracle_procedures.keys() if procedure_name.lower() ==_.lower()]
             if func !=[] and len(func)==1:
                 try:
-                    output = cursor.callproc(func[0],[outValue,str(OrderIDText),])
+                    output = cursor.callproc(func[0],[outValue,str(order_id),])
                 except ValueError:
-                    output = cursor.callproc(func[0],[outValue,str(OrderIDText),])
+                    output = cursor.callproc(func[0],[outValue,str(order_id),])
                 except AttributeError:
-                    output = cursor.callproc(func[0],[outValue,str(OrderIDText),])
+                    output = cursor.callproc(func[0],[outValue,str(order_id),])
             return output
         except cx_Oracle.Error as e:
             raise Exception(("Oracle Failure",e.message))
@@ -664,14 +664,14 @@ def exportViewerTable(ImagePath,FileName):
     metaitem['lat_ne'] = desc.extent.YMax
     metaitem['long_ne'] = desc.extent.XMax
 
-    delete_query = "delete from overlay_image_info where order_id = '%s' and type = '%s' and filename = '%s'"%(OrderIDText,metaitem['type'],FileName)
-    insert_query = "insert into overlay_image_info values (%s, %s, %s, %.5f, %.5f, %.5f, %.5f, %s, '', '')" % (str(OrderIDText), orderInfo['ORDER_NUM'], "'" + metaitem['type']+"'", metaitem['lat_sw'], metaitem['long_sw'], metaitem['lat_ne'], metaitem['long_ne'],"'"+metaitem['imagename']+"'" )
+    delete_query = "delete from overlay_image_info where order_id = '%s' and type = '%s' and filename = '%s'"%(order_id,metaitem['type'],FileName)
+    insert_query = "insert into overlay_image_info values (%s, %s, %s, %.5f, %.5f, %.5f, %.5f, %s, '', '')" % (str(order_id), orderInfo['ORDER_NUM'], "'" + metaitem['type']+"'", metaitem['lat_sw'], metaitem['long_sw'], metaitem['lat_ne'], metaitem['long_ne'],"'"+metaitem['imagename']+"'" )
     image_info = Oracle('dev').insert_overlay(delete_query,insert_query)
 
 if __name__ == '__main__':
     try:
         # INPUT #####################################
-        OrderIDText = '1050559'#arcpy.GetParameterAsText(0).strip()#'736799'#
+        order_id = '1050559'#arcpy.GetParameterAsText(0).strip()#'736799'#
         multipage = False#True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
         gridsize = '0'#arcpy.GetParameterAsText(2).strip()#0#
         code = 'usa'#arcpy.GetParameterAsText(3).strip()#'usa'#
@@ -700,9 +700,9 @@ if __name__ == '__main__':
 
         # STEPS ####################################
         # 1  get order info by Oracle call
-        orderInfo= Oracle('dev').call_function('getorderinfo',OrderIDText)
-        needTopo= Oracle('dev').call_function('printTopo',OrderIDText)
-        xplorerflag= Oracle('dev').call_procedure('xplorerflag',OrderIDText)[0]
+        orderInfo= Oracle('dev').call_function('getorderinfo',order_id)
+        needTopo= Oracle('dev').call_function('printTopo',order_id)
+        xplorerflag= Oracle('dev').call_procedure('xplorerflag',order_id)[0]
         end = timeit.default_timer()
         arcpy.AddMessage(('call oracle', round(end -start1,4)))
         start=end
@@ -748,7 +748,7 @@ if __name__ == '__main__':
             start=end
 
         # 4-2 add ERIS points
-        erisPointsInfo = Oracle('dev').call_function('geterispointdetails',OrderIDText)
+        erisPointsInfo = Oracle('dev').call_function('geterispointdetails',order_id)
         # for i in erisPointsInfo:
         #     print(i)
         erisPointsLayer=addERISpoint(erisPointsInfo,map1,scratch)
@@ -855,7 +855,7 @@ if __name__ == '__main__':
         tbinfo = traceback.format_tb(tb)[0]
         pymsg = "PYTHON ERRORS:\nTraceback info:\n %s \nError Info:\n %s"%(tbinfo,str(sys.exc_info()[1]))
         msgs = "ArcPy ERRORS:\n %s\n"%arcpy.GetMessages(2)
-        arcpy.AddError("hit CC's error code in except: Order ID %s"%OrderIDText)
+        arcpy.AddError("hit CC's error code in except: Order ID %s"%order_id)
         arcpy.AddError(pymsg)
         arcpy.AddError(msgs)
         raise
