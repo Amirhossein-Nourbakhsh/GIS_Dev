@@ -655,7 +655,7 @@ def exportViewerTable(ImagePath,FileName):
 
     delete_query = "delete from overlay_image_info where order_id = '%s' and type = '%s' and filename = '%s'"%(order_id,metaitem['type'],FileName)
     insert_query = "insert into overlay_image_info values (%s, %s, %s, %.5f, %.5f, %.5f, %.5f, %s, '', '')" % (str(order_id), orderInfo['ORDER_NUM'], "'" + metaitem['type']+"'", metaitem['lat_sw'], metaitem['long_sw'], metaitem['lat_ne'], metaitem['long_ne'],"'"+metaitem['imagename']+"'" )
-    image_info = Oracle('dev').insert_overlay(delete_query,insert_query)
+    image_info = Oracle('test').insert_overlay(delete_query,insert_query)
 
 if __name__ == '__main__':
     try:
@@ -665,8 +665,8 @@ if __name__ == '__main__':
         grid_size = '0'#arcpy.GetParameterAsText(2).strip()#0#
         code = 'usa'#arcpy.GetParameterAsText(3).strip()#'usa'#
         is_instant = False#True if arcpy.GetParameterAsText(4).strip().lower()=='yes'else False
-        scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'
-
+        scratch = arcpy.env.scratchFolder#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'
+        env = 'test'
         # Server Setting ############################
         code = 9093 if code.strip().lower()=='usa' else 9036 if code.strip().lower()=='can' else 9049 if code.strip().lower()=='mex' else ValueError
         config = DevConfig(code)
@@ -689,9 +689,9 @@ if __name__ == '__main__':
 
         # STEPS ####################################
         # 1  get order info by Oracle call
-        orderInfo= Oracle('dev').call_function('getorderinfo',order_id)
-        needTopo= Oracle('dev').call_function('printTopo',order_id)
-        xplorerflag= Oracle('dev').call_procedure('xplorerflag',order_id)[0]
+        orderInfo= Oracle('test').call_function('getorderinfo',order_id)
+        needTopo= Oracle('test').call_function('printTopo',order_id)
+        xplorerflag= Oracle('test').call_procedure('xplorerflag',order_id)[0]
         end = timeit.default_timer()
         arcpy.AddMessage(('call oracle', round(end -start1,4)))
         start=end
@@ -737,7 +737,7 @@ if __name__ == '__main__':
             start=end
 
         # 4-2 add ERIS points
-        erisPointsInfo = Oracle('dev').call_function('geterispointdetails',order_id)
+        erisPointsInfo = Oracle('test').call_function('geterispointdetails',order_id)
         # for i in erisPointsInfo:
         #     print(i)
         erisPointsLayer=addERISpoint(erisPointsInfo,map1,scratch)
