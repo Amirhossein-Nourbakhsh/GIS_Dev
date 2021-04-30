@@ -395,7 +395,7 @@ def export_frame(imagedict,ordergeometry,buffergeometry):
             extent = raster_desc.extent
             centerlong = round(extent.XMin + (extent.XMax - extent.XMin)/2, 7)
             centerlat = round(extent.YMin + (extent.YMax - extent.YMin)/2, 7)
-            set_imagedetail(extent,centerlat,centerlong,fin_image_name)
+            set_imagedetail(extent,centerlat,centerlong,image_year + '_' + image_source + '_' +str(image_per_year) + '.tif')
 
         
 
