@@ -240,6 +240,7 @@ def export_reportimage(imagepath,ordergeometry,auid):
             arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,jpg_image),df,df_export_width=w_res,df_export_height=h_res,world_file=True,color_mode = '8-BIT_GRAYSCALE', jpeg_quality = 70)
         else:
             arcpy.mapping.ExportToJPEG(mxd,os.path.join(jpg_image_folder,jpg_image),df,df_export_width=w_res,df_export_height=h_res,world_file=True,color_mode = '24-BIT_TRUE_COLOR', jpeg_quality = 70)
+        shutil.copy(os.path.join(jpg_image_folder,jpg_image),os.path.join(scratch,jpg_image))
         arcpy.DefineProjection_management(os.path.join(jpg_image_folder,jpg_image),sr2)
         extent =arcpy.Describe(os.path.join(jpg_image_folder,jpg_image)).extent
         if AUI_ID == '':
@@ -255,13 +256,33 @@ def export_reportimage(imagepath,ordergeometry,auid):
             arcpy.AddError('status: '+message_return[3]+' - '+message_return[2])
         mxd.saveACopy(os.path.join(scratch,auid+'_export.mxd'))
         del mxd
+def best_imageperyear(image_workspace):
+    allyears = []
+    max_size_by_year = {}
+    for file in os.listdir(image_workspace):
+        if file.endswith('.jpg'):
+            year = file.split('_')[0]
+            allyears.append(year)
+    for year in list(dict.fromkeys(allyears)):
+        maxsize = 0
+        for image in os.listdir(image_workspace):
+            if image.endswith('.jpg') and year == image.split('_')[0]:
+                auid = image.split('_')[-1].replace('.jpg','')
+                size = os.stat(os.path.join(image_workspace,image)).st_size
+                if size>maxsize:
+                    maxsize = size
+                    max_size_by_year[year] = auid
+    return max_size_by_year
+
+
+
 
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = arcpy.GetParameterAsText(0)#'1058321'#arcpy.GetParameterAsText(0)
-    AUI_ID = arcpy.GetParameterAsText(1)#''#arcpy.GetParameterAsText(1)
-    scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
+    orderID = '1058337'#arcpy.GetParameterAsText(0)#'1058321'#arcpy.GetParameterAsText(0)
+    AUI_ID = ''#arcpy.GetParameterAsText(1)#''#arcpy.GetParameterAsText(1)
+    scratch = r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\psr2'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export.mxd'
     conversion_input = r'\\192.168.136.164\v2_usaerial\input'
@@ -403,3 +424,5 @@ if __name__ == '__main__':
                 export_reportimage(image_name,OrderGeometry,image_auid)
         else:
             arcpy.AddError('No Available Image for that AUI ID')
+    best_images = best_imageperyear(scratch)
+    print best_images
