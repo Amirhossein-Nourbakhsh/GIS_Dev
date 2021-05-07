@@ -201,8 +201,8 @@ if __name__ == '__main__':
                 if imagecollection == 'DOQQ':
                     sr = arcpy.Describe(imageuploadpath).spatialReference
                     mosaicfp = os.path.join(scratch,'image_boundary.shp')
-                    arcpy.CreateMosaicDataset_management(os.path.join(scratch,'temp.gdb'), 'doqq', 4326)
-                    arcpy.AddRastersToMosaicDataset_management (os.path.join(scratch,'temp.gdb','doqq'), "Raster Dataset", imageuploadpath, 'NO_CELL_SIZES', True, False,spatial_reference = sr)
+                    arcpy.CreateMosaicDataset_management(os.path.join(scratch,'temp.gdb'), 'raster', 4326)
+                    arcpy.AddRastersToMosaicDataset_management (os.path.join(scratch,'temp.gdb','raster'), "Raster Dataset", imageuploadpath, 'NO_CELL_SIZES', True, False,spatial_reference = sr)
                     arcpy.ExportMosaicDatasetGeometry_management(os.path.join(scratch,'temp.gdb','raster'),mosaicfp,"OBJECTID = 1","FOOTPRINT")
                     cellsizeX = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEX')
                     cellsizeY = arcpy.GetRasterProperties_management(imageuploadpath,'CELLSIZEY')
@@ -221,7 +221,7 @@ if __name__ == '__main__':
                     arcpy.AddMessage(result_right)
                     #Rename image and TAB
                     if os.path.exists(TAB_upload_path):
-                        shutil.copy(os.path.join(uploaded_dir,TAB_image_name),os.path.join(georeferenced_doqq,TAB_image_name)) #copy TAB if exists
+                        shutil.copy(os.path.join(TAB_upload_path),os.path.join(georeferenced_doqq,TAB_image_name)) #copy TAB if exists
                     #Copy image to inventory folder/
                     arcpy.Copy_management(originalpath,os.path.join(scratch,job_image_name))
                     if os.path.exists(os.path.join(georeferenced_doqq,job_image_name)):
@@ -230,6 +230,13 @@ if __name__ == '__main__':
                     image_inv_path = os.path.join(georeferenced_doqq,job_image_name)
                 else:
                     sr = arcpy.Describe(imageuploadpath).spatialReference
+                    if sr.name == 'GCS_Unknown':
+                        sr = arcpy.SpatialReference(4326)
+                        arcpy.DefineProjection_management(imageuploadpath,sr)
+                    elif sr.name != 'Unknown':
+                        pass
+                    else:
+                        arcpy.AddError('Unable to read tab properties:'+ sr.name)
                     mosaicfp = os.path.join(scratch,'image_boundary.shp')
                     arcpy.CreateMosaicDataset_management(os.path.join(scratch,'temp.gdb'), 'raster', 4326)
                     arcpy.AddRastersToMosaicDataset_management (os.path.join(scratch,'temp.gdb','raster'), "Raster Dataset", imageuploadpath, 'NO_CELL_SIZES', True, False,spatial_reference = sr)
@@ -251,7 +258,7 @@ if __name__ == '__main__':
                     arcpy.AddMessage(result_right)
                     #Rename image and TAB
                     if os.path.exists(TAB_upload_path):
-                        shutil.copy(os.path.join(uploaded_dir,TAB_image_name),os.path.join(georeferenced_historical,TAB_image_name)) #copy TAB if exists
+                        shutil.copy(TAB_upload_path,os.path.join(georeferenced_historical,TAB_image_name)) #copy TAB if exists
                     #Copy image to inventory folder/
                     arcpy.Copy_management(originalpath,os.path.join(scratch,job_image_name))
                     if os.path.exists(os.path.join(georeferenced_historical,job_image_name)):
