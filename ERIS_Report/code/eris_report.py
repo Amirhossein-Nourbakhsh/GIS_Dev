@@ -330,7 +330,7 @@ def addERISpoint(pointInfo,mxd,output_folder,out_points=r'points.shp'):
     out_pointsSHP = os.path.join(output_folder,out_points)
     erisPointsLayer = config.LAYER.erisPoints
     #erisIDs_4points = dict((_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID'),[('m%sc'%(_.get("MAP_KEY_LOC"))) if _.get("MAP_KEY_NO_TOT")==1 else ('m%sc(%s)'%(_.get("MAP_KEY_LOC"), _.get("MAP_KEY_NO_TOT"))) ,float('%s'%(1 if round(_.get("ELEVATION_DIFF"),2)>0.0 else 0 if round(_.get("ELEVATION_DIFF"),2)==0.0 else -1 if round(_.get("ELEVATION_DIFF"),2)<0.0 else 100))]) for _ in pointInfo)
-    erisIDs_4points = dict((_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID'),[('m%sc'%(_.get("MAP_KEY_LOC"))) if _.get("MAP_KEY_NO_TOT")==1 else ('m%sc(%s)'%(_.get("MAP_KEY_LOC"), _.get("MAP_KEY_NO_TOT"))) ,float('%s'%(1 if _.get("ELEVATION_DIFF")>0.0 else 0 if _.get("ELEVATION_DIFF")==0.0 else -1 if _.get("ELEVATION_DIFF")<0.0 else 100))]) for _ in pointInfo)
+    erisIDs_4points = dict((_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID'),[('m%sc'%(_.get("MAP_KEY_LOC"))) if _.get("MAP_KEY_NO_TOT")==1 else ('m%sc(%s)'%(_.get("MAP_KEY_LOC"), _.get("MAP_KEY_NO_TOT"))) ,float('%s'%(-2 if _.get("ELEVATION_DIFF")=='-' else 1 if float(_.get("ELEVATION_DIFF"))>0.0 else 0 if float(_.get("ELEVATION_DIFF"))==0.0 else -1 if float(_.get("ELEVATION_DIFF"))<0.0 else 100))]) for _ in pointInfo)
     erispoints = dict((int(_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID')),(_.get("X"),_.get("Y"))) for _ in pointInfo)
     # print(erisIDs_4points)
     if erisIDs_4points != {}:

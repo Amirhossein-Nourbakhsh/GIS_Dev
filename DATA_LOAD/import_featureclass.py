@@ -1,4 +1,12 @@
 import arcpy, os
+class DBConnections():
+    def __init__(self):
+        self.sde_con_us_work = r'\\cabcvan1gis005\GISData\US_WORK.sde'
+        self.sde_con_ca_work = r'\\cabcvan1gis005\GISData\CA_WORK.sde'
+        self.sde_con_eris_work = r'\\cabcvan1gis005\GISData\ERIS_WORK.sde'
+        self.sde_con_test_ca = r'\\cabcvan1gis005\GISData\TEST_CA.sde'
+        self.sde_con_test_us = r'\\cabcvan1gis005\GISData\TEST_US.sde'
+        self.sde_con_test_work = r'\\cabcvan1gis005\GISData\TEST_WORK.sde'
 def strip_arcenv(infc):
     arcpy.env.outputMFlag = "Disabled"
     arcpy.env.outputZFlag = "Disabled"
