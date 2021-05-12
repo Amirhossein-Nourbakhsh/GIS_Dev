@@ -91,18 +91,18 @@ def wetland_ny_to_kml(order_obj):
             arcpy.Union_analysis([wetland_ny_clip,wetland_boudnary],wetland_clip_ny_final)
 
             keep_field_list = ("CLASS")
-            fieldInfo = ""
-            fieldList = arcpy.ListFields(wetland_clip_ny_final)
-            for field in fieldList:
+            field_info = ""
+            field_list = arcpy.ListFields(wetland_clip_ny_final)
+            for field in field_list:
                 if field.name in keep_field_list:
                     if field.name == 'CLASS':
-                        fieldInfo = fieldInfo + field.name + " " + "Wetland CLASS" + " VISIBLE;"
+                        field_info = field_list + field.name + " " + "Wetland CLASS" + " VISIBLE;"
                     else:
                         pass
                 else:
-                    fieldInfo = fieldInfo + field.name + " " + field.name + " HIDDEN;"
+                    field_info = field_info + field.name + " " + field.name + " HIDDEN;"
 
-            arcpy.MakeFeatureLayer_management(wetland_clip_ny_final, 'wetland_ny_clip_lyr', "", "", fieldInfo[:-1])
+            arcpy.MakeFeatureLayer_management(wetland_clip_ny_final, 'wetland_ny_clip_lyr', "", "", field_info[:-1])
             arcpy.ApplySymbologyFromLayer_management('wetland_ny_clip_lyr', config.data_lyr_wetland_ny_kml)
             arcpy.LayerToKML_conversion('wetland_ny_clip_lyr', os.path.join(Kml_Config.viewer_dir_kml,"w_NY_wetland.kmz"))
             arcpy.AddMessage('      -- Create Wetland NY kmz map: %s' % os.path.join(Kml_Config.viewer_dir_kml,"wetland_nodata.kmz"))
@@ -132,7 +132,7 @@ def wetland_ny_to_kml(order_obj):
                             pass
                     else:
                         field_info = field_info + field.name + " " + field.name + " HIDDEN;"
-            arcpy.MakeFeatureLayer_management(wetland_ny_apa_clip_final, 'wetland_ny_apa_clip_final_lyr', "", "", fieldInfo[:-1])
+            arcpy.MakeFeatureLayer_management(wetland_ny_apa_clip_final, 'wetland_ny_apa_clip_final_lyr', "", "", field_info[:-1])
             arcpy.ApplySymbologyFromLayer_management('wetland_ny_apa_clip_final_lyr', config.data_lyr_wetland_ny_apa_kml)
             arcpy.LayerToKML_conversion('wetland_ny_apa_clip_final_lyr', os.path.join(Kml_Config.viewer_dir_kml,"w_apa_wetland.kmz"))
             arcpy.AddMessage('      -- Create APA Wetland kmz map: %s' % os.path.join(Kml_Config.viewer_dir_kml,"w_apa_wetland.kmz"))

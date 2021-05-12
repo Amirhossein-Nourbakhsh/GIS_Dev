@@ -173,6 +173,7 @@ class LAYER():
         self.erisPoints = os.path.join(machine_path,eris_report_path,r"layer","ErisClipCC.lyr")
         self.topowhite = os.path.join(machine_path,eris_report_path,'layer',"topo_white.lyr")
         self.road = os.path.join(machine_path,eris_report_path,r"layer","Roadadd_notransparency.lyr")
+        self.eris_polygon = os.path.join(machine_path,eris_report_path,r"layer","eris_polygon.lyr")
 
 class DATA():
     def __init__(self,machine_path):
@@ -635,8 +636,7 @@ def getWorldAerialYear((centroid_X,centroid_Y)):
                 tries -= 1
 
 def exportViewerTable(ImagePath,FileName):
-    srGoogle = arcpy.SpatialReference(3857)
-    srWGS84 = arcpy.SpatialReference(4326)
+   
     metaitem = {}
     arcpy.DefineProjection_management(ImagePath,srGoogle)
     desc = arcpy.Describe(ImagePath)
@@ -656,17 +656,49 @@ def exportViewerTable(ImagePath,FileName):
     delete_query = "delete from overlay_image_info where order_id = '%s' and type = '%s' and filename = '%s'"%(order_id,metaitem['type'],FileName)
     insert_query = "insert into overlay_image_info values (%s, %s, %s, %.5f, %.5f, %.5f, %.5f, %s, '', '')" % (str(order_id), orderInfo['ORDER_NUM'], "'" + metaitem['type']+"'", metaitem['lat_sw'], metaitem['long_sw'], metaitem['lat_ne'], metaitem['long_ne'],"'"+metaitem['imagename']+"'" )
     image_info = Oracle('test').insert_overlay(delete_query,insert_query)
-
+    
+def export_to_kml(order_number,mxd_doc):
+    viewer_kml_path = os.path.join(scratch,order_number +'_eris_kml')
+    if not os.path.exists(viewer_kml_path):
+        os.mkdir(viewer_kml_path)
+    eris_polygon_clip = os.path.join(scratch, "eris_polygon_clip.shp")
+    df = arcpy.mapping.ListDataFrames(mxd_doc.mxd,'')[0]    # the spatial reference here is UTM zone #, need to change to WGS84 Web Mercator
+    df.spatialReference = srWGS84
+    #re-focus using Buffer layer for multipage
+    if multi_page:
+        buffer_layer = arcpy.mapping.ListLayers(mxd_doc.mxd, "Buffer", df)[0]
+        df.extent = buffer_layer.getSelectedExtent(False)
+        df.scale = df.scale * 1.1
+    df_as_feature = arcpy.Polygon(arcpy.Array([df.extent.lowerLeft, df.extent.lowerRight, df.extent.upperRight, df.extent.upperLeft]), df.spatialReference)
+    del df, mxd_doc
+    eris_kml_extend = os.path.join(scratch,"eris_kml_extend.shp")
+    arcpy.Project_management(df_as_feature, eris_kml_extend, srWGS84)
+    arcpy.Clip_analysis(config.LAYER.eris_polygon, eris_kml_extend, eris_polygon_clip)
+    del df_as_feature
+    
+    if int(arcpy.GetCount_management(eris_polygon_clip).getOutput(0)) != 0:
+        arcpy.MakeFeatureLayer_management(eris_polygon_clip, 'eris_polygon_clip_lyr')
+        arcpy.ApplySymbologyFromLayer_management('eris_polygon_clip_lyr', config.LAYER.eris_polygon)
+        arcpy.LayerToKML_conversion('eris_polygon_clip_lyr', os.path.join(viewer_kml_path,"eris_polygon.kmz"))
+        arcpy.AddMessage('      -- Create ERIS polygon kmz map: %s' % os.path.join(viewer_kml_path,"eris_polygon.kmz"))
+        arcpy.Delete_management('eris_polygon_clip_lyr')
+    
 if __name__ == '__main__':
     try:
         # INPUT #####################################
         order_id = '1050559'#arcpy.GetParameterAsText(0).strip()#'736799'#
+        
         multi_page = False#True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
         grid_size = '0'#arcpy.GetParameterAsText(2).strip()#0#
         code = 'usa'#arcpy.GetParameterAsText(3).strip()#'usa'#
         is_instant = False#True if arcpy.GetParameterAsText(4).strip().lower()=='yes'else False
         scratch = arcpy.env.scratchFolder#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'
         env = 'test'
+        ##get info for order from oracle
+        order_info = Oracle(env).call_function('getorderinfo',str(order_id))
+        order_num = str(order_info['ORDER_NUM'])
+        srGoogle = arcpy.SpatialReference(3857)
+        srWGS84 = arcpy.SpatialReference(4326)
         # Server Setting ############################
         code = 9093 if code.strip().lower()=='usa' else 9036 if code.strip().lower()=='can' else 9049 if code.strip().lower()=='mex' else ValueError
         config = DevConfig(code)
@@ -696,6 +728,8 @@ if __name__ == '__main__':
         arcpy.AddMessage(('call oracle', round(end -start1,4)))
         start=end
 
+        xplorerflag = 'Y'
+        
         # 2 create xplorer directory
         if xplorerflag == 'Y':
             scratchviewer = os.path.join(scratch,orderInfo['ORDER_NUM']+'_current')
@@ -776,7 +810,7 @@ if __name__ == '__main__':
             arcpy.AddMessage(('4-4 maps to 3 pdfs', round(end -start,4)))
             start=end
         scale = map1.df.scale
-        del map1,erisPointsLayer
+        del erisPointsLayer
 
         # 5 Aerial
         mapbing = Map(config.MXD.mxdbing)
@@ -833,12 +867,15 @@ if __name__ == '__main__':
 
         # Xplorer
         if xplorerflag == 'Y':
+            # os.path.join(scratch,'mxd.mxd')
+            export_to_kml(order_num,map1)
+            
             if os.path.exists(os.path.join(viewer_path,orderInfo['ORDER_NUM']+'_current')):
                 shutil.rmtree(os.path.join(viewer_path,orderInfo['ORDER_NUM']+'_current'))
             shutil.copytree(scratchviewer, os.path.join(viewer_path, orderInfo['ORDER_NUM']+'_current'))
             url = currentuploadurl + orderInfo['ORDER_NUM']
             urllib.urlopen(url)
-
+        del map1
     except:
         tb = sys.exc_info()[2]
         tbinfo = traceback.format_tb(tb)[0]
