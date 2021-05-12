@@ -225,7 +225,7 @@ if __name__ == '__main__':
     inputRaster = arcpy.GetParameterAsText(0)
     # DQQQ_footprint_FC = r'\\cabcvan1nas003\doqq\DOQQ_ALL_11202020\DOQQ_ALL_WGS84.shp'
     logfile = r'C:\Users\HKiavarz\Documents\log_DOQQ_seamless_duplicate_path.txt'
-    DQQQ_ALL_FC = r'\\cabcvan1nas003\doqq\AutoRebuild\LOGS\DOQQ_ALL_INCREMENTAL_02152021-04022021\DOQQ_ALL_INCREMENTAL_rectangle.shp'
+    DQQQ_ALL_FC = r'\\CABCVAN1NAS003\doqq\DOQQ_INCREMENTAL\DOQQ_ALL_INCREMENTAL_04082021-05052021\DOQQ_Incremental_04082021-05052021_rectangle.shp'
     # DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\DOQQ_seamless_map'
     # DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\DOQQ_Seamless_map_unknowPath'
     DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic'

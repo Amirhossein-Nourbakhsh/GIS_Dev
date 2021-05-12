@@ -24,7 +24,7 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 if __name__ == "__main__":
-    # id = 1026370
+    ### input parameters
     id = arcpy.GetParameterAsText(0)
     config.if_relief_report = bool(arcpy.GetParameterAsText(1))
     config.if_topo_report = bool(arcpy.GetParameterAsText(2))
@@ -36,7 +36,8 @@ if __name__ == "__main__":
     config.if_radon_report = bool(arcpy.GetParameterAsText(8))
     config.if_aspect_map = bool(arcpy.GetParameterAsText(9))
     config.if_kml_output =bool(arcpy.GetParameterAsText(10))
-    # id = 1026370
+    
+    id = 1026370
     arcpy.AddMessage('Start PSR report...')
     start = timeit.default_timer()
     # ### set workspace
@@ -58,14 +59,14 @@ if __name__ == "__main__":
             
             # config.if_relief_report = True
             # config.if_topo_report = True
-            # config.if_wetland_report = True
+            config.if_wetland_report = True
             # config.if_flood_report = True
             # config.if_geology_report = True
             # config.if_soil_report = True
             # config.if_ogw_report = True
             # config.if_radon_report = True
             # config.if_aspect_map = True
-            # config.if_kml_output = True
+            config.if_kml_output = True
 
             # shaded releif map report
             if config.if_relief_report:
