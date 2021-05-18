@@ -676,17 +676,33 @@ def export_to_kml(order_number,mxd_doc):
     arcpy.Clip_analysis(config.LAYER.eris_polygon, eris_kml_extend, eris_polygon_clip)
     del df_as_feature
     
-    if int(arcpy.GetCount_management(eris_polygon_clip).getOutput(0)) != 0:
-        arcpy.MakeFeatureLayer_management(eris_polygon_clip, 'eris_polygon_clip_lyr')
+    if int(arcpy.GetCount_management(eris_polygon_clip).getOutput(0)) > 0:
+        keep_field_list = ("source")
+        field_info = ""
+        field_list = arcpy.ListFields(eris_polygon_clip)
+        for field in field_list:
+            if field.name.lower() in keep_field_list:
+                if field.name.lower() == 'source':
+                    field_info = field_info + field.name + " " + "Wetland CLASS" + " VISIBLE;"
+                else:
+                    pass
+            else:
+                field_info = field_info + field.name + " " + field.name + " HIDDEN;"
+        arcpy.MakeFeatureLayer_management(eris_polygon_clip, 'eris_polygon_clip_lyr',"", "", field_info[:-1])
         arcpy.ApplySymbologyFromLayer_management('eris_polygon_clip_lyr', config.LAYER.eris_polygon)
         arcpy.LayerToKML_conversion('eris_polygon_clip_lyr', os.path.join(viewer_kml_path,"eris_polygon.kmz"))
         arcpy.AddMessage('      -- Create ERIS polygon kmz map: %s' % os.path.join(viewer_kml_path,"eris_polygon.kmz"))
+        
+        ### copy kml to 006
+        if os.path.exists(os.path.join(viewer_path, order_number + '_eris_kml')):
+                shutil.rmtree(os.path.join(viewer_path, order_number + '_eris_kml'))
+        shutil.copytree(viewer_kml_path, os.path.join(viewer_path, order_number + '_eris_kml'))
         arcpy.Delete_management('eris_polygon_clip_lyr')
     
 if __name__ == '__main__':
     try:
         # INPUT #####################################
-        order_id = '1050559'#arcpy.GetParameterAsText(0).strip()#'736799'#
+        order_id = '1079998'#arcpy.GetParameterAsText(0).strip()#'736799'#
         
         multi_page = False#True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
         grid_size = '0'#arcpy.GetParameterAsText(2).strip()#0#
@@ -718,7 +734,7 @@ if __name__ == '__main__':
         grid_size = '%s %s'%(grid_size,grid_unit)
         viewer_path = server_config['viewer']
         currentuploadurl = server_config['viewer_upload']+r"/ErisInt/BIPublisherPortal_test/Viewer.svc/CurImageUpload?ordernumber="
-
+        
         # STEPS ####################################
         # 1  get order info by Oracle call
         orderInfo= Oracle('test').call_function('getorderinfo',order_id)
