@@ -155,6 +155,15 @@ def set_raster_background(input_raster,remove_color):
     elif remove_color == 'white':
         for i in range(desc.bandCount):
             arcpy.SetRasterProperties_management(input_raster ,nodata= str(i+1) + ' 255')
+    elif remove_color == 'both':
+        for i in range(desc.bandCount):
+            arcpy.SetRasterProperties_management(input_raster ,nodata= str(i+1) + ' 255;'+ str(i+1) + ' 0')
+def set_raster_background_nolicense(input_raster):
+    null_raster = os.path.join(scratch,os.path.basename(input_raster))
+    arcpy.CheckOutExtension("Spatial")
+    outSetNull = SetNull(input_raster, input_raster, "VALUE = 0 OR VALUE > 254")
+    outSetNull.save(null_raster)
+    return null_raster
 def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef = arcpy.SpatialReference(4326)):
     outputSHP = os.path.join(output_folder,output_name)
     if geometry_type.lower()== 'point':
@@ -208,7 +217,7 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
         arcpy.MakeRasterLayer_management(imagepath,lyrpath)
         image_lyr = arcpy.mapping.Layer(lyrpath)
         arcpy.mapping.AddLayer(df,image_lyr,'TOP')
-    sr = arcpy.SpatialReference(3857)#arcpy.GetUTMFromLocation(centroidX,centroidY)
+    sr = arcpy.GetUTMFromLocation(centroidX,centroidY)
     df.spatialReference = sr
     geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
     geometry_layer.visible = False
@@ -401,13 +410,14 @@ def export_frame(imagedict,ordergeometry,buffergeometry):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '1058277'#arcpy.GetParameterAsText(0)#'1058277'#arcpy.GetParameterAsText(0)#'968634'#arcpy.GetParameterAsText(0)
+    orderID = '1079804'#arcpy.GetParameterAsText(0)#'1058277'#arcpy.GetParameterAsText(0)#'968634'#arcpy.GetParameterAsText(0)
     ImageType = 'pdf'#arcpy.GetParameterAsText(1)#'geotiff'#pdf,geotiff,frame arcpy.GetParameterAsText(1)
-    UserMapScale = '500'#arcpy.GetParameterAsText(2)
+    UserMapScale = '1000'#arcpy.GetParameterAsText(2)
     scratch = r'C:\Users\JLoucks\Documents\JL\test4'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export_new.mxd'
     wgs84_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\wgs84_template.mxd'
+    symbol_layer = r'\\cabcvan1gis006\GISData\Aerial_US\layer\order_symbol.lyr'
     arcpy.env.overwriteOutput=True
 
     #Set dynamic or user defined scale
