@@ -387,7 +387,7 @@ def getMaps(mxd, output_folder,map_name,buffer_dict, buffer_sizes_list,unit_code
             mxd.df.scale = ((int(1.1*mxd.df.scale)/100)+1)*100
             unit = 'Kilometer' if unit_code ==9036 else 'Mile'
             mxd.addTextoMap("Map","Map: %s %s Radius"%(buffer_sizes_list[i],unit))
-            #arcpy.mapping.ExportToPDF(mxd.mxd,os.path.join(output_folder,map_name%(i)))
+            arcpy.mapping.ExportToPDF(mxd.mxd,os.path.join(output_folder,map_name%(i)))
             temp.append(os.path.join(output_folder,map_name%(i)))
     if temp==[] and buffer_dict=={}:
         arcpy.mapping.ExportToPDF(mxd.mxd,os.path.join(output_folder,map_name%0))
@@ -636,7 +636,8 @@ def getWorldAerialYear((centroid_X,centroid_Y)):
                 tries -= 1
 
 def exportViewerTable(ImagePath,FileName):
-   
+    srGoogle = arcpy.SpatialReference(3857)
+    srWGS84 = arcpy.SpatialReference(4326)
     metaitem = {}
     arcpy.DefineProjection_management(ImagePath,srGoogle)
     desc = arcpy.Describe(ImagePath)
@@ -702,17 +703,13 @@ def export_to_kml(order_number,mxd_doc):
 if __name__ == '__main__':
     try:
         # INPUT #####################################
-<<<<<<< HEAD
         order_id = '1079998'#arcpy.GetParameterAsText(0).strip()#'736799'#
-=======
-        order_id = '1048712'#arcpy.GetParameterAsText(0).strip()#'736799'#
->>>>>>> 94491cf63a316e75f2be02506214b9eee796858e
         
         multi_page = False#True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
         grid_size = '0'#arcpy.GetParameterAsText(2).strip()#0#
         code = 'usa'#arcpy.GetParameterAsText(3).strip()#'usa'#
         is_instant = False#True if arcpy.GetParameterAsText(4).strip().lower()=='yes'else False
-        scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test2'
+        scratch = arcpy.env.scratchFolder
         env = 'test'
         ##get info for order from oracle
         order_info = Oracle(env).call_function('getorderinfo',str(order_id))
@@ -747,8 +744,6 @@ if __name__ == '__main__':
         end = timeit.default_timer()
         arcpy.AddMessage(('call oracle', round(end -start1,4)))
         start=end
-
-        xplorerflag = 'Y'
         
         # 2 create xplorer directory
         if xplorerflag == 'Y':
@@ -1029,7 +1024,7 @@ if __name__ == '__main__':
             end = timeit.default_timer()
             arcpy.AddMessage(('4-4 maps to 3 pdfs', round(end -start,4)))
             start=end
-        scale = 10000#map1.df.scale
+        scale = map1.df.scale
         del erisPointsLayer
 
         # 5 Aerial
