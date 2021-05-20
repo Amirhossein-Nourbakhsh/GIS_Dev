@@ -701,14 +701,22 @@ def export_to_kml(order_number,mxd_doc):
 if __name__ == '__main__': 
     try:
         # INPUT #####################################
-        order_id = '1079998'#arcpy.GetParameterAsText(0).strip()#'736799'#
+        order_id = arcpy.GetParameterAsText(0).strip()
+        # order_id = '1079998'#'736799'#
         
-        multi_page = False#True if (arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y') else False
-        grid_size = '0'#arcpy.GetParameterAsText(2).strip()#0#
-        code = 'usa'#arcpy.GetParameterAsText(3).strip()#'usa'#
-        is_instant = False#True if arcpy.GetParameterAsText(4).strip().lower()=='yes'else False
+        if arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y':
+            multi_page = True
+        else: 
+            multi_page = False
+        grid_size = arcpy.GetParameterAsText(2).strip()#0#
+        code = arcpy.GetParameterAsText(3).strip()#'usa'#
+        if arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y':
+             is_instant = True
+        else: 
+             is_instant = False
         scratch = arcpy.env.scratchFolder
         env = 'test'
+        
         ##get info for order from oracle
         order_info = Oracle(env).call_function('getorderinfo',str(order_id))
         order_num = str(order_info['ORDER_NUM'])
