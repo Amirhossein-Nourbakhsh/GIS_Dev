@@ -206,7 +206,11 @@ def export_reportimage(imagepath,ordergeometry,auid):
         geo_extent = geometry_layer.getExtent()
         df.extent = geo_extent
         if image_collection == 'DOQQ':
-                if df.scale > 25000:
+                if int(image_year) in list(range(1990,1999)):
+                    df.scale = 62500*1.3 #multiply by 30% to compensate for inaccurate scaling on web mercator projection. 62500 is the scale for 1 quadrangle
+                    w_res = 5100
+                    h_res = 6600
+                elif df.scale > 25000:
                     df.extent = geo_extent
                     df.scale = df.scale * 1.0
                     try:
