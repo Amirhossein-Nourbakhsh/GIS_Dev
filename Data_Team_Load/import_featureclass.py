@@ -40,14 +40,16 @@ def getspatial_ref(infc,outfc):
         return outload
     else:
         return infc
-indbconnection = 'TEST_US'#str(arcpy.GetParameterAsText(0))#r'\\cabcvan1gis005\GISData\Connection to GMTESTC.sde'#arcpy.GetParameterAsText(0) #location of connection file
-infc = r'\\cabcvan1gis005\MISC_DataManagement\DATA_TEAM_LOAD\US\HFA_CO\HFA_CO.shp'#str(arcpy.GetParameterAsText(1))#r'C:\Users\JLoucks\Desktop\HFA_CO.shp'#arcpy.GetParameterAsText(1) This can be a shapefile or .gdb featureclass
-outfc = 'HFA_CA_loadtest'#str(arcpy.GetParameterAsText(2))#'HFA_CO_test'#arcpy.GetParameterAsText(2) #name of table that will be imported to db
-scratch = r'C:\Users\JLoucks\Documents\JL\test4'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test1'
+indbconnection = arcpy.GetParameterAsText(0)#r'\\cabcvan1gis005\GISData\Connection to GMTESTC.sde'#arcpy.GetParameterAsText(0) #location of connection file
+infc = arcpy.GetParameterAsText(1)#r'C:\Users\JLoucks\Desktop\HFA_CO.shp'#arcpy.GetParameterAsText(1) This can be a shapefile or .gdb featureclass
+outfc = arcpy.GetParameterAsText(2)#'HFA_CO_test'#arcpy.GetParameterAsText(2) #name of table that will be imported to db
+scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test1'
 scratchgdb = os.path.join(scratch,'scratch.gdb')
-#arcpy.CreateFileGDB_management(scratch,'scratch.gdb')
-
+arcpy.CreateFileGDB_management(scratchgdb)
+arcpy.AddMessage('Grabbing connection file')
 indbconnection = OracleCredential(indbconnection).get_sde_con_file()
-print indbconnection
+arcpy.AddMessage(indbconnection)
+arcpy.AddMessage('Stripping M Z values and projecting to WGS84')
 infc = str(getspatial_ref(infc,outfc))
+arcpy.AddMessage('Copying Feature Class to DB')
 arcpy.FeatureClassToFeatureClass_conversion(infc,indbconnection,outfc)
