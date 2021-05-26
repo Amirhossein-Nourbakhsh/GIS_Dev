@@ -195,6 +195,11 @@ def set_imagedetail(extent,centerlat,centerlong,fin_image_name):
             raise OracleBadReturn
     except OracleBadReturn:
         arcpy.AddError('status: '+message_return[3]+' - '+message_return[2])
+def get_shapefile(shape_path,out_path):
+    if os.path.exists(shape_path):
+        arcpy.Copy_management(shape_path,out_path)
+    else:
+        pass
 def export_reportimage(imagedict,ordergeometry,image_comment):
     arcpy.AddMessage("Adding to template: "+str(imagedict))
     mxd = arcpy.mapping.MapDocument(mxdexport_template)
@@ -458,6 +463,7 @@ if __name__ == '__main__':
     ##get image matrix and export
     if ImageType == 'frames':
         BufferGeometry = create_clipbuffer(OrderGeometry)
+        get_shapefile(OrderGeometry,os.path.join(job_fin,OrderNumText+'.shp'))
         export_frame(selected_list_json['RESULTS'],OrderGeometry,BufferGeometry)
     else:
         for image_year in selected_list_json['RESULTS'].keys():
@@ -476,6 +482,7 @@ if __name__ == '__main__':
             if ImageType == 'pdf':
                 export_reportimage(getimage_dict,OrderGeometry,image_comment)
             elif ImageType == 'geotiff':
+                get_shapefile(OrderGeometry,os.path.join(job_fin,OrderNumText+'.shp'))
                 export_geotiff(getimage_dict,OrderGeometry,image_comment)
 
 

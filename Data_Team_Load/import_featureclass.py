@@ -6,6 +6,7 @@ class DBConnections():
     sde_con_test_ca = r'\\cabcvan1gis005\GISData\TEST_CA.sde'
     sde_con_test_us = r'\\cabcvan1gis005\GISData\TEST_US.sde'
     sde_con_test_work = r'\\cabcvan1gis005\GISData\TEST_WORK.sde'
+
 class OracleCredential():
     def __init__(self,db_connection_name):
         # initiate connection credential
@@ -45,7 +46,8 @@ infc = arcpy.GetParameterAsText(1)#r'C:\Users\JLoucks\Desktop\HFA_CO.shp'#arcpy.
 outfc = arcpy.GetParameterAsText(2)#'HFA_CO_test'#arcpy.GetParameterAsText(2) #name of table that will be imported to db
 scratch = arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test1'
 scratchgdb = os.path.join(scratch,'scratch.gdb')
-arcpy.CreateFileGDB_management(scratchgdb)
+arcpy.CreateFileGDB_management(scratch,'scratch.gdb')
+
 arcpy.AddMessage('Grabbing connection file')
 indbconnection = OracleCredential(indbconnection).get_sde_con_file()
 arcpy.AddMessage(indbconnection)
