@@ -709,7 +709,9 @@ if __name__ == '__main__':
         else: 
             multi_page = False
         grid_size = arcpy.GetParameterAsText(2).strip()#0#
+        # grid_size = 0
         code = arcpy.GetParameterAsText(3).strip()#'usa'#
+        # code = 'usa'
         if arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y':
              is_instant = True
         else: 
