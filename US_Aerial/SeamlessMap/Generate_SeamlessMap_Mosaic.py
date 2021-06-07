@@ -219,20 +219,19 @@ def find_file(in_path, file_name):
 if __name__ == '__main__':
 
     ws =  arcpy.env.scratchFolder
-    arcpy.env.workspace = ws
     arcpy.env.overwriteOutput = True
     arcpy.AddMessage(ws)
-    inputRaster = arcpy.GetParameterAsText(0)
+    input_doqq_footprint  = arcpy.GetParameterAsText(0)
+    input_doqq_footprint = r'\\cabcvan1nas003\doqq\AutoRebuild\LOGS\DOQQ_ALL_INCREMENTAL05062021-05272021\DOQQ_ALL_INCREMENTAL05062021-05272021_rectangle.shp'
+    arcpy.AddMessage('Input file: %s' % input_doqq_footprint)
+    output_doqq_footprint = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic'
     # DQQQ_footprint_FC = r'\\cabcvan1nas003\doqq\DOQQ_ALL_11202020\DOQQ_ALL_WGS84.shp'
-    logfile = r'C:\Users\HKiavarz\Documents\log_DOQQ_seamless_duplicate_path.txt'
-    DQQQ_ALL_FC = r'\\CABCVAN1NAS003\doqq\DOQQ_INCREMENTAL\DOQQ_ALL_INCREMENTAL_04082021-05052021\DOQQ_Incremental_04082021-05052021_rectangle.shp'
-    # DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\DOQQ_seamless_map'
-    # DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\DOQQ_Seamless_map_unknowPath'
-    DQQQ_footprint_FC = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic'
-
+    log_file = os.path.join(arcpy.env.scratchFolder,'log_DOQQ_seamless.txt')
+    arcpy.AddMessage(log_file)
+   
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.WARNING)
-    handler = logging.FileHandler(logfile)
+    handler = logging.FileHandler(log_file)
     handler.setLevel(logging.WARNING)
     logger.addHandler(handler)
 
@@ -250,11 +249,12 @@ if __name__ == '__main__':
     startDataset = timeit.default_timer()
     arcpy.AddMessage('-------------------------------------------------------------------------------------------------')
     # rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE','SHAPE@'],expression)
-    rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE','SHAPE@'])
+    rows = arcpy.da.SearchCursor(input_doqq_footprint,["FID", 'TABLE','SHAPE@'])
     i=0
     for row in rows:
-        arcpy.AddMessage('Start FID: ' + str(row[0]) + ' - processing Dataset: ' + row[1])
         tabfile_org = row[1].replace('nas2520','cabcvan1nas003')
+        tabfile_org = row[1].replace('v:','\\\\cabcvan1nas003\\doqq')
+        arcpy.AddMessage('Start FID: ' + str(row[0]) + ' - processing Dataset: ' + tabfile_org)
         tabfile_path = ''
         tab_file_name = os.path.basename(tabfile_org)
         tab_file_org_path = os.path.dirname(tabfile_org)
@@ -270,7 +270,7 @@ if __name__ == '__main__':
                     metaData = get_Image_Metadata(img_path_info[0],img_path_info[1],row[0])
                     # footprint_Polygon = get_Footprint(image_Path)
                     footprint_Polygon = row[2].projectAs(srWGS84)
-                    UpdateSeamlessFC(DQQQ_footprint_FC,metaData,footprint_Polygon)
+                    UpdateSeamlessFC(output_doqq_footprint,metaData,footprint_Polygon)
                 else:
                     arcpy.AddWarning("FID : {} - Input raster: is not the type of Composite Geodataset, or does not exist".format(row[0]))
                     logger.warning("FID :, {}, Input raster: is not the type of Composite Geodataset, or does not exist:, {} ".format(row[0], row[1]))
@@ -280,7 +280,7 @@ if __name__ == '__main__':
         else:
             arcpy.AddWarning("FID : {} - Tab file Path is not valid or available for: ".format(row[0]))
             logger.warning("FID : , {}, Tab file Path is not valid or available for:, {} ".format(row[0], row[1]))
-
+    arcpy.AddMessage('Output Featureclass: %s' % output_doqq_footprint)
     endTotal= timeit.default_timer()
     arcpy.AddMessage(('Total Duration:', round(endTotal -startTotal,4)))
 
