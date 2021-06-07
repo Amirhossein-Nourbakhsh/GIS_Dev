@@ -1,13 +1,3 @@
-#-------------------------------------------------------------------------------
-# Name:        module1
-# Purpose:
-#
-# Author:      cchen
-#
-# Created:     21/12/2018
-# Copyright:   (c) cchen 2018
-# Licence:     <your licence>
-#-------------------------------------------------------------------------------
 import cx_Oracle,os,shutil,webbrowser
 
 connectionString = r'ERIS_GIS/gis295@GMPRODC.glaciermedia.inc'
