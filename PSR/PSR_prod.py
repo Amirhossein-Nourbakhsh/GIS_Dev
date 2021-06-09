@@ -169,7 +169,7 @@ try:
 # LOCAL #########################################################################
     OrderIDText = ''
     OrderNumText = r"21021100004"
-    scratchfolder = os.path.join(r"C:\Users\HKiavarz\AppData\Local\Temp\scratch", OrderNumText)
+    scratchfolder = os.path.join(arcpy.env.scratchFolder, OrderNumText)
     scratch = arcpy.CreateFileGDB_management(scratchfolder,r"scratch.gdb")   # for tables to make Querytable
     scratch = os.path.join(scratchfolder,r"scratch.gdb")
 #################################################################################
