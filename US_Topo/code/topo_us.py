@@ -59,7 +59,7 @@ if __name__ == '__main__':
         logger,handler = tf.log(cfg.logfile, cfg.logname)
 
         # get custom order flags
-        is_nova, is_aei, is_newLogo = tf.customrpt(order_obj)
+        is_nova, is_aei, is_terracon, is_newLogo = tf.customrpt(order_obj)
         
         # get spatial references
         srGCS83,srWGS84,srGoogle,srUTM = tf.projlist(order_obj)
@@ -69,8 +69,8 @@ if __name__ == '__main__':
         
         # open mxd and create map extent
         logger.debug("#1")
-        mxd, df = tf.mapDocument(is_nova, srUTM)
-        needtif = tf.mapExtent(df, mxd, srUTM, cfg.multipage)
+        mxd, df = tf.mapDocument(is_nova,is_terracon, srUTM)
+        map_scale, needtif = tf.mapExtent(df, mxd, srUTM, cfg.multipage)
 
         # set boundary
         mxd, df, yesBoundary = tf.setBoundary(mxd, df, cfg.yesBoundary)
@@ -105,23 +105,26 @@ if __name__ == '__main__':
             # create map pages
             logger.debug("#5")
             dictlist = []
+            all_year_data = {}
             if is_aei == 'Y':
                 comb7515 = {}
                 comb7515.update(dict7575)
                 comb7515.update(dict1515)
-                tf.createPDF(comb7515, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize, needtif)
+                comb_year_data = tf.createPDF(comb7515, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize, needtif)
                 dictlist.append(comb7515)
+                all_year_data.update(comb_year_data)
             else:
                 if dict7575:
-                    tf.createPDF(dict7575, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize, needtif)
+                    year_data_75 = tf.createPDF(dict7575, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize, needtif)
                     dictlist.append(dict7575)
+                    all_year_data.update(year_data_75)
                 if dict1515:
-                    tf.createPDF(dict1515, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize, needtif)
+                    year_data_15 = tf.createPDF(dict1515, yearalldict, mxd, df, yesBoundary, srUTM, cfg.multipage, cfg.gridsize, needtif)
                     dictlist.append(dict1515)
-
+                    all_year_data.update(year_data_15)
             # create blank pdf and append cover and summary pages
             tf.goCoverPage(cfg.coverPdf)
-            tf.goSummaryPage(dictlist, cfg.summaryPdf)
+            sort_order = tf.goSummaryPage(dictlist, cfg.summaryPdf)
 
             coverPages = PdfFileReader(open(cfg.coverPdf,'rb'))
             summaryPages = PdfFileReader(open(cfg.summaryPdf,'rb'))
@@ -142,7 +145,7 @@ if __name__ == '__main__':
             outputStream.close()
 
             # save summary data to oracle
-            tf.oracleSummary(dictlist, order_obj.number + "_US_Topo.pdf")
+            tf.oracleSummary(dictlist, order_obj.number + "_US_Topo.pdf",sort_order,map_scale,all_year_data)
 
             # zip tiffs if needtif  
             copydirs = [os.path.join(os.path.join(cfg.scratch,order_obj.number), name) for name in os.listdir(os.path.join(cfg.scratch,order_obj.number))]

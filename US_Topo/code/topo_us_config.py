@@ -8,7 +8,7 @@ if 'arcgisserver' in file_path:
     model_path = os.path.join(r'\\cabcvan1gis005\arcgisserver\directories\arcgissystem\arcgisinput\GPtools\DB_Framework')
 else:
     main_path = os.path.abspath(os.path.join(__file__, os.pardir))
-    model_path = os.path.join(main_path.split('GIS_Dev')[0],'GIS_Dev','DB_Framework')
+    model_path = os.path.join(main_path.split('GIS-Dev')[0],'GIS-Dev','DB_Framework')
 
 sys.path.insert(1,model_path)
 import models
@@ -43,6 +43,14 @@ gridsize = arcpy.GetParameterAsText(4)
 scratch = arcpy.env.scratchFolder
 scratchgdb = arcpy.env.scratchGDB
 
+OrderIDText = 1080305
+BufsizeText = '2.4'
+yesBoundary = 'yes'
+multipage = 'no'
+gridsize = '0'
+scratch = r'C:\Users\JLoucks\Documents\JL\test1'
+scratchgdb = arcpy.env.scratchGDB
+
 # order info
 order_obj = models.Order().get_order(OrderIDText)
 
@@ -66,7 +74,7 @@ extent = os.path.join(scratch, scratchgdb, "extent")
 
 # connections/report outputs
 server_environment = 'dev'
-serverpath = r"\\cabcvan1gis005"
+serverpath = r"\\cabcvan1gis006"
 server_config_file = os.path.join(serverpath, r"GISData\ERISServerConfig.ini")
 server_config = server_loc_config(server_config_file,server_environment)
 
@@ -90,6 +98,7 @@ tifdir_c = os.path.join(masterfolder, "USGS_currentTopo_Geotiff")
 # mxds
 mxdfile = os.path.join(mxdpath,"template.mxd")
 mxdfile_nova = os.path.join(mxdpath,'template_nova.mxd')
+mxdfile_terracon = os.path.join(mxdpath,'template_terracon.mxd')
 
 # layers
 topolyrfile_none = os.path.join(mxdpath,"topo.lyr")
