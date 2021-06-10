@@ -156,7 +156,7 @@ if __name__ == '__main__':
             tf.toXplorer(needtif, dictlist, srGoogle, srWGS84)
 
             # copy files to report check
-            tf.toReportCheck(needtif, order_obj.number + "_US_Topo.pdf")
+            tf.toReportCheck(needtif, is_terracon, order_obj.number + "_US_Topo.pdf")
 
     except:
         # Get the traceback object

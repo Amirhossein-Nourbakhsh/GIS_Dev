@@ -1111,9 +1111,12 @@ class topo_us_rpt(object):
         del mxd, df
         return metadata
 
-    def toReportCheck(self, needtif, pdfreport):
+    def toReportCheck(self, needtif, is_terracon, pdfreport):
         scratchpdf = os.path.join(cfg.scratch,pdfreport)
-        reportcheckpdf = os.path.join(cfg.reportcheckFolder,"TopographicMaps",pdfreport)
+        if is_terracon == 'Y':
+            reportcheckpdf = os.path.join(cfg.noninstantFolder,"TERTopo",pdfreport)
+        else:
+            reportcheckpdf = os.path.join(cfg.reportcheckFolder,"TopographicMaps",pdfreport)
         scratchzip = os.path.join(cfg.scratch,pdfreport[:-3] + "zip")
         reportcheckzip = os.path.join(cfg.reportcheckFolder,"TopographicMaps",pdfreport[:-3] + "zip")
 

@@ -5,10 +5,10 @@ import ConfigParser
 
 file_path =os.path.dirname(os.path.abspath(__file__))
 if 'arcgisserver' in file_path:
-    model_path = os.path.join(r'\\cabcvan1gis005\arcgisserver\directories\arcgissystem\arcgisinput\GPtools\DB_Framework')
+    model_path = os.path.join(r'\\cabcvan1gis006\arcgisserver\directories\arcgissystem\arcgisinput\GPtools\DB_Framework')
 else:
     main_path = os.path.abspath(os.path.join(__file__, os.pardir))
-    model_path = os.path.join(main_path.split('GIS-Dev')[0],'GIS-Dev','DB_Framework')
+    model_path = os.path.join(main_path.split('GIS_Dev')[0],'GIS_Dev','DB_Framework')
 
 sys.path.insert(1,model_path)
 import models
@@ -26,7 +26,7 @@ def server_loc_config(configpath,environment):
     return server_config
 
 # def createScratch():
-#     scratch = os.path.join(r"\\cabcvan1gis005\MISC_DataManagement\_AW\TOPO_US_SCRATCHY", "test1")
+#     scratch = r'C:\Users\JLoucks\Documents\JL\test1'
 #     scratchgdb = "scratch.gdb"
 #     if not os.path.exists(scratch):
 #         os.mkdir(scratch)
@@ -43,13 +43,13 @@ gridsize = arcpy.GetParameterAsText(4)
 scratch = arcpy.env.scratchFolder
 scratchgdb = arcpy.env.scratchGDB
 
-OrderIDText = 1080305
-BufsizeText = '2.4'
-yesBoundary = 'yes'
-multipage = 'no'
-gridsize = '0'
-scratch = r'C:\Users\JLoucks\Documents\JL\test1'
-scratchgdb = arcpy.env.scratchGDB
+# OrderIDText = 1080305
+# BufsizeText = '2.4'
+# yesBoundary = 'yes'
+# multipage = 'no'
+# gridsize = '0'
+# scratch = r'C:\Users\JLoucks\Documents\JL\test1'
+# scratchgdb = arcpy.env.scratchGDB
 
 # order info
 order_obj = models.Order().get_order(OrderIDText)
@@ -73,12 +73,13 @@ orderBuffer = os.path.join(scratch, scratchgdb, "buffer")
 extent = os.path.join(scratch, scratchgdb, "extent")
 
 # connections/report outputs
-server_environment = 'dev'
+server_environment = 'test'
 serverpath = r"\\cabcvan1gis006"
 server_config_file = os.path.join(serverpath, r"GISData\ERISServerConfig.ini")
 server_config = server_loc_config(server_config_file,server_environment)
 
 reportcheckFolder = server_config["reportcheck"]
+noninstantFolder = server_config["noninstant"]
 viewerFolder = server_config["viewer"]
 topouploadurl =  server_config["viewer_upload"] + r"/TopoUpload?ordernumber="
 connectionString = server_config["dbconnection"]
