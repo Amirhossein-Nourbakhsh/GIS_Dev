@@ -135,6 +135,7 @@ def createGeometry(pntCoords,geometry_type,output_folder,output_name, spatialRef
 OrderID = '1058392'#arcpy.GetParameterAsText(0)#'968849'#arcpy.GetParameterAsText(0)'1014745'
 scale = '5000'#arcpy.GetParameterAsText(1)#'2000'#arcpy.GetParameterAsText(1)'1200'
 unit = 'ft'#arcpy.GetParameterAsText(2)#'ft'#arcpy.GetParameterAsText(2)'ft'
+FactoryCode = ''#arcpy.GetParameterAsText(3)
 scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchF0older#r'C:\Users\JLoucks\Documents\JL\test9'
 init_env = 'test'
 jobfolder = os.path.join(r'\\cabcvan1eap003\v2_usaerial\JobData', init_env)
@@ -159,7 +160,10 @@ mxdextent = os.path.join(scratch,'extent.mxd')
 shutil.copy(mxdtemplate,mxdextent)
 mxd = arcpy.mapping.MapDocument(mxdextent)
 df = arcpy.mapping.ListDataFrames(mxd,'*')[0]
-sr = arcpy.SpatialReference(3857)#arcpy.GetUTMFromLocation(centroidX,centroidY)
+if projection == '':
+    arcpy.GetUTMFromLocation(centroidX,centroidY)
+else:
+    sr = arcpy.SpatialReference(int(FactoryCode))
 
 df.spatialReference = sr
 geo_lyr = arcpy.mapping.Layer(site_feat)

@@ -223,7 +223,10 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
         arcpy.MakeRasterLayer_management(imagepath,lyrpath)
         image_lyr = arcpy.mapping.Layer(lyrpath)
         arcpy.mapping.AddLayer(df,image_lyr,'TOP')
-    sr = arcpy.GetUTMFromLocation(centroidX,centroidY)
+    if FactoryCode == '':
+        sr = arcpy.GetUTMFromLocation(centroidX,centroidY)
+    else:
+        sr = arcpy.SpatialReference(int(FactoryCode))
     df.spatialReference = sr
     geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
     geometry_layer.visible = False
@@ -295,7 +298,10 @@ def export_geotiff(imagedict,ordergeometry,image_comment):
         arcpy.MakeRasterLayer_management(imagepath,lyrpath)
         image_lyr = arcpy.mapping.Layer(lyrpath)
         arcpy.mapping.AddLayer(df,image_lyr,'TOP')
-    sr = arcpy.GetUTMFromLocation(centroidX,centroidY)
+    if FactoryCode == '':
+        sr = arcpy.GetUTMFromLocation(centroidX,centroidY)
+    else:
+        sr = arcpy.SpatialReference(int(FactoryCode))
     df.spatialReference = sr
     geometry_layer = arcpy.mapping.ListLayers(mxd,'OrderGeometry',df)[0]
     geometry_layer.visible = False
@@ -419,6 +425,7 @@ if __name__ == '__main__':
     orderID = '1079990'#arcpy.GetParameterAsText(0)#'1058277'#arcpy.GetParameterAsText(0)#'968634'#arcpy.GetParameterAsText(0)
     ImageType = 'pdf'#arcpy.GetParameterAsText(1)#'geotiff'#pdf,geotiff,frame arcpy.GetParameterAsText(1)
     UserMapScale = '500'#arcpy.GetParameterAsText(2)
+    FactoryCode = ''#arcpy.GetParameterAsText(3)
     scratch = r'C:\Users\JLoucks\Documents\JL\test4'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export_new.mxd'

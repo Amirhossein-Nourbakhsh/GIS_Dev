@@ -1,4 +1,4 @@
-import os, arcpy, shutil
+import os, arcpy, shutil, time
 import cx_Oracle
 import json
 
@@ -257,13 +257,23 @@ if __name__ == '__main__':
                     arcpy.AddMessage(result_left)
                     arcpy.AddMessage(result_right)
                     #Rename image and TAB
-                    if os.path.exists(TAB_upload_path):
-                        shutil.copy(TAB_upload_path,os.path.join(georeferenced_historical,TAB_image_name)) #copy TAB if exists
-                    #Copy image to inventory folder/
-                    arcpy.Copy_management(originalpath,os.path.join(scratch,job_image_name))
-                    if os.path.exists(os.path.join(georeferenced_historical,job_image_name)):
-                        arcpy.Delete_management(os.path.join(georeferenced_historical,job_image_name))
-                    arcpy.Copy_management(os.path.join(scratch,job_image_name),os.path.join(georeferenced_historical,job_image_name))
+                    try:
+                        if os.path.exists(TAB_upload_path):
+                            shutil.copy(TAB_upload_path,os.path.join(georeferenced_historical,TAB_image_name)) #copy TAB if exists
+                        #Copy image to inventory folder/
+                        arcpy.Copy_management(originalpath,os.path.join(scratch,job_image_name))
+                        if os.path.exists(os.path.join(georeferenced_historical,job_image_name)):
+                            arcpy.Delete_management(os.path.join(georeferenced_historical,job_image_name))
+                        arcpy.Copy_management(os.path.join(scratch,job_image_name),os.path.join(georeferenced_historical,job_image_name))
+                    except Exception:
+                        time.sleep(20)
+                        if os.path.exists(TAB_upload_path):
+                            shutil.copy(TAB_upload_path,os.path.join(georeferenced_historical,TAB_image_name)) #copy TAB if exists
+                        #Copy image to inventory folder/
+                        arcpy.Copy_management(originalpath,os.path.join(scratch,job_image_name))
+                        if os.path.exists(os.path.join(georeferenced_historical,job_image_name)):
+                            arcpy.Delete_management(os.path.join(georeferenced_historical,job_image_name))
+                        arcpy.Copy_management(os.path.join(scratch,job_image_name),os.path.join(georeferenced_historical,job_image_name))
                     image_inv_path = os.path.join(georeferenced_historical,job_image_name)                
                 image_metadata = str({"PROCEDURE":Oracle.erisapi_procedures['passimagedetail'],"ORDER_NUM":OrderNumText,"AUI_ID":str(auid),"SWLAT":str(result_bot),"SWLONG":str(result_left),"NELAT":str(result_top),"NELONG":str(result_right),"SPATIAL_RESOLUTION":str(spatial_res),"ORIGINAL_IMAGE_PATH":str(image_inv_path)})
                 Oracle('test').call_erisapi(image_metadata)

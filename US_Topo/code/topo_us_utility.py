@@ -228,8 +228,10 @@ class topo_us_rpt(object):
 
             if self.is_aei == 'Y':
                 years.sort(reverse = False)
+                self.sort_order = 'ASC'
             else:
                 years.sort(reverse = True)
+                self.sort_order = 'DESC'
 
             for year in years:
                 seriesText = d[year][1].replace("75", "7.5")
@@ -304,6 +306,7 @@ class topo_us_rpt(object):
 
         doc.build(Story, onFirstPage=self.myFirstPage, onLaterPages=self.myFirstPage)
         doc = None
+        return self.sort_order
 
     def myCoverPage(self, canvas, doc):
         pagesize = portrait(letter)
@@ -383,7 +386,7 @@ class topo_us_rpt(object):
     def createPDF(self, diction, yearalldict, mxd, df, yesboundary, projection, multipage, gridsize, needtif):         # {'1946': ['htmc', '15', [['NY_Newburgh_130830_1946_62500_geo.pdf', 'rowsMain']]], '1903': ['htmc', '15', [['NY_Rosendale_129217_1903_62500_geo.pdf', 'rowsAdj'], ['NY_Newburg_144216_1903_62500_geo.pdf', 'rowsMain']]]}
         # create PDF and also make a copy of the geotiff files if the scale is too small
         years = diction.keys()
-
+        summary_allyear_data = {}
         for year in years:
             if year == "":
                 years.remove("")
@@ -395,7 +398,8 @@ class topo_us_rpt(object):
             quaddict = self.addTopoImages(df, diction, year)
 
             # set mxd elements
-            self.mapSetElements(mxd, year, yearalldict, seriesText, quaddict)
+            summary_year_data = self.mapSetElements(mxd, year, yearalldict, seriesText, quaddict)
+            summary_allyear_data[year]=summary_year_data
 
             # multipage
             if multipage == "Y":
@@ -416,6 +420,7 @@ class topo_us_rpt(object):
             for lyr in arcpy.mapping.ListLayers(mxd, "", df):
                 if lyr.name not in ["Project Property", "Buffer Outline", "Grid"]:
                     arcpy.mapping.RemoveLayer(df, lyr)
+        return summary_allyear_data
 
     def zipDir(self, pdfreport):
         path = os.path.join(cfg.scratch,self.order_obj.number)
@@ -465,6 +470,15 @@ class topo_us_rpt(object):
             arcpy.AddWarning(e)
             arcpy.AddWarning("### ERIS_CUSTOMER.IsProductChron failed...")
         arcpy.AddMessage("is_aei = " + self.is_aei)
+        
+        self.is_terracon = 'N'
+        try:
+            expression = "select decode(c.company_id, 19803, 'Y', 'N') is_terracon from orders o, customer c where o.customer_id = c.customer_id and o.order_id=" + str(order_obj.id)
+            self.is_terracon = self.oracle.query(expression)[0][0]
+        except Exception as e:
+            arcpy.AddWarning(e)
+            arcpy.AddWarning("### is_terracon) failed...")
+        arcpy.AddMessage("is_terracon = " + self.is_terracon)
 
         self.is_newLogo = 'N'
         try:
@@ -480,7 +494,7 @@ class topo_us_rpt(object):
             arcpy.AddWarning("### ERIS_CUSTOMER.IsCustomLogo failed...")
         arcpy.AddMessage("is_newLogo = " + self.is_newLogo)
 
-        return self.is_nova, self.is_aei, self.is_newLogo
+        return self.is_nova, self.is_aei, self.is_terracon, self.is_newLogo
 
     def delyear(self, yeardel7575, yeardel1515, dict7575, dict1515):
         if yeardel7575:
@@ -540,12 +554,14 @@ class topo_us_rpt(object):
         del point
         del array
 
-    def mapDocument(self, is_nova, projection):
+    def mapDocument(self, is_nova,is_terracon, projection):
         arcpy.env.overwriteOutput = True
         arcpy.env.outputCoordinateSystem = projection
 
         if is_nova == 'Y':
             mxd = arcpy.mapping.MapDocument(cfg.mxdfile_nova)
+        elif is_terracon == 'Y':
+            mxd = arcpy.mapping.MapDocument(cfg.mxdfile_terracon)
         else:
             mxd = arcpy.mapping.MapDocument(cfg.mxdfile)
 
@@ -617,7 +633,7 @@ class topo_us_rpt(object):
         polygon = arcpy.Polygon(array, projection)
         arcpy.CopyFeatures_management(polygon, cfg.extent)
         
-        return needtif
+        return mscale,needtif
 
     def setBoundary(self, mxd, df, yesboundary):        
         # get yesboundary flag
@@ -699,8 +715,27 @@ class topo_us_rpt(object):
                         if procdate != None:
                             procdesc = procstep.find("./procdesc")
                             yeardict[procdesc.text.lower()] = procdate.text
+                    year_all_types = {}
+                    if yeardict.get("date on map") is not None:
+                        #year_list.append(yeardict.get("date on map"))
+                        year_all_types['date_on_map'] = yeardict.get("date on map")
+                    if yeardict.get("edit year") is not None:
+                        #year_list.append(yeardict.get("edit year"))
+                        year_all_types['edit_year'] = yeardict.get("edit year")
+                    if yeardict.get("aerial photo year") is not None:
+                        #year_list.append(yeardict.get("aerial photo year"))
+                        year_all_types['aerial_photo_year'] = yeardict.get("aerial photo year")
+                    if yeardict.get("photo revision year") is not None:
+                        #year_list.append(yeardict.get("photo revision year"))
+                        year_all_types['photo_revision_year'] = yeardict.get("photo revision year")
+                    if yeardict.get("field check year") is not None:
+                        #year_list.append(yeardict.get("field check year"))
+                        year_all_types['field_check_year'] = yeardict.get("field check year")
+                    if yeardict.get("photo inspection year") is not None:
+                        #year_list.append(yeardict.get("photo inspection year"))
+                        year_all_types['photo_inspection_year'] = yeardict.get("photo inspection year")
 
-                    year2use = yeardict.get("date on map")
+                    year2use = max([_ for _ in year_all_types.values()])
                     if year2use == "":
                         year2use = row["SourceYear"].strip()
                         arcpy.AddMessage("### cannot determine year of the map from xml...get from csv instead..." + year2use)
@@ -788,7 +823,6 @@ class topo_us_rpt(object):
                     maps7575.append(row)
                 elif row[1] == "15X15 GRID":
                     maps1515.append(row)
-
         return maps7575, maps1515, yearalldict
     
     def addTopoImages(self, df, diction, year): # {'1946': ['htmc', '15', [['NY_Newburgh_130830_1946_62500_geo.pdf', 'rowsMain']]], '1903': ['htmc', '15', [['NY_Rosendale_129217_1903_62500_geo.pdf', 'rowsAdj'], ['NY_Newburg_144216_1903_62500_geo.pdf', 'rowsMain']]]}
@@ -877,47 +911,63 @@ class topo_us_rpt(object):
             else:
                 yearlistText = " "
                 quadText = quadText + quadname + "; "
+        if self.is_terracon == 'Y':
+            pass
+        else:
+            yearTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "year")[0]
+            yearTextE.text = year
 
-        yearTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "year")[0]
-        yearTextE.text = year
+            yearlist = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "yearlist")[0]
+            yearlist.text = yearlistText
 
-        yearlist = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "yearlist")[0]
-        yearlist.text = yearlistText
+            quadrangleTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "quadrangle")[0]
+            quadrangleTextE.text = quadText.rstrip('; ')
 
-        quadrangleTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "quadrangle")[0]
-        quadrangleTextE.text = quadText.rstrip('; ')
+            sourceTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "source")[0]
+            sourceTextE.text = "Source: USGS " + seriesText.replace("75", "7.5") + " Minute Topographic Map"
 
-        sourceTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "source")[0]
-        sourceTextE.text = "Source: USGS " + seriesText.replace("75", "7.5") + " Minute Topographic Map"
+            ordernoTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "orderno")[0]
+            ordernoTextE.text = "Order No. " + self.order_obj.number
 
-        ordernoTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "orderno")[0]
-        ordernoTextE.text = "Order No. " + self.order_obj.number
+            if self.is_nova == 'Y':
+                projNoTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "projno")[0]
+                projNoTextE.text = "Project No: " + self.order_obj.project_num
 
-        if self.is_nova == 'Y':
-            projNoTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "projno")[0]
-            projNoTextE.text = "Project No: " + self.order_obj.project_num
+                siteNameTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "sitename")[0]
+                siteNameTextE.text = "Site Name: " + self.order_obj.site_name + ', ' + self.order_obj.address
 
-            siteNameTextE = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT", "sitename")[0]
-            siteNameTextE.text = "Site Name: " + self.order_obj.site_name + ', ' + self.order_obj.address
+            if self.is_newLogo == 'Y':     # custom logs
+                logoE = arcpy.mapping.ListLayoutElements(mxd, "PICTURE_ELEMENT", "logo")[0]
+                logoE.sourceImage = os.path.join(cfg.logopath, self.newlogofile)
+        return [filteryears,quadText]
 
-        if self.is_newLogo == 'Y':     # custom logs
-            logoE = arcpy.mapping.ListLayoutElements(mxd, "PICTURE_ELEMENT", "logo")[0]
-            logoE.sourceImage = os.path.join(cfg.logopath, self.newlogofile)
-
-    def oracleSummary(self, dictlist, pdfreport):
-        summarydata = []
+    def oracleSummary(self, dictlist, pdfreport,sort_order,map_scale,additional_years):
+        print dictlist
+        summarydata = {}
         topoSource = 'USGS'
+        inch_ft_scale = str(int(map_scale/12))
         for d in dictlist:
             tempyears = d.keys()
             tempyears.sort(reverse = True)
             for year in tempyears:
                 seriesText = d[year][1].replace("75", "7.5")
                 if year != "":
-                    summarydata.append([year, seriesText, topoSource])
+                    try:
+                        aerial_photo_year = additional_years[year][0]['aerial photo year']
+                    except KeyError:
+                        aerial_photo_year = ''
+                    try:
+                        aerial_revision_year = additional_years[year][0]['photo revision year']
+                    except KeyError:
+                        aerial_revision_year = ''
+                    quadtext = additional_years[year][1].split(',')[0]
+                    state = additional_years[year][1].split(',')[1][1:3]
+                    summarydata[year] = {'series':seriesText, 'source':topoSource,'quad':quadtext,'state':state,'aerial_photo_year':aerial_photo_year,'aerial_revision_year':aerial_revision_year}
             tempyears = None
                 
-        summarylist = {"ORDER_ID":self.order_obj.id,"FILENAME":pdfreport,"SUMMARY":summarydata}
+        summarylist = {"ORDER_ID":self.order_obj.id,"FILENAME":pdfreport,"SORT_ORDER":sort_order,"MAP_SCALE":map_scale,"INCH_FT_SCALE": inch_ft_scale,"SUMMARY":summarydata}
         topassorc = json.dumps(summarylist,ensure_ascii=False)
+        print '################################################ :'+ str(topassorc)
 
         try:
             function = 'eris_gis.AddTopoSummary'
@@ -1061,9 +1111,12 @@ class topo_us_rpt(object):
         del mxd, df
         return metadata
 
-    def toReportCheck(self, needtif, pdfreport):
+    def toReportCheck(self, needtif, is_terracon, pdfreport):
         scratchpdf = os.path.join(cfg.scratch,pdfreport)
-        reportcheckpdf = os.path.join(cfg.reportcheckFolder,"TopographicMaps",pdfreport)
+        if is_terracon == 'Y':
+            reportcheckpdf = os.path.join(cfg.noninstantFolder,"TERTopo",pdfreport)
+        else:
+            reportcheckpdf = os.path.join(cfg.reportcheckFolder,"TopographicMaps",pdfreport)
         scratchzip = os.path.join(cfg.scratch,pdfreport[:-3] + "zip")
         reportcheckzip = os.path.join(cfg.reportcheckFolder,"TopographicMaps",pdfreport[:-3] + "zip")
 
