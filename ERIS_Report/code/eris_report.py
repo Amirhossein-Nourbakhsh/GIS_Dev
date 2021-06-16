@@ -702,7 +702,7 @@ if __name__ == '__main__':
     try:
         # INPUT #####################################
         order_id = arcpy.GetParameterAsText(0).strip()
-        # order_id = '1079998'#'736799'#
+        # order_id = '1080523'#'736799'#
         
         if arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y':
             multi_page = True
@@ -712,10 +712,12 @@ if __name__ == '__main__':
         # grid_size = 0
         code = arcpy.GetParameterAsText(3).strip()#'usa'#
         # code = 'usa'
-        if arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y':
+       
+        if arcpy.GetParameterAsText(4).lower()=='yes' or arcpy.GetParameterAsText(4).lower()=='y':
              is_instant = True
         else: 
              is_instant = False
+
         scratch = arcpy.env.scratchFolder
         env = 'test'
         
