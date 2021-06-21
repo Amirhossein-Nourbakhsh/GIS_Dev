@@ -102,6 +102,8 @@ mxdfile_soil = r"\\cabcvan1gis005\GISData\PSR\python\mxd\soil.mxd"
 mxdMMfile_soil = r"\\cabcvan1gis005\GISData\PSR\python\mxd\soilMM.mxd"
 mxdfile_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wells.mxd"
 mxdMMfile_wells = r"\\cabcvan1gis005\GISData\PSR\python\mxd\wellsMM.mxd"
+mxd_survey_pipeline = r"\\cabcvan1gis005\GISData\PSR\python\mxd\survey_pipeline.mxd"
+mxd_survey_pipeline_mm = r"\\cabcvan1gis005\GISData\PSR\python\mxd\survey_pipeline_mm.mxd"
 
 srGCS83 = arcpy.SpatialReference(os.path.join(connectionPath, r"projections\GCSNorthAmerican1983.prj"))
 

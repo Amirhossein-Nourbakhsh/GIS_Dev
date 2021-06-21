@@ -174,7 +174,7 @@ try:
     arcpy.env.OverWriteOutput = True
 
 # LOCAL #######################################################################################################
-    OrderIDText = '1026370'
+    OrderIDText = '1080545'
     scratch_gdb = arcpy.CreateFileGDB_management(scratch_folder,r"scratch_gdb.gdb")   # for tables to make Querytable
     scratch_gdb = os.path.join(scratch_folder,r"scratch_gdb.gdb")
     print(scratch_folder)
@@ -244,12 +244,15 @@ try:
     # 10209 WATER WELL
     # 9144 OGW  (one state source..)
     # 10061 OGW (another state source..)
+    srGoogle = arcpy.SpatialReference(3857)   #web mercator
+    srWGS84 = arcpy.SpatialReference(4326)   #WGS84
+    
     bufferDist_topo = '1 MILES'
     bufferDist_flood = str(searchRadius['10683']) + ' MILES'
     bufferDist_wetland = str(searchRadius['10684']) + ' MILES'
     bufferDist_geol = str(searchRadius['10685']) + ' MILES'
     bufferDist_soil = str(searchRadius['9334']) + ' MILES'
-    #bufferDist_wwells = "0.5 MILES"
+    buffer_dist_sp = "0.5 MILES" #survey and pipeline
     #bufferDist_ogw = "0.5 MILES"
     bufferDist_radon = str(searchRadius['10689']) + ' MILES'    # use teh indoor radon one
 
@@ -331,10 +334,11 @@ try:
     outputjpg_soil = os.path.join(scratch_folder, OrderNumText+'_US_SOIL.jpg')
     outputjpg_geol = os.path.join(scratch_folder, OrderNumText+'_US_GEOL.jpg')
     outputjpg_wells = os.path.join(scratch_folder, OrderNumText+'_US_WELLS.jpg')
+    outputjpg_sp = os.path.join(scratch_folder, OrderNumText+'_US_SURVAY_PIPELINE.jpg')
 
     srGCS83 = PSR_config.srGCS83#arcpy.SpatialReference(os.path.join(connectionPath, r"projections\GCSNorthAmerican1983.prj"))
 
-  
+
 
     erisid = 0
 
@@ -391,7 +395,7 @@ try:
     del UT
     if UTMvalue[0]=='0':
         UTMvalue=' '+UTMvalue[1:]
-    out_coordinate_system = arcpy.SpatialReference('NAD 1983 UTM Zone %sN'%UTMvalue)#os.path.join(connectionPath+'/', r"projections/NAD1983/NAD1983UTMZone"+UTMvalue+"N.prj")
+    out_coordinate_system = arcpy.SpatialReference('NAD 1983 UTM Zone %sN'%UTMvalue)
 
     orderGeometryPR = os.path.join(scratch_folder, "ordergeoNamePR.shp")
     arcpy.Project_management(orderGeometry, orderGeometryPR, out_coordinate_system)
@@ -434,6 +438,25 @@ try:
     multipage_geology = False
     multipage_soil = False
     multipage_wells = False
+    multipage_sp = False # survey and pipeline
+    
+    need_viewer = 'N'
+    try:
+        con = cx_Oracle.connect(connectionString)
+        cur = con.cursor()
+
+        cur.execute("select psr_viewer from order_viewer where order_id =" + str(OrderIDText))
+        t = cur.fetchone()
+        if t != None:
+            need_viewer = t[0]
+        if need_viewer:
+            viewerdir_kml = os.path.join(scratch_folder,OrderNumText+'_psrkml')
+            if not os.path.exists(viewerdir_kml):
+                os.mkdir(viewerdir_kml)
+
+    finally:
+        cur.close()
+        con.close()
 
     gridsize = "2 MILES"
     if geomExtent.width > 1300 or geomExtent.height > 1300:
@@ -445,11 +468,187 @@ try:
         multipage_relief = True
         multipage_topo = True
         multipage_wells = True
+        multipage_sp = True
     if geomExtent.width > 500 or geomExtent.height > 500:
         multipage_topo = True
         multipage_relief = True
         multipage_topo = True
         multipage_wells = True
+    # multipage_sp = True
+# Survey and pipeline
+    print("--- starting survey & pipeline report " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
+    buffer_sp_fc = os.path.join(scratch_folder,"buffer_sp.shp")
+    arcpy.Buffer_analysis(orderGeometryPR, buffer_sp_fc, buffer_dist_sp)
+
+    point = arcpy.Point()
+    array = arcpy.Array()
+    feature_list = []
+
+    width = arcpy.Describe(buffer_sp_fc).extent.width/2
+    height = arcpy.Describe(buffer_sp_fc).extent.height/2
+
+    if (width/height > 7/7):    #7/7 now since adjusted the frame to square
+        # wider shape
+        height = width/7*7
+    else:
+        # longer shape
+        width = height/7*7
+    xCentroid = (arcpy.Describe(buffer_sp_fc).extent.XMax + arcpy.Describe(buffer_sp_fc).extent.XMin)/2
+    yCentroid = (arcpy.Describe(buffer_sp_fc).extent.YMax + arcpy.Describe(buffer_sp_fc).extent.YMin)/2
+    
+    if multipage_sp == True:
+        width = width + 6400     #add 2 miles to each side, for multipage
+        height = height + 6400   #add 2 miles to each side, for multipage
+
+    point.X = xCentroid-width
+    point.Y = yCentroid+height
+    array.add(point)
+    point.X = xCentroid+width
+    point.Y = yCentroid+height
+    array.add(point)
+    point.X = xCentroid+width
+    point.Y = yCentroid-height
+    array.add(point)
+    point.X = xCentroid-width
+    point.Y = yCentroid-height
+    array.add(point)
+    point.X = xCentroid-width
+    point.Y = yCentroid+height
+    array.add(point)
+    feat = arcpy.Polygon(array,spatialRef)
+    array.removeAll()
+    feature_list.append(feat)
+    clip_frame_sp_fc = os.path.join(scratch_folder, "clip_frame_sp.shp")
+    arcpy.CopyFeatures_management(feature_list, clip_frame_sp_fc)
+    clip_frame_desc = arcpy.Describe(clip_frame_sp_fc)
+
+    mxd_sp = arcpy.mapping.MapDocument(PSR_config.mxd_survey_pipeline)
+    # select survey and pipleline feature(s) layers in mxd file
+    pipeline_lyr =  arcpy.mapping.ListLayers(mxd_sp)[0]
+    
+    arcpy.SelectLayerByLocation_management(pipeline_lyr, 'intersect',clip_frame_sp_fc)
+    count_pipeline = int((arcpy.GetCount_management(pipeline_lyr).getOutput(0)))
+
+    survey_lyr = arcpy.mapping.ListLayers(mxd_sp)[1]
+    arcpy.SelectLayerByLocation_management(survey_lyr, 'intersect',clip_frame_sp_fc)
+    count_survey = int((arcpy.GetCount_management(survey_lyr).getOutput(0)))
+
+    if count_pipeline > 0 or count_survey > 0:
+        # mxd_sp_temp = arcpy.mapping.MapDocument(os.path.join(scratch_folder,"mxd_sp_temp.mxd"))
+        df_sp = arcpy.mapping.ListDataFrames(mxd_sp,"*")[0]
+        df_sp.spatialRef = out_coordinate_system
+        df_sp.extent = clip_frame_desc.extent
+        addBuffertoMxd("buffer_sp",df_sp)
+        addOrdergeomtoMxd("ordergeoNamePR", df_sp)
+        for lyr in arcpy.mapping.ListLayers(mxd_sp):
+            # clear selections
+            if lyr.isFeatureLayer:
+                arcpy.SelectLayerByAttribute_management(lyr, "CLEAR_SELECTION")
+        
+        if not multipage_sp:
+            mxd_sp.saveACopy(os.path.join(scratch_folder,"mxd_sp.mxd"))
+            mxd_sp_tmp = arcpy.mapping.MapDocument(os.path.join(scratch_folder,"mxd_sp.mxd"))
+            arcpy.mapping.ExportToJPEG(mxd_sp_tmp, outputjpg_sp, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+            if not os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText)):
+                os.mkdir(os.path.join(report_path, 'PSRmaps', OrderNumText))
+            shutil.copy(outputjpg_sp, os.path.join(report_path, 'PSRmaps', OrderNumText))
+
+        else:
+            grid_name = "grid_lyr_sp" 
+            grid_lyr_shp = os.path.join(scratch_gdb, grid_name)
+            arcpy.GridIndexFeatures_cartography(grid_lyr_shp, buffer_sp_fc, "", "", "", gridsize, gridsize)
+            
+            mxd_mm_sp = arcpy.mapping.MapDocument(PSR_config.mxd_survey_pipeline_mm)
+            df_mm_sp = arcpy.mapping.ListDataFrames(mxd_mm_sp,"*")[0]
+            df_mm_sp.spatialReference = out_coordinate_system
+            # part 1: the overview map
+            # add grid layer
+            grid_layer = arcpy.mapping.Layer(gridlyrfile)
+            grid_layer.replaceDataSource(scratch_gdb,"FILEGDB_WORKSPACE","grid_lyr_sp")
+            arcpy.mapping.AddLayer(df_sp,grid_layer,"Top")
+            
+            df_sp.extent = grid_layer.getExtent()
+            df_sp.scale = df_sp.scale * 1.1
+            
+            mxd_sp.saveACopy(os.path.join(scratch_folder, "mxd_sp.mxd"))
+            arcpy.mapping.ExportToJPEG(mxd_sp, outputjpg_sp, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+            
+            if not os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText)):
+                os.mkdir(os.path.join(report_path, 'PSRmaps', OrderNumText))
+                shutil.copy(outputjpg_sp, os.path.join(report_path, 'PSRmaps', OrderNumText))
+                del mxd_sp
+                del df_sp
+            shutil.copy(outputjpg_sp, os.path.join(report_path, 'PSRmaps', OrderNumText))
+            
+            # part 2: the data driven pages
+            page = 1
+            page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
+
+            addBuffertoMxd("buffer_sp",df_mm_sp)
+            addOrdergeomtoMxd("ordergeoNamePR", df_mm_sp)
+
+            grid_layer_mm = arcpy.mapping.ListLayers(mxd_mm_sp,"Grid" ,df_mm_sp)[0]
+            grid_layer_mm.replaceDataSource(scratch_gdb, "FILEGDB_WORKSPACE","grid_lyr_sp")
+            arcpy.CalculateAdjacentFields_cartography(grid_lyr_shp, 'PageNumber')
+            mxd_mm_sp.saveACopy(os.path.join(scratch_folder, "mxd_mm_sp.mxd"))
+            
+            for i in range(1,int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))+1):
+    	        arcpy.SelectLayerByAttribute_management(grid_layer_mm, "NEW_SELECTION", ' "PageNumber" =  ' + str(i))
+                df_mm_sp.extent = grid_layer_mm.getSelectedExtent(True)
+                df_mm_sp.scale = df_mm_sp.scale * 1.1
+                arcpy.SelectLayerByAttribute_management(grid_layer_mm, "CLEAR_SELECTION")
+
+                title_text = arcpy.mapping.ListLayoutElements(mxd_mm_sp, "TEXT_ELEMENT", "title")[0]
+                title_text.text = "Survey & Pipeline - Page " + str(i)
+                title_text.elementPositionX = 0.468
+                arcpy.RefreshTOC()
+
+                arcpy.mapping.ExportToJPEG(mxd_mm_sp, outputjpg_sp[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+                if not os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText)):
+                    os.mkdir(os.path.join(report_path, 'PSRmaps', OrderNumText))
+                shutil.copy(outputjpg_sp[0:-4]+str(i)+".jpg", os.path.join(report_path, 'PSRmaps', OrderNumText))
+            del mxd_mm_sp
+            del df_mm_sp
+    else:
+        arcpy.AddMessage('There is no survey and pipeline data for this property')
+    ### Generate KML if need viewer
+    if need_viewer:
+        df_sp.spatialRef = srWGS84
+        
+        #re-focus using Buffer layer for multipage
+        if multipage_sp:
+            buffer_layer = arcpy.mapping.ListLayers(mxd_sp, "Buffer", df_sp)[0]
+            df_sp.extent = buffer_layer.getSelectedExtent(False)
+            df_sp.scale = df_sp.scale * 1.1
+        df_as_feature = arcpy.Polygon(arcpy.Array([df_sp.extent.lowerLeft, df_sp.extent.lowerRight, df_sp.extent.upperRight, df_sp.extent.upperLeft]),
+					df_sp.spatialReference)
+        sp_df_extent = os.path.join(scratch_gdb,"sp_df_extent_WGS84")
+        arcpy.Project_management(df_as_feature, sp_df_extent, srWGS84)
+        ### Select pipeline by dataframe extent
+        arcpy.SelectLayerByLocation_management(pipeline_lyr, 'intersect',sp_df_extent)
+        if int((arcpy.GetCount_management(pipeline_lyr).getOutput(0))) > 0:
+            # save Pipeline layer 
+            pipeline_lyr_file = os.path.join(scratch_folder,'pipeline.lyr')
+            arcpy.SaveToLayerFile_management(pipeline_lyr, pipeline_lyr_file, "ABSOLUTE")
+            arcpy.ApplySymbologyFromLayer_management(pipeline_lyr, pipeline_lyr_file)
+            arcpy.LayerToKML_conversion(pipeline_lyr, os.path.join(viewerdir_kml,"pipeline.kmz"))
+        else:
+            arcpy.AddMessage('No Pipeline data for creating KML')
+            
+        ### Select Survey by dataframe extent
+        arcpy.SelectLayerByLocation_management(survey_lyr, 'intersect',sp_df_extent)
+        if int((arcpy.GetCount_management(survey_lyr).getOutput(0))) > 0:
+            # save Survey layer 
+            survey_lyr_file = os.path.join(scratch_folder,'survey.lyr')
+            arcpy.SaveToLayerFile_management(survey_lyr, survey_lyr_file, "ABSOLUTE")
+            arcpy.ApplySymbologyFromLayer_management(survey_lyr, survey_lyr_file)
+            arcpy.LayerToKML_conversion(survey_lyr, os.path.join(viewerdir_kml,"survey.kmz"))
+        else:
+            arcpy.AddMessage('No Pipeline data for creating KML')
+    
+    del mxd_sp
+    del mxd_sp_tmp
+    del df_sp
 
 # current Topo map, no attributes ----------------------------------------------------------------------------------
     print "--- starting Topo section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
@@ -2246,7 +2445,7 @@ try:
     del in_row
     del in_rows
 
-    needViewer = 'N'
+    need_viewer = 'N'
     try:
         con = cx_Oracle.connect(connectionString)
         cur = con.cursor()
@@ -2254,19 +2453,17 @@ try:
         cur.execute("select psr_viewer from order_viewer where order_id =" + str(OrderIDText))
         t = cur.fetchone()
         if t != None:
-            needViewer = t[0]
+            need_viewer = t[0]
 
     finally:
         cur.close()
         con.close()
 
-    if needViewer == 'Y':
+    if need_viewer == 'Y':
         #clip wetland, flood, geology, soil and covnert .lyr to kml
         #for now, use clipFrame_topo to clip
         #added clip current topo
-        viewerdir_kml = os.path.join(scratch_folder,OrderNumText+'_psrkml')
-        if not os.path.exists(viewerdir_kml):
-            os.mkdir(viewerdir_kml)
+      
         viewerdir_topo = os.path.join(scratch_folder,OrderNumText+'_psrtopo')
         if not os.path.exists(viewerdir_topo):
             os.mkdir(viewerdir_topo)
@@ -2282,8 +2479,7 @@ try:
         datalyr_flood = PSR_config.datalyr_flood#r"E:\GISData\PSR\python\mxd\flood.lyr"
         datalyr_geology = PSR_config.datalyr_geology#r"E:\GISData\PSR\python\mxd\geology.lyr"
         masterfilesoil = os.path.join(datapath_soil,'MUPOLYGON')
-        srGoogle = arcpy.SpatialReference(3857)   #web mercator
-        srWGS84 = arcpy.SpatialReference(4326)   #WGS84
+        
 
 # wetland ----------------------------------------------------------------------------------------------------
         wetlandclip = os.path.join(scratch_gdb, "wetlandclip")
