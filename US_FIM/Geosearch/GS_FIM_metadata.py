@@ -36,7 +36,7 @@ import re
 import win32com.client as win32
 
 
-prov = "Hawaii"    #Change prov 
+prov = "Alabama"    #Change prov 
 gs_path = (r"\\10.6.246.73\Sanborn")
 path = os.path.join(gs_path, prov)
 
