@@ -22,12 +22,50 @@ def desc_decode(code):
     elif " C" in code: 
         description = code.replace(" C", "Colour")
         description = re.findall(r"\D+", description)
-    elif "rep" in code:
+    elif " rep" in code:
         description = code.replace(" rep", "Reprinted")
         description = re.findall(r"\D+", description)
     else:
-        description = None
+        description = ""
     return description
+
+def vol_parse(year):
+    #Some years may have Vol 1 attached, parse vol from year
+    if "Vol 1" in year:
+        vol_parse = "Vol 1"
+    else:
+        vol_parse = ""
+    return vol_parse
+
+def vol_formatted(vol):
+    #Format volume to match ERIS naming convention
+    if "Volume." in vol:
+        vol_cleaned = vol.split("Volume. ",1)[1]
+    elif "Volume" in vol:
+        vol_cleaned = vol.split("Volume ",1)[1]
+    elif "Vol." in vol:
+        vol_cleaned = vol.split("Vol. ",1)[1]
+    elif "Vol" in vol:
+        vol_cleaned = vol.split("Vol ",1)[1]
+    else:
+        vol_cleaned = vol
+        
+    if vol_cleaned.count(" ") > 0:
+        vol_cleaned = vol_cleaned.split(" ",1)[0]
+    else:
+        vol_cleaned = vol_cleaned
+    return vol_cleaned
+
+def no_of_sheets(file_path):
+    #Count number of sheets in each directory
+    no_of_sheets = 0
+    for root, directories, files in os.walk(file_path):
+        files[:] = [f for f in files if f not in ["Thumbs.db"]]
+        for item in files:
+            sheet_path = os.path.join(root, item)
+            if os.path.isfile(sheet_path):
+                no_of_sheets += 1
+    return no_of_sheets
 
 
 import os
@@ -36,97 +74,90 @@ import re
 import win32com.client as win32
 
 
-prov = "Alabama"    #Change prov 
+province = "Iowa"    #Change prov 
 gs_path = (r"\\10.6.246.73\Sanborn")
-path = os.path.join(gs_path, prov)
+path = os.path.join(gs_path, province)
 
 #Loop through path to obtain list of filepaths
 file_paths = [] 
 for root, directories, files in os.walk(path):
-    files[:] = [f for f in files if f not in ["Thumbs.db"]]
-    for item in files:
+    for item in directories:
         filepath = os.path.join(root, item)
         file_paths.append(filepath)
 
-
 #Loop through the list of filepaths to parse metadata and append data to a dictionary
-unique_list = set()          # Unique list of file paths 
 resultlist = []              # List of parsed filepaths to export to excel
 resultlist_questionable = [] #List of questionable paths to be manually verified
 
 for item in file_paths:
     delimiter_count = item.count("\\")
-    if delimiter_count == 9:
-        file_path = item                   #e.g. \\10.6.246.73\Sanborn\Alaska\Anchorage\1916\AK_Anchorage_1916_V1_S1.jpg
-        dir_path = item.rsplit("\\", 1)[0] #e.g. \\10.6.246.73\Sanborn\Alaska\Anchorage\1916
-        prov = item.split("\\",5)[4]
-        city = item.split("\\",6)[5]
-        year = item.split("\\",7)[6]
-        vol  = item.split("\\",8)[7]
-        vol_year = vol  = item.split("\\",9)[8]
-        description = desc_decode(year)
-        sheet_no = item.rsplit("\\",1)[1]  #e.g     AK_Anchorage_1916_V1_S1.jpg
+    if delimiter_count == 8:
+        path = item                                   # \\10.6.246.73\Sanborn\Alaska\Anchorage\1916 C\Volume 2
+        prov = item.split("\\",8)[4]                  # Alaska
+        city = item.split("\\",8)[5]                  # Anchorage
+        year = item.split("\\",8)[6]                  # 1916 C
+        vol  = item.split("\\",8)[7]                  # Volume 2
+        description = desc_decode(year)               # C - Colour
+        sheets = no_of_sheets(path)                   # Number of files in each subdirectory
+        vol_for_converted_name = vol_formatted(vol)   # 2
+        year_for_converted_name = year.replace(" C","")
+        converted_name = city + " " + year +"@@@" + prov + "@" + city  + "@" + year_for_converted_name + "@" + vol_for_converted_name  #Match ERIS folder naming convention
 
-        if file_path not in unique_list: 
-            unique_list.add(file_path)
-            resultlist.append({"prov":prov, "city":city, "year":year, "dir_path": dir_path, "desc": description, 
-            "file": sheet_no, "file_path": file_path, "vol":vol, "vol_year": vol_year}) 
+        resultlist.append({"prov":prov, "city":city, "year":year, "dir_path": path, 'vol': vol, "desc": description, "no_of_sheets": sheets,
+        'converted_name': converted_name}) 
 
-    elif delimiter_count == 8:
-        file_path = item                   
-        dir_path = item.rsplit("\\", 1)[0] 
-        prov = item.split("\\",5)[4]
-        city = item.split("\\",6)[5]
-        year = item.split("\\",7)[6]
-        vol  = item.split("\\",8)[7]
-        vol_year = ""
-        description = desc_decode(year)
-        sheet_no = item.rsplit("\\",1)[1]  
-
-        if file_path not in unique_list: 
-            unique_list.add(file_path)
-            resultlist.append({"prov":prov, "city":city, "year":year, "dir_path": dir_path, "desc": description, 
-            "file": sheet_no, "file_path": file_path, "vol":vol, "vol_year": vol_year}) 
-    
     elif delimiter_count == 7:
-        file_path = item                   
-        dir_path = item.rsplit("\\", 1)[0] 
-        prov = item.split("\\",5)[4]
-        city = item.split("\\",6)[5]
+        path = item                
+        prov = item.split("\\",7)[4]
+        city = item.split("\\",7)[5]
         year = item.split("\\",7)[6]
-        vol  = ""
-        vol_year = ""
+        vol  = item.split("\\",7)[7]
+        if vol == "JPEG":
+            vol = ""
         description = desc_decode(year)
-        sheet_no = item.rsplit("\\",1)[1]  
+        sheets = no_of_sheets(path)
+        vol_for_converted_name = vol_formatted(vol)
+        year_for_converted_name = year.replace(" C","")
+        converted_name = city + " " + year +"@@@" + prov + "@" + city  + "@" + year_for_converted_name + "@" + vol_for_converted_name 
 
-        if file_path not in unique_list: 
-            unique_list.add(file_path)
-            resultlist.append({"prov":prov, "city":city, "year":year, "dir_path": dir_path, "desc": description, 
-            "file": sheet_no, "file_path": file_path, "vol":vol, "vol_year": vol_year})
+        resultlist.append({"prov":prov, "city":city, "year":year, "dir_path": path, 'vol': vol, "desc": description, "no_of_sheets": sheets,
+        'converted_name': converted_name}) 
 
     elif delimiter_count == 6:
-        file_path = item 
-        dir_path = item.rsplit("\\", 1)[0]
-        prov = item.split("\\",5)[4]
-        city = item.rsplit("\\",6)[5]
-        year = desc_decode(city)
-        vol  = ""
-        vol_year = ""
-        description = ""
-        sheet_no = item.rsplit("\\",1)[1]
+        path = item 
+        prov = item.split("\\",6)[4]
+        city = item.split("\\",6)[5]
+        year = item.split("\\",6)[6]
+        vol  = vol_parse(year)
+        description = desc_decode(year)
+        sheets = no_of_sheets(path)  
+        vol_for_converted_name = vol_formatted(vol)
+        year_for_converted_name = year.replace(" C","")
+        converted_name = city + " " + year +"@@@" + prov + "@" + city  + "@" + year_for_converted_name + "@" + vol_for_converted_name  
 
-        if file_path not in unique_list: 
-            unique_list.add(file_path)
-            resultlist.append({"prov":prov, "city":city, "year":year, "dir_path": dir_path, "desc": description, 
-            "file": sheet_no, "file_path": file_path, "vol":vol, "vol_year": vol_year})
+        resultlist.append({"prov":prov, "city":city, "year":year, "dir_path": path, 'vol': vol, "desc": description, "no_of_sheets": sheets,
+        'converted_name': converted_name}) 
+
+    elif delimiter_count == 5:
+        path = item        
+        prov = item.split("\\",5)[4]
+        city = item.split("\\",5)[5]
+        year = re.findall(r"\d+", city)
+        vol  = vol_parse(year)
+        description = desc_decode(year)
+        sheets = no_of_sheets(path)  
+        vol_for_converted_name = vol_formatted(vol)
+        converted_name = city + " " + str(year) +"@@@" + prov + "@" + city  + "@" + str(year) + "@" + vol_for_converted_name  
+
+        if len(year) > 0:
+            resultlist.append({"prov":prov, "city":city, "year":year, "dir_path": path, 'vol': vol, "desc": description, "no_of_sheets": sheets,
+            'converted_name': converted_name}) 
     
     #Some FIMS might not have a regular pattern, set these paths to a questionable list for manual verification
     else:
-        dir_path = item
+        path = item
 
-        if dir_path not in unique_list: 
-            unique_list.add(dir_path)
-            resultlist_questionable.append({"dir_path": dir_path})
+        resultlist_questionable.append({"dir_path": path})
            
 
 # Export data to excel 
@@ -142,9 +173,9 @@ else:
 #Create new worksheets per state
 
 sheet1 = excel.Sheets.Add(Before = None , After = excel.Sheets(excel.Sheets.count))
-sheet1.Name = prov
+sheet1.Name = province
 sheet2 = excel.Sheets.Add(Before = None , After = excel.Sheets(excel.Sheets.count))
-sheet2.Name = prov + " - Questionable"
+sheet2.Name = province + " - Questionable"
                                            
 # Add table headers to Sheet1
 sheet1.Cells(1,1).Value = "Province"
@@ -152,14 +183,16 @@ sheet1.Cells(1,2).Value = "City"
 sheet1.Cells(1,3).Value = "Year"  
 sheet1.Cells(1,4).Value = "Volume"         
 sheet1.Cells(1,5).Value = "Vol_Year"                                         
-sheet1.Cells(1,6).Value = "Sheet No"                                             
+sheet1.Cells(1,6).Value = "No of Sheets"                                             
 sheet1.Cells(1,7).Value = "Description"
-sheet1.Cells(1,8).Value = "Missing year"
-sheet1.Cells(1,9).Value = "Missing sheet"
-sheet1.Cells(1,10).Value = "Colour"
-sheet1.Cells(1,11).Value = "GS better quality"
-sheet1.Cells(1,12).Value = "Additional Comments"
-sheet1.Cells(1,13).Value = "Path"
+sheet1.Cells(1,8).Value = "Converted Name"
+sheet1.Cells(1,9).Value = "Missing year"
+sheet1.Cells(1,10).Value = "Missing sheet"
+sheet1.Cells(1,11).Value = "Colour"
+sheet1.Cells(1,12).Value = "GS better quality"
+sheet1.Cells(1,13).Value = "Additional Comments"
+sheet1.Cells(1,14).Value = "Path"
+
     
 # Loop through each dictionary item in resultlist to put data into excel
 row = 2
@@ -168,9 +201,10 @@ for item in resultlist:
     sheet1.Cells(row,2).Value = item["city"]                                              
     sheet1.Cells(row,3).Value = item["year"]   
     sheet1.Cells(row,4).Value = item["vol"]     
-    sheet1.Cells(row,5).Value = item["vol_year"]                                          
-    sheet1.Cells(row,6).Value = item["file"]
+    # sheet1.Cells(row,5).Value = item["vol_year"]                                          
+    sheet1.Cells(row,6).Value = item["no_of_sheets"]
     sheet1.Cells(row,7).Value = item["desc"]
+    sheet1.Cells(row,8).Value = item["converted_name"]
     sheet1.Cells(row,13).Value = item["dir_path"]
     row +=1
 
@@ -183,7 +217,7 @@ sheet1.Cells.HorizontalAlignment = -4131
 
 #Bold headers
 i=1
-for i in range(1,14):
+for i in range(1,15):
     sheet1.Cells(1,i).Font.Bold = True
     i += 1
    
