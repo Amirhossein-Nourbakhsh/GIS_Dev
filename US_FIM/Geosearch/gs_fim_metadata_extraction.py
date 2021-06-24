@@ -1,17 +1,10 @@
 #-------------------------------------------------------------------------------
-# Name:        GS_FIM_metadata 
 # Purpose:     This script parses FIM related information (e.g. prov, city, year
 #              volume, etc..) from the Geosearch folder inventory and exports the 
 #              data by state to excel to create a master list of FIMs.
 #              The script also creates a "questionable sheet" to note directories that
 #              do not meet the pattern specifid in the script. Review the script 
 #              and make adjustments if needed. 
-#
-# Author:      czhou
-#
-# Created:     06/18/2021
-# Copyright:   (c) czhou 2021
-# Licence:     <your licence>
 #-------------------------------------------------------------------------------
 
 def desc_decode(code):
