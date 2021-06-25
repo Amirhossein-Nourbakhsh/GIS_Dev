@@ -42,16 +42,22 @@ def getspatial_ref(infc,outfc):
     else:
         return infc
 indbconnection = 'TEST_US'#arcpy.GetParameterAsText(0)#r'\\cabcvan1gis005\GISData\Connection to GMTESTC.sde'#arcpy.GetParameterAsText(0) #location of connection file
-infc = r'\\CABCVAN1FPR001\DATA\12CTESTING\US\Colorado\METH\2021_05_28\PYLOADER\COMETHANESITES_region.shp'#arcpy.GetParameterAsText(1)#r'C:\Users\JLoucks\Desktop\HFA_CO.shp'#arcpy.GetParameterAsText(1) This can be a shapefile or .gdb featureclass
-outfc = 'METH_CO_REGION1'#arcpy.GetParameterAsText(2)#'HFA_CO_test'#arcpy.GetParameterAsText(2) #name of table that will be imported to db
-scratch = r'C:\Users\JLoucks\Documents\JL\test1'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test1'
+infc = r'\\Cabcvan1fpr001\data\12CTESTING\US\_Federal\NPL\2021_05_20\PYLOADER\NationalPrioritiesList.gdb\Region9_boundaries'#arcpy.GetParameterAsText(1)#r'C:\Users\JLoucks\Desktop\HFA_CO.shp'#arcpy.GetParameterAsText(1) This can be a shapefile or .gdb featureclass
+outfc = 'candelete4'#arcpy.GetParameterAsText(2)#'HFA_CO_test'#arcpy.GetParameterAsText(2) #name of table that will be imported to db
+scratch = r'C:\Users\JLoucks\Documents\JL\test9'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test1'
 scratchgdb = os.path.join(scratch,'scratch.gdb')
 arcpy.CreateFileGDB_management(scratch,'scratch.gdb')
 
-arcpy.AddMessage('Stripping M Z values and projecting to WGS84')
-infc = str(getspatial_ref(infc,outfc))
-arcpy.AddMessage('Grabbing connection file')
-indbconnection = OracleCredential(indbconnection).get_sde_con_file()
-arcpy.AddMessage(indbconnection)
-arcpy.AddMessage('Copying Feature Class to DB')
-arcpy.FeatureClassToFeatureClass_conversion(infc,indbconnection,outfc,config_keyword='SDO_GEOMETRY')
+try:
+    arcpy.AddMessage('Stripping M Z values and projecting to WGS84')
+    infc = str(getspatial_ref(infc,outfc))
+    arcpy.AddMessage('Grabbing connection file')
+    indbconnection = OracleCredential(indbconnection).get_sde_con_file()
+    arcpy.AddMessage(indbconnection)
+    arcpy.AddMessage('Copying Feature Class to DB')
+    arcpy.FeatureClassToFeatureClass_conversion(infc,indbconnection,outfc,config_keyword='SDO_GEOMETRY')
+except Exception as e:
+    arcpy.AddError(e)
+    arcpy.ClearWorkspaceCache_management()
+finally:
+    arcpy.ClearWorkspaceCache_management()
