@@ -13,6 +13,7 @@ from numpy import gradient
 from numpy import arctan2, arctan, sqrt
 import PSR_config
 import json
+import ssl
 
 def returnUniqueSetString_musym(tableName):
     data = arcpy.da.TableToNumPyArray(tableName, ['mukey', 'musym'])
@@ -134,7 +135,8 @@ def getElevation(dataset,fields):
     params['XYs']=pntlist
     params = urllib.urlencode(params)
     inhouse_esri_geocoder = r"https://gisserverprod.glaciermedia.ca/arcgis/rest/services/GPTools_temp/pntElevation2/GPServer/pntElevation2/execute?env%3AoutSR=&env%3AprocessSR=&returnZ=false&returnM=false&f=pjson"
-    f = urllib.urlopen(inhouse_esri_geocoder,params)
+    context = ssl._create_unverified_context()
+    f = urllib.urlopen(inhouse_esri_geocoder,params,context=context)
     results =  json.loads(f.read())
     result = eval( results['results'][0]['value'])
 
