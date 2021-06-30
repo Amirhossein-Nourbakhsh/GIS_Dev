@@ -207,8 +207,9 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
         auid = imagedict[order_value][0]
         image_source = imagedict[order_value][1]
         imagepath = imagedict[order_value][2]
+        image_background = imagedict[order_value][3].lower()
         arcpy.SetRasterProperties_management(imagepath,data_type = 'PROCESSED')
-        set_raster_background(imagepath,'white')
+        set_raster_background(imagepath,image_background)
         img_sr = arcpy.Describe(imagepath).spatialReference
         print img_sr.name
         if img_sr.name == 'Unknown' or img_sr.name == 'GCS_Unknown':
@@ -232,10 +233,10 @@ def export_reportimage(imagedict,ordergeometry,image_comment):
     if PrintScale is not None:
         df.scale = PrintScale
         MapScale = PrintScale
-        export_width = 5100
-        export_height = 6600
     else:
         arcpy.AddError('No scale set for order')
+    export_width = 5100
+    export_height = 6600
     arcpy.RefreshActiveView()
     arcpy.overwriteOutput = True
     if image_comment != "":
@@ -271,8 +272,9 @@ def export_geotiff(imagedict,ordergeometry,image_comment):
         auid = imagedict[order_value][0]
         image_source = imagedict[order_value][1]
         imagepath = imagedict[order_value][2]
+        image_background = imagedict[order_value][3].lower()
         arcpy.SetRasterProperties_management(imagepath,data_type = 'PROCESSED')
-        set_raster_background(imagepath,'white')
+        set_raster_background(imagepath,image_background)
         img_sr = arcpy.Describe(imagepath).spatialReference
         print img_sr.name
         if img_sr.name == 'Unknown' or img_sr.name == 'GCS_Unknown':
@@ -296,10 +298,10 @@ def export_geotiff(imagedict,ordergeometry,image_comment):
     if PrintScale is not None:
         df.scale = PrintScale
         MapScale = PrintScale
-        export_width = 5100
-        export_height = 6600
     else:
         arcpy.AddError('No scale set for order')
+    export_width = 5100
+    export_height = 6600
     arcpy.RefreshActiveView()
     arcpy.overwriteOutput = True
     if image_comment != "":
@@ -399,10 +401,10 @@ def export_frame(imagedict,ordergeometry,buffergeometry):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = arcpy.GetParameterAsText(0)#'1058277'#arcpy.GetParameterAsText(0)#'968634'#arcpy.GetParameterAsText(0)
-    ImageType = arcpy.GetParameterAsText(1)#'geotiff'#pdf,geotiff,frame arcpy.GetParameterAsText(1)
-    UserMapScale = arcpy.GetParameterAsText(2)
-    FactoryCode = arcpy.GetParameterAsText(3)
+    orderID = '1080883'#'1058277'#arcpy.GetParameterAsText(0)#'968634'#arcpy.GetParameterAsText(0)
+    ImageType = 'pdf'#arcpy.GetParameterAsText(1)#'geotiff'#pdf,geotiff,frame arcpy.GetParameterAsText(1)
+    UserMapScale = '500'#arcpy.GetParameterAsText(2)
+    FactoryCode = ''#arcpy.GetParameterAsText(3)
     scratch = r'C:\Users\JLoucks\Documents\JL\test4'#arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export_new.mxd'
@@ -418,8 +420,9 @@ if __name__ == '__main__':
     elif UserMapScale != '' and FactoryCode != '':
         PrintScale = int(int(UserMapScale)*12)
     else:
+        UserMapScale = '500'
         MapScale = 6000
-        PrintScale = None
+        PrintScale = int((int(UserMapScale)*12)*1.25)
 
     ##get info for order from oracle
     orderInfo = Oracle('test').call_function('getorderinfo',orderID)
@@ -462,9 +465,10 @@ if __name__ == '__main__':
                 image_auid = image['AUI_ID']
                 image_source = image['IMAGE_SOURCE']
                 image_path = image['ORIGINAL_IMAGE_PATH']
+                image_background = image['IMAGE_BACKGROUND_COLOR']
                 if image['COMMENTS'] != "":
                     image_comment = image['COMMENTS']
-                getimage_dict[order_key] = [image_auid,image_source,image_path]
+                getimage_dict[order_key] = [image_auid,image_source,image_path,image_background]
             if image_comment == None:
                 image_comment = ""
             if ImageType == 'pdf':
