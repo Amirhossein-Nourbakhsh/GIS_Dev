@@ -222,9 +222,11 @@ if __name__ == '__main__':
     arcpy.env.overwriteOutput = True
     arcpy.AddMessage(ws)
     input_doqq_footprint  = arcpy.GetParameterAsText(0)
-    input_doqq_footprint = r'\\cabcvan1nas003\doqq\AutoRebuild\LOGS\DOQQ_ALL_INCREMENTAL05062021-05272021\DOQQ_ALL_INCREMENTAL05062021-05272021_rectangle.shp'
+    input_doqq_footprint = r'\\cabcvan1nas003\doqq\AutoRebuild\DOQQ_INCREMENTAL\DOQQ_Incremental_05282021-06282021-FINAL\DOQQ_Incremental_05282021-06282021-FINAL_rectangle.shp'
     arcpy.AddMessage('Input file: %s' % input_doqq_footprint)
-    output_doqq_footprint = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic'
+    # output_doqq_footprint = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic'
+    sde_connection = r'C:\Users\HKiavarz\AppData\Roaming\ESRI\Desktop10.8\ArcCatalog\SDE_Test.sde'
+    output_doqq_footprint = r'C:\Users\HKiavarz\AppData\Roaming\ESRI\Desktop10.8\ArcCatalog\SDE_Test.sde\SDE.eris_aerial_footprint_DOQQ'
     # DQQQ_footprint_FC = r'\\cabcvan1nas003\doqq\DOQQ_ALL_11202020\DOQQ_ALL_WGS84.shp'
     log_file = os.path.join(arcpy.env.scratchFolder,'log_DOQQ_seamless.txt')
     arcpy.AddMessage(log_file)
@@ -251,6 +253,9 @@ if __name__ == '__main__':
     # rows = arcpy.da.SearchCursor(DQQQ_ALL_FC,["FID", 'TABLE','SHAPE@'],expression)
     rows = arcpy.da.SearchCursor(input_doqq_footprint,["FID", 'TABLE','SHAPE@'])
     i=0
+    edit = arcpy.da.Editor(sde_connection)
+    edit.startEditing()
+    edit.startOperation()
     for row in rows:
         tabfile_org = row[1].replace('nas2520','cabcvan1nas003')
         tabfile_org = row[1].replace('v:','\\\\cabcvan1nas003\\doqq')
@@ -280,6 +285,8 @@ if __name__ == '__main__':
         else:
             arcpy.AddWarning("FID : {} - Tab file Path is not valid or available for: ".format(row[0]))
             logger.warning("FID : , {}, Tab file Path is not valid or available for:, {} ".format(row[0], row[1]))
+    edit.stopOperation()
+    edit.stopEditing(True)
     arcpy.AddMessage('Output Featureclass: %s' % output_doqq_footprint)
     endTotal= timeit.default_timer()
     arcpy.AddMessage(('Total Duration:', round(endTotal -startTotal,4)))
