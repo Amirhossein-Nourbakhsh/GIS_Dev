@@ -654,10 +654,9 @@ def exportViewerTable(ImagePath,FileName):
     image_info = Oracle('test').insert_overlay(delete_query,insert_query)
     
 def export_to_kml(order_number,mxd_doc):
-    viewer_kml_path = os.path.join(scratch,order_number +'_eris_kml')
-    if not os.path.exists(viewer_kml_path):
-        os.mkdir(viewer_kml_path)
-    eris_polygon_clip = os.path.join(scratch, "eris_polygon_clip.shp")
+    scratch_kml_path = os.path.join(scratch,order_number +'_eris_kml')
+    if not os.path.exists(scratch_kml_path):
+        os.mkdir(scratch_kml_path)
     df = arcpy.mapping.ListDataFrames(mxd_doc.mxd,'')[0]    # the spatial reference here is UTM zone #, need to change to WGS84 Web Mercator
     df.spatialReference = srWGS84
     #re-focus using Buffer layer for multipage
@@ -669,31 +668,33 @@ def export_to_kml(order_number,mxd_doc):
     del df, mxd_doc
     eris_kml_extend = os.path.join(scratch,"eris_kml_extend.shp")
     arcpy.Project_management(df_as_feature, eris_kml_extend, srWGS84)
-    arcpy.Clip_analysis(config.LAYER.eris_polygon, eris_kml_extend, eris_polygon_clip)
+    ### Select pipeline by dataframe extent
+    eris_polygon_lyr = arcpy.mapping.Layer(config.LAYER.eris_polygon)
+    arcpy.SelectLayerByLocation_management(eris_polygon_lyr, 'intersect',df_as_feature)
     del df_as_feature
-    
-    if int(arcpy.GetCount_management(eris_polygon_clip).getOutput(0)) > 0:
-        keep_field_list = ("source")
+    if int((arcpy.GetCount_management(eris_polygon_lyr).getOutput(0))) > 0:
+        desired_fields = ['source']
         field_info = ""
-        field_list = arcpy.ListFields(eris_polygon_clip)
+        field_list = arcpy.ListFields(eris_polygon_lyr.dataSource)
         for field in field_list:
-            if field.name.lower() in keep_field_list:
+            if field.name.lower() in desired_fields:
                 if field.name.lower() == 'source':
                     field_info = field_info + field.name + " " + "Wetland CLASS" + " VISIBLE;"
                 else:
                     pass
             else:
                 field_info = field_info + field.name + " " + field.name + " HIDDEN;"
-        arcpy.MakeFeatureLayer_management(eris_polygon_clip, 'eris_polygon_clip_lyr',"", "", field_info[:-1])
-        arcpy.ApplySymbologyFromLayer_management('eris_polygon_clip_lyr', config.LAYER.eris_polygon)
-        arcpy.LayerToKML_conversion('eris_polygon_clip_lyr', os.path.join(viewer_kml_path,"eris_polygon.kmz"))
+       
+        eris_polygon_lyr = arcpy.MakeFeatureLayer_management(eris_polygon_lyr, 'eris_polygon_lyr', '', '', field_info)
+        arcpy.ApplySymbologyFromLayer_management(eris_polygon_lyr,config.LAYER.eris_polygon)
+        arcpy.LayerToKML_conversion(eris_polygon_lyr, os.path.join(scratch_kml_path,"eris_polygon.kmz"))
         
         ### copy kml to viewer folder
         if os.path.exists(os.path.join(viewer_path, order_number + '_eris_kml')):
                 shutil.rmtree(os.path.join(viewer_path, order_number + '_eris_kml'))
-        shutil.copytree(viewer_kml_path, os.path.join(viewer_path, order_number + '_eris_kml'))
+        shutil.copytree(scratch_kml_path, os.path.join(viewer_path, order_number + '_eris_kml'))
         arcpy.AddMessage('      -- Create ERIS polygon kmz map: %s' % os.path.join(viewer_path, order_number + '_eris_kml'))
-        arcpy.Delete_management('eris_polygon_clip_lyr')
+        arcpy.Delete_management(eris_polygon_lyr)
         ### upload kml from eris polygon into xplorer
         kml_upload_url = kml_upload_service_url + order_num
         urllib.urlopen(kml_upload_url)
@@ -702,16 +703,16 @@ if __name__ == '__main__':
     try:
         # INPUT #####################################
         order_id = arcpy.GetParameterAsText(0).strip()
-        # order_id = '1080523'#'736799'#
+        # order_id = '1080823'#'736799'#
         
         if arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y':
             multi_page = True
         else: 
             multi_page = False
         grid_size = arcpy.GetParameterAsText(2).strip()#0#
-        # grid_size = 0
+        # grid_size = 1
         code = arcpy.GetParameterAsText(3).strip()#'usa'#
-        # code = 'usa'
+        # code = 'USA'
        
         if arcpy.GetParameterAsText(4).lower()=='yes' or arcpy.GetParameterAsText(4).lower()=='y':
              is_instant = True
