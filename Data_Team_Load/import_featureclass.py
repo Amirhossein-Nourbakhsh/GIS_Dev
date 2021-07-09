@@ -47,6 +47,7 @@ outfc = 'candelete4'#arcpy.GetParameterAsText(2)#'HFA_CO_test'#arcpy.GetParamete
 scratch = r'C:\Users\JLoucks\Documents\JL\test9'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test1'
 scratchgdb = os.path.join(scratch,'scratch.gdb')
 arcpy.CreateFileGDB_management(scratch,'scratch.gdb')
+geo_check_table = os.path.join(scratch,"checkGeometryResult")
 
 try:
     arcpy.AddMessage('Stripping M Z values and projecting to WGS84')
@@ -54,6 +55,12 @@ try:
     arcpy.AddMessage('Grabbing connection file')
     indbconnection = OracleCredential(indbconnection).get_sde_con_file()
     arcpy.AddMessage(indbconnection)
+    arcpy.AddMessage('Checking geometry...')
+    arcpy.CheckGeometry_management(infc, geo_check_table)
+    if int(arcpy.GetCount_management(geo_check_table)[0]) > 0:
+        arcpy.AddWarning(str(arcpy.GetCount_management(geo_check_table)[0]) + ' problems found with geometry, please check log here: '+geo_check_table)
+    else:
+        arcpy.AddMessage('Geometry OK')
     arcpy.AddMessage('Copying Feature Class to DB')
     arcpy.FeatureClassToFeatureClass_conversion(infc,indbconnection,outfc,config_keyword='SDO_GEOMETRY')
 except Exception as e:
