@@ -401,28 +401,16 @@ def export_frame(imagedict,ordergeometry,buffergeometry):
 
 if __name__ == '__main__':
     start = timeit.default_timer()
-    orderID = '1080883'#'1058277'#arcpy.GetParameterAsText(0)#'968634'#arcpy.GetParameterAsText(0)
-    ImageType = 'pdf'#arcpy.GetParameterAsText(1)#'geotiff'#pdf,geotiff,frame arcpy.GetParameterAsText(1)
-    UserMapScale = '500'#arcpy.GetParameterAsText(2)
-    FactoryCode = ''#arcpy.GetParameterAsText(3)
-    scratch = r'C:\Users\JLoucks\Documents\JL\test4'#arcpy.env.scratchFolder
+    orderID = arcpy.GetParameterAsText(0)#'968634'#arcpy.GetParameterAsText(0)
+    ImageType = arcpy.GetParameterAsText(1)#'geotiff'#pdf,geotiff,frame arcpy.GetParameterAsText(1)
+    UserMapScale = arcpy.GetParameterAsText(2)
+    FactoryCode = arcpy.GetParameterAsText(3)
+    scratch = arcpy.env.scratchFolder
     job_directory = r'\\192.168.136.164\v2_usaerial\JobData\test'
     mxdexport_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\Aerial_US_Export_new.mxd'
     wgs84_template = r'\\cabcvan1gis006\GISData\Aerial_US\mxd\wgs84_template.mxd'
     symbol_layer = r'\\cabcvan1gis006\GISData\Aerial_US\layer\order_symbol.lyr'
     arcpy.env.overwriteOutput=True
-
-    #Set dynamic or user defined scale
-    if UserMapScale != '' and FactoryCode == '':
-        PrintScale = int((int(UserMapScale)*12)*1.25)
-    elif UserMapScale != '' and FactoryCode == 'UTM':
-        PrintScale = int(int(UserMapScale)*12)
-    elif UserMapScale != '' and FactoryCode != '':
-        PrintScale = int(int(UserMapScale)*12)
-    else:
-        UserMapScale = '500'
-        MapScale = 6000
-        PrintScale = int((int(UserMapScale)*12)*1.25)
 
     ##get info for order from oracle
     orderInfo = Oracle('test').call_function('getorderinfo',orderID)
@@ -444,6 +432,36 @@ if __name__ == '__main__':
     selected_list_return = Oracle('test').call_erisapi(oracle_input)
     selected_list_json = json.loads(selected_list_return[1])
     #print selected_list_json
+
+    #Set dynamic or user defined scale
+    if UserMapScale != '' and FactoryCode == '':
+        if centroidY <= 30:
+            PrintScale = int((int(UserMapScale)*12)*1.25)
+        elif centroidY > 30 and centroidY <= 35:
+            PrintScale = int((int(UserMapScale)*12)*1.3)
+        elif centroidY > 35 and centroidY <= 40:
+            PrintScale = int((int(UserMapScale)*12)*1.35)
+        elif centroidY > 40 and centroidY <= 45:
+            PrintScale = int((int(UserMapScale)*12)*1.4)
+        elif centroidY > 45:
+            PrintScale = int((int(UserMapScale)*12)*1.45)
+    elif UserMapScale != '' and FactoryCode == 'UTM':
+        PrintScale = int(int(UserMapScale)*12)
+    elif UserMapScale != '' and FactoryCode != '':
+        PrintScale = int(int(UserMapScale)*12)
+    else:
+        UserMapScale = '500'
+        MapScale = 6000
+        if centroidY <= 30:
+            PrintScale = int((int(UserMapScale)*12)*1.25)
+        elif centroidY > 30 and centroidY <= 35:
+            PrintScale = int((int(UserMapScale)*12)*1.3)
+        elif centroidY > 35 and centroidY <= 40:
+            PrintScale = int((int(UserMapScale)*12)*1.35)
+        elif centroidY > 40 and centroidY <= 45:
+            PrintScale = int((int(UserMapScale)*12)*1.4)
+        elif centroidY > 45:
+            PrintScale = int((int(UserMapScale)*12)*1.45)
 
     ##create fin directory
     job_fin = os.path.join(job_folder,'fin')
