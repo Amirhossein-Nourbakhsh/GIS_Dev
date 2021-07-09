@@ -615,96 +615,97 @@ try:
                 shutil.copy(outputjpg_sp[0:-4]+str(i)+".jpg", os.path.join(report_path, 'PSRmaps', OrderNumText))
             del mxd_mm_sp
             del df_mm_sp
+    
+        ### Save Survey and Pipeline data in the DB
+        try:
+            con = cx_Oracle.connect(connectionString)
+            cur = con.cursor()
+            ### Insert in order_detail_psr and eris_flex_reporting_psr tables
+            
+            ### Survey
+            for surv_row in survey_cursor:
+                cur.callproc('eris_psr.InsertOrderDetail', (OrderIDText, erisid,'17251'))
+                erisid += 1
+            ### Pipeline
+            for pipe_row in pipeline_cursor:
+                cur.callproc('eris_psr.InsertOrderDetail', (OrderIDText, erisid,'17250'))
+                query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',1, 'Pipe Line ID',pipe_row.PLINE_ID))
+                query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',2, 'Status',pipe_row.STATUS_CD))
+                query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',3, 'T4 Permit NO',pipe_row.T4PERMIT))
+                query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',4, 'Commodity',pipe_row.COMMODITY1))
+                query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',5, 'Cmdty Desc',pipe_row.CMDTY_DESC))
+                query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',6, 'Operator',pipe_row.OPER_NM))
+                query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',7, 'System Name',pipe_row.SYS_NM))
+                query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',7, 'Diameter (inches)',pipe_row.DIAMETER))
+                erisid += 1
+            
+            ### Insert in eris_maps_psr table
+            if os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText, OrderNumText+'_US_SURVEY_PIPELINE.jpg')):
+                query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'SURVEY_PIPELINE', OrderNumText+'_US_SURVEY_PIPELINE.jpg', 1))
+                if multipage_sp == True:
+                    for i in range(1,page):
+                        query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'SURVEY_PIPELINE', OrderNumText+'_US_SURVEY_PIPELINE'+str(i)+'.jpg', i+1))
+
+            else:
+                print( 'No survey and pipleline map is available')
+        finally:
+            cur.close()
+        ### Generate KML if need viewer
+        if need_viewer:
+            df_sp.spatialRef = srWGS84
+            
+            #re-focus using Buffer layer for multipage
+            if multipage_sp:
+                buffer_layer = arcpy.mapping.ListLayers(mxd_sp, "Buffer", df_sp)[0]
+                df_sp.extent = buffer_layer.getSelectedExtent(False)
+                df_sp.scale = df_sp.scale * 1.1
+            df_as_feature = arcpy.Polygon(arcpy.Array([df_sp.extent.lowerLeft, df_sp.extent.lowerRight, df_sp.extent.upperRight, df_sp.extent.upperLeft]),
+                        df_sp.spatialReference)
+            sp_df_extent = os.path.join(scratch_gdb,"sp_df_extent_WGS84")
+            arcpy.Project_management(df_as_feature, sp_df_extent, srWGS84)
+            ### Select pipeline by dataframe extent to generate kml file
+            arcpy.SelectLayerByLocation_management(pipeline_lyr, 'intersect',sp_df_extent)
+            if int((arcpy.GetCount_management(pipeline_lyr).getOutput(0))) > 0:
+                pipeline_visible_fields = ['PLINE_ID','STATUS_CD','STATUS_CD','T4PERMIT','COMMODITY1','CMDTY_DESC','OPER_NM','SYS_NM','DIAMETER']
+                pipeline_field_info = ""
+                pipeline_field_list = arcpy.ListFields(pipeline_lyr.dataSource)
+                for field in pipeline_field_list:
+                    if field.name in pipeline_visible_fields:
+                            pipeline_field_info = pipeline_field_info + field.name + " " + field.name + " VISIBLE;"
+                    else:
+                        pipeline_field_info = pipeline_field_info + field.name + " " + field.name + " HIDDEN;"
+                # save Pipeline layer 
+                pipeline_lyr_file = os.path.join(scratch_folder,'pipeline.lyr')
+                arcpy.SaveToLayerFile_management(pipeline_lyr_file, pipeline_lyr_file, "ABSOLUTE")
+                
+                pipeline_tmp_lyr = arcpy.MakeFeatureLayer_management(pipeline_lyr, 'pipeline_tmp_lyr', "", "", pipeline_field_info[:-1])
+                arcpy.ApplySymbologyFromLayer_management(pipeline_tmp_lyr, pipeline_lyr_file)
+                
+                arcpy.LayerToKML_conversion(pipeline_tmp_lyr, os.path.join(viewerdir_kml,"pipeline.kmz"))
+            else:
+                arcpy.AddMessage('No Pipeline data for creating KML')
+            
+            ### Select Survey by dataframe extent to generate kml file
+            arcpy.SelectLayerByLocation_management(survey_lyr, 'intersect',sp_df_extent)
+            if int((arcpy.GetCount_management(survey_lyr).getOutput(0))) > 0:
+                survey_visible_fields = ['ANUM2','L1SURNAM']
+                survey_field_info = ""
+                survey_field_list = arcpy.ListFields(survey_lyr.dataSource)
+                for field in survey_field_list:
+                    if field.name in survey_visible_fields:
+                            survey_field_info = survey_field_info + field.name + " " + field.name + " VISIBLE;"
+                    else:
+                        survey_field_info = survey_field_info + field.name + " " + field.name + " HIDDEN;"
+                # save Survey layer 
+                survey_lyr_file = os.path.join(scratch_folder,'survey.lyr')
+                arcpy.SaveToLayerFile_management(survey_lyr, survey_lyr_file, "ABSOLUTE")
+                surveye_tmp_lyr = arcpy.MakeFeatureLayer_management(survey_lyr_file, 'surveye_tmp_lyr', "", "", survey_field_info[:-1])
+                arcpy.ApplySymbologyFromLayer_management(surveye_tmp_lyr, survey_lyr_file)
+                arcpy.LayerToKML_conversion(surveye_tmp_lyr, os.path.join(viewerdir_kml,"survey.kmz"))
+            else:
+                arcpy.AddMessage('No Pipeline data for creating KML')
     else:
         arcpy.AddMessage('There is no survey and pipeline data for this property')
-    ### Save Survey and Pipeline data in the DB
-    try:
-        con = cx_Oracle.connect(connectionString)
-        cur = con.cursor()
-        ### Insert in order_detail_psr and eris_flex_reporting_psr tables
-        
-        ### Survey
-        for surv_row in survey_cursor:
-            cur.callproc('eris_psr.InsertOrderDetail', (OrderIDText, erisid,'17251'))
-            erisid += 1
-        ### Pipeline
-        for pipe_row in pipeline_cursor:
-            cur.callproc('eris_psr.InsertOrderDetail', (OrderIDText, erisid,'17250'))
-            query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',1, 'Pipe Line ID',pipe_row.PLINE_ID))
-            query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',2, 'Status',pipe_row.STATUS_CD))
-            query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',3, 'T4 Permit NO',pipe_row.T4PERMIT))
-            query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',4, 'Commodity',pipe_row.COMMODITY1))
-            query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',5, 'Cmdty Desc',pipe_row.CMDTY_DESC))
-            query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',6, 'Operator',pipe_row.OPER_NM))
-            query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',7, 'System Name',pipe_row.SYS_NM))
-            query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',7, 'Diameter (inches)',pipe_row.DIAMETER))
-            erisid += 1
-         
-        ### Insert in eris_maps_psr table
-        if os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText, OrderNumText+'_US_SURVEY_PIPELINE.jpg')):
-            query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'SURVEY_PIPELINE', OrderNumText+'_US_SURVEY_PIPELINE.jpg', 1))
-            if multipage_sp == True:
-                for i in range(1,page):
-                    query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'SURVEY_PIPELINE', OrderNumText+'_US_SURVEY_PIPELINE'+str(i)+'.jpg', i+1))
-
-        else:
-            print( 'No survey and pipleline map is available')
-    finally:
-        cur.close()
-    ### Generate KML if need viewer
-    if need_viewer:
-        df_sp.spatialRef = srWGS84
-        
-        #re-focus using Buffer layer for multipage
-        if multipage_sp:
-            buffer_layer = arcpy.mapping.ListLayers(mxd_sp, "Buffer", df_sp)[0]
-            df_sp.extent = buffer_layer.getSelectedExtent(False)
-            df_sp.scale = df_sp.scale * 1.1
-        df_as_feature = arcpy.Polygon(arcpy.Array([df_sp.extent.lowerLeft, df_sp.extent.lowerRight, df_sp.extent.upperRight, df_sp.extent.upperLeft]),
-					df_sp.spatialReference)
-        sp_df_extent = os.path.join(scratch_gdb,"sp_df_extent_WGS84")
-        arcpy.Project_management(df_as_feature, sp_df_extent, srWGS84)
-        ### Select pipeline by dataframe extent to generate kml file
-        arcpy.SelectLayerByLocation_management(pipeline_lyr, 'intersect',sp_df_extent)
-        if int((arcpy.GetCount_management(pipeline_lyr).getOutput(0))) > 0:
-            pipeline_visible_fields = ['PLINE_ID','STATUS_CD','STATUS_CD','T4PERMIT','COMMODITY1','CMDTY_DESC','OPER_NM','SYS_NM','DIAMETER']
-            pipeline_field_info = ""
-            pipeline_field_list = arcpy.ListFields(pipeline_lyr.dataSource)
-            for field in pipeline_field_list:
-                if field.name in pipeline_visible_fields:
-                        pipeline_field_info = pipeline_field_info + field.name + " " + field.name + " VISIBLE;"
-                else:
-                    pipeline_field_info = pipeline_field_info + field.name + " " + field.name + " HIDDEN;"
-            # save Pipeline layer 
-            pipeline_lyr_file = os.path.join(scratch_folder,'pipeline.lyr')
-            arcpy.SaveToLayerFile_management(pipeline_lyr_file, pipeline_lyr_file, "ABSOLUTE")
-            
-            pipeline_tmp_lyr = arcpy.MakeFeatureLayer_management(pipeline_lyr, 'pipeline_tmp_lyr', "", "", pipeline_field_info[:-1])
-            arcpy.ApplySymbologyFromLayer_management(pipeline_tmp_lyr, pipeline_lyr_file)
-            
-            arcpy.LayerToKML_conversion(pipeline_tmp_lyr, os.path.join(viewerdir_kml,"pipeline.kmz"))
-        else:
-            arcpy.AddMessage('No Pipeline data for creating KML')
-            
-        ### Select Survey by dataframe extent to generate kml file
-        arcpy.SelectLayerByLocation_management(survey_lyr, 'intersect',sp_df_extent)
-        if int((arcpy.GetCount_management(survey_lyr).getOutput(0))) > 0:
-            survey_visible_fields = ['ANUM2','L1SURNAM']
-            survey_field_info = ""
-            survey_field_list = arcpy.ListFields(survey_lyr.dataSource)
-            for field in survey_field_list:
-                if field.name in survey_visible_fields:
-                        survey_field_info = survey_field_info + field.name + " " + field.name + " VISIBLE;"
-                else:
-                    survey_field_info = survey_field_info + field.name + " " + field.name + " HIDDEN;"
-            # save Survey layer 
-            survey_lyr_file = os.path.join(scratch_folder,'survey.lyr')
-            arcpy.SaveToLayerFile_management(survey_lyr, survey_lyr_file, "ABSOLUTE")
-            surveye_tmp_lyr = arcpy.MakeFeatureLayer_management(survey_lyr_file, 'surveye_tmp_lyr', "", "", survey_field_info[:-1])
-            arcpy.ApplySymbologyFromLayer_management(surveye_tmp_lyr, survey_lyr_file)
-            arcpy.LayerToKML_conversion(surveye_tmp_lyr, os.path.join(viewerdir_kml,"survey.kmz"))
-        else:
-            arcpy.AddMessage('No Pipeline data for creating KML')
     
     del mxd_sp
     del mxd_sp_tmp
