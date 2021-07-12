@@ -176,7 +176,7 @@ try:
     arcpy.env.OverWriteOutput = True
 
 # LOCAL #######################################################################################################
-    OrderIDText = '1129956'
+    # OrderIDText = '1129991'
     scratch_gdb = arcpy.CreateFileGDB_management(scratch_folder,r"scratch_gdb.gdb")   # for tables to make Querytable
     scratch_gdb = os.path.join(scratch_folder,r"scratch_gdb.gdb")
     arcpy.AddMessage(scratch_folder)
@@ -478,7 +478,7 @@ try:
         multipage_wells = True
     # multipage_sp = True
 # Survey and pipeline
-    print("--- starting survey & pipeline report " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
+    arcpy.AddMessage("--- starting survey & pipeline report " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     buffer_sp_fc = os.path.join(scratch_folder,"buffer_sp.shp")
     arcpy.Buffer_analysis(orderGeometryPR, buffer_sp_fc, buffer_dist_sp)
 
@@ -536,97 +536,99 @@ try:
     arcpy.SelectLayerByLocation_management(survey_lyr, 'intersect',data_frame_sp_fc)
     count_survey = int((arcpy.GetCount_management(survey_lyr).getOutput(0)))
 
-    if count_pipeline > 0 or count_survey > 0:
-        survey_cursor = arcpy.SearchCursor(survey_lyr) # use it for inserting in DB 
-        pipeline_cursor = arcpy.SearchCursor(pipeline_lyr) # use it for inserting in DB 
-        
-        df_sp = arcpy.mapping.ListDataFrames(mxd_sp,"*")[0]
-        df_sp.spatialRef = out_coordinate_system
-        df_sp.extent = data_frame_desc.extent
-        addBuffertoMxd("buffer_sp",df_sp)
-        addOrdergeomtoMxd("ordergeoNamePR", df_sp)
-        for lyr in arcpy.mapping.ListLayers(mxd_sp):
-            # clear selections
-            if lyr.isFeatureLayer:
-                arcpy.SelectLayerByAttribute_management(lyr, "CLEAR_SELECTION")
-        
-        if not multipage_sp:
-            mxd_sp.saveACopy(os.path.join(scratch_folder,"mxd_sp.mxd"))
-            mxd_sp_tmp = arcpy.mapping.MapDocument(os.path.join(scratch_folder,"mxd_sp.mxd"))
-            arcpy.mapping.ExportToJPEG(mxd_sp_tmp, outputjpg_sp, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-            if not os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText)):
-                os.mkdir(os.path.join(report_path, 'PSRmaps', OrderNumText))
-            shutil.copy(outputjpg_sp, os.path.join(report_path, 'PSRmaps', OrderNumText))
-
-        else:
-            grid_name = 'grid_lyr_sp'
-            grid_lyr_shp = os.path.join(scratch_gdb, grid_name)
-            arcpy.GridIndexFeatures_cartography(grid_lyr_shp, buffer_sp_fc, "", "", "", gridsize, gridsize)
-            
-            mxd_mm_sp = arcpy.mapping.MapDocument(PSR_config.mxd_survey_pipeline_mm)
-            df_mm_sp = arcpy.mapping.ListDataFrames(mxd_mm_sp,"*")[0]
-            df_mm_sp.spatialReference = out_coordinate_system
-            # part 1: the overview map
-            # add grid layer
-            grid_layer = arcpy.mapping.Layer(gridlyrfile)
-            grid_layer.replaceDataSource(scratch_gdb,"FILEGDB_WORKSPACE","grid_lyr_sp")
-            arcpy.mapping.AddLayer(df_sp,grid_layer,"Top")
-            
-            df_sp.extent = grid_layer.getExtent()
-            df_sp.scale = df_sp.scale * 1.1
-            
-            mxd_sp.saveACopy(os.path.join(scratch_folder, "mxd_sp.mxd"))
-            mxd_sp_tmp = arcpy.mapping.MapDocument(os.path.join(scratch_folder,"mxd_sp.mxd"))
-            arcpy.mapping.ExportToJPEG(mxd_sp_tmp, outputjpg_sp, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-            
-            if not os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText)):
-                os.mkdir(os.path.join(report_path, 'PSRmaps', OrderNumText))
-                shutil.copy(outputjpg_sp, os.path.join(report_path, 'PSRmaps', OrderNumText))
-                del mxd_sp
-                del df_sp
-            shutil.copy(outputjpg_sp, os.path.join(report_path, 'PSRmaps', OrderNumText))
-            
-            # part 2: the data driven pages
-            page = 1
-            page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
-
-            addBuffertoMxd("buffer_sp",df_mm_sp)
-            addOrdergeomtoMxd("ordergeoNamePR", df_mm_sp)
-
-            grid_layer_mm = arcpy.mapping.ListLayers(mxd_mm_sp,"Grid" ,df_mm_sp)[0]
-            grid_layer_mm.replaceDataSource(scratch_gdb, "FILEGDB_WORKSPACE","grid_lyr_sp")
-            arcpy.CalculateAdjacentFields_cartography(grid_lyr_shp, 'PageNumber')
-            mxd_mm_sp.saveACopy(os.path.join(scratch_folder, "mxd_mm_sp.mxd"))
-            
-            for i in range(1,int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))+1):
-    	        arcpy.SelectLayerByAttribute_management(grid_layer_mm, "NEW_SELECTION", ' "PageNumber" =  ' + str(i))
-                df_mm_sp.extent = grid_layer_mm.getSelectedExtent(True)
-                df_mm_sp.scale = df_mm_sp.scale * 1.1
-                arcpy.SelectLayerByAttribute_management(grid_layer_mm, "CLEAR_SELECTION")
-
-                title_text = arcpy.mapping.ListLayoutElements(mxd_mm_sp, "TEXT_ELEMENT", "title")[0]
-                title_text.text = "Survey & Pipeline - Page " + str(i)
-                title_text.elementPositionX = 0.468
-                arcpy.RefreshTOC()
-
-                arcpy.mapping.ExportToJPEG(mxd_mm_sp, outputjpg_sp[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
-                if not os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText)):
-                    os.mkdir(os.path.join(report_path, 'PSRmaps', OrderNumText))
-                shutil.copy(outputjpg_sp[0:-4]+str(i)+".jpg", os.path.join(report_path, 'PSRmaps', OrderNumText))
-            del mxd_mm_sp
-            del df_mm_sp
+    # if count_pipeline > 0 or count_survey > 0:
+    survey_cursor = arcpy.SearchCursor(survey_lyr) # use it for inserting in DB 
+    pipeline_cursor = arcpy.SearchCursor(pipeline_lyr) # use it for inserting in DB 
     
-        ### Save Survey and Pipeline data in the DB
-        try:
-            con = cx_Oracle.connect(connectionString)
-            cur = con.cursor()
-            ### Insert in order_detail_psr and eris_flex_reporting_psr tables
+    df_sp = arcpy.mapping.ListDataFrames(mxd_sp,"*")[0]
+    df_sp.spatialRef = out_coordinate_system
+    df_sp.extent = data_frame_desc.extent
+    addBuffertoMxd("buffer_sp",df_sp)
+    addOrdergeomtoMxd("ordergeoNamePR", df_sp)
+    for lyr in arcpy.mapping.ListLayers(mxd_sp):
+        # clear selections
+        if lyr.isFeatureLayer:
+            arcpy.SelectLayerByAttribute_management(lyr, "CLEAR_SELECTION")
+        
+    if not multipage_sp:
+        mxd_sp.saveACopy(os.path.join(scratch_folder,"mxd_sp.mxd"))
+        mxd_sp_tmp = arcpy.mapping.MapDocument(os.path.join(scratch_folder,"mxd_sp.mxd"))
+        arcpy.mapping.ExportToJPEG(mxd_sp_tmp, outputjpg_sp, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+        if not os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText)):
+            os.mkdir(os.path.join(report_path, 'PSRmaps', OrderNumText))
+        shutil.copy(outputjpg_sp, os.path.join(report_path, 'PSRmaps', OrderNumText))
+
+    else:
+        grid_name = 'grid_lyr_sp'
+        grid_lyr_shp = os.path.join(scratch_gdb, grid_name)
+        arcpy.GridIndexFeatures_cartography(grid_lyr_shp, buffer_sp_fc, "", "", "", gridsize, gridsize)
+        
+        mxd_mm_sp = arcpy.mapping.MapDocument(PSR_config.mxd_survey_pipeline_mm)
+        df_mm_sp = arcpy.mapping.ListDataFrames(mxd_mm_sp,"*")[0]
+        df_mm_sp.spatialReference = out_coordinate_system
+        # part 1: the overview map
+        # add grid layer
+        grid_layer = arcpy.mapping.Layer(gridlyrfile)
+        grid_layer.replaceDataSource(scratch_gdb,"FILEGDB_WORKSPACE","grid_lyr_sp")
+        arcpy.mapping.AddLayer(df_sp,grid_layer,"Top")
+        
+        df_sp.extent = grid_layer.getExtent()
+        df_sp.scale = df_sp.scale * 1.1
+        
+        mxd_sp.saveACopy(os.path.join(scratch_folder, "mxd_sp.mxd"))
+        mxd_sp_tmp = arcpy.mapping.MapDocument(os.path.join(scratch_folder,"mxd_sp.mxd"))
+        arcpy.mapping.ExportToJPEG(mxd_sp_tmp, outputjpg_sp, "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
             
-            ### Survey
+        if not os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText)):
+            os.mkdir(os.path.join(report_path, 'PSRmaps', OrderNumText))
+            shutil.copy(outputjpg_sp, os.path.join(report_path, 'PSRmaps', OrderNumText))
+            del mxd_sp
+            del df_sp
+        shutil.copy(outputjpg_sp, os.path.join(report_path, 'PSRmaps', OrderNumText))
+            
+        # part 2: the data driven pages
+        page = 1
+        page = int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))  + page
+
+        addBuffertoMxd("buffer_sp",df_mm_sp)
+        addOrdergeomtoMxd("ordergeoNamePR", df_mm_sp)
+
+        grid_layer_mm = arcpy.mapping.ListLayers(mxd_mm_sp,"Grid" ,df_mm_sp)[0]
+        grid_layer_mm.replaceDataSource(scratch_gdb, "FILEGDB_WORKSPACE","grid_lyr_sp")
+        arcpy.CalculateAdjacentFields_cartography(grid_lyr_shp, 'PageNumber')
+        mxd_mm_sp.saveACopy(os.path.join(scratch_folder, "mxd_mm_sp.mxd"))
+        
+        for i in range(1,int(arcpy.GetCount_management(grid_lyr_shp).getOutput(0))+1):
+            arcpy.SelectLayerByAttribute_management(grid_layer_mm, "NEW_SELECTION", ' "PageNumber" =  ' + str(i))
+            df_mm_sp.extent = grid_layer_mm.getSelectedExtent(True)
+            df_mm_sp.scale = df_mm_sp.scale * 1.1
+            arcpy.SelectLayerByAttribute_management(grid_layer_mm, "CLEAR_SELECTION")
+
+            title_text = arcpy.mapping.ListLayoutElements(mxd_mm_sp, "TEXT_ELEMENT", "title")[0]
+            title_text.text = "Survey & Pipeline - Page " + str(i)
+            title_text.elementPositionX = 0.468
+            arcpy.RefreshTOC()
+
+            arcpy.mapping.ExportToJPEG(mxd_mm_sp, outputjpg_sp[0:-4]+str(i)+".jpg", "PAGE_LAYOUT", 480, 640, 150, "False", "24-BIT_TRUE_COLOR", 85)
+            if not os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText)):
+                os.mkdir(os.path.join(report_path, 'PSRmaps', OrderNumText))
+            shutil.copy(outputjpg_sp[0:-4]+str(i)+".jpg", os.path.join(report_path, 'PSRmaps', OrderNumText))
+        del mxd_mm_sp
+        del df_mm_sp
+    
+    ### Save Survey and Pipeline data in the DB
+    try:
+        con = cx_Oracle.connect(connectionString)
+        cur = con.cursor()
+        ### Insert in order_detail_psr and eris_flex_reporting_psr tables
+        
+        ### Survey
+        if count_survey > 0:
             for surv_row in survey_cursor:
                 cur.callproc('eris_psr.InsertOrderDetail', (OrderIDText, erisid,'17251'))
                 erisid += 1
-            ### Pipeline
+        ### Pipeline
+        if count_pipeline > 0:
             for pipe_row in pipeline_cursor:
                 cur.callproc('eris_psr.InsertOrderDetail', (OrderIDText, erisid,'17250'))
                 query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',1, 'Pipe Line ID',pipe_row.PLINE_ID))
@@ -639,80 +641,79 @@ try:
                 query = cur.callproc('eris_psr.InsertFlexRep', (OrderIDText, erisid, '17250',2,'',7, 'Diameter (inches)',pipe_row.DIAMETER))
                 erisid += 1
             
-            ### Insert in eris_maps_psr table
-            if os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText, OrderNumText+'_US_SURVEY_PIPELINE.jpg')):
-                query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'SURVEY_PIPELINE', OrderNumText+'_US_SURVEY_PIPELINE.jpg', 1))
-                if multipage_sp == True:
-                    for i in range(1,page):
-                        query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'SURVEY_PIPELINE', OrderNumText+'_US_SURVEY_PIPELINE'+str(i)+'.jpg', i+1))
+        ### Insert in eris_maps_psr table
+        if os.path.exists(os.path.join(report_path, 'PSRmaps', OrderNumText, OrderNumText+'_US_SURVEY_PIPELINE.jpg')):
+            query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'SURVEY_PIPELINE', OrderNumText+'_US_SURVEY_PIPELINE.jpg', 1))
+            if multipage_sp == True:
+                for i in range(1,page):
+                    query = cur.callproc('eris_psr.InsertMap', (OrderIDText, 'SURVEY_PIPELINE', OrderNumText+'_US_SURVEY_PIPELINE'+str(i)+'.jpg', i+1))
 
-            else:
-                print( 'No survey and pipleline map is available')
-        finally:
-            cur.close()
-        ### Generate KML if need viewer
-        if need_viewer:
-            df_sp.spatialRef = srWGS84
+        else:
+            print( 'No survey and pipleline map is available')
+    finally:
+        cur.close()
+    ### Generate KML if need viewer
+    if need_viewer:
+        df_sp.spatialRef = srWGS84
+        
+        #re-focus using Buffer layer for multipage
+        if multipage_sp:
+            buffer_layer = arcpy.mapping.ListLayers(mxd_sp, "Buffer", df_sp)[0]
+            df_sp.extent = buffer_layer.getSelectedExtent(False)
+            df_sp.scale = df_sp.scale * 1.1
+        df_as_feature = arcpy.Polygon(arcpy.Array([df_sp.extent.lowerLeft, df_sp.extent.lowerRight, df_sp.extent.upperRight, df_sp.extent.upperLeft]),
+                    df_sp.spatialReference)
+        sp_df_extent = os.path.join(scratch_gdb,"sp_df_extent_WGS84")
+        arcpy.Project_management(df_as_feature, sp_df_extent, srWGS84)
+        ### Select pipeline by dataframe extent to generate kml file
+        arcpy.SelectLayerByLocation_management(pipeline_lyr, 'intersect',sp_df_extent)
+        if int((arcpy.GetCount_management(pipeline_lyr).getOutput(0))) > 0:
+            pipeline_visible_fields = ['PLINE_ID','STATUS_CD','STATUS_CD','T4PERMIT','COMMODITY1','CMDTY_DESC','OPER_NM','SYS_NM','DIAMETER']
+            pipeline_field_info = ""
+            pipeline_field_list = arcpy.ListFields(pipeline_lyr.dataSource)
+            for field in pipeline_field_list:
+                if field.name in pipeline_visible_fields:
+                        pipeline_field_info = pipeline_field_info + field.name + " " + field.name + " VISIBLE;"
+                else:
+                    pipeline_field_info = pipeline_field_info + field.name + " " + field.name + " HIDDEN;"
+            # save Pipeline layer 
+            pipeline_lyr_file = os.path.join(scratch_folder,'pipeline.lyr')
+            arcpy.SaveToLayerFile_management(pipeline_lyr, pipeline_lyr_file, "ABSOLUTE")
             
-            #re-focus using Buffer layer for multipage
-            if multipage_sp:
-                buffer_layer = arcpy.mapping.ListLayers(mxd_sp, "Buffer", df_sp)[0]
-                df_sp.extent = buffer_layer.getSelectedExtent(False)
-                df_sp.scale = df_sp.scale * 1.1
-            df_as_feature = arcpy.Polygon(arcpy.Array([df_sp.extent.lowerLeft, df_sp.extent.lowerRight, df_sp.extent.upperRight, df_sp.extent.upperLeft]),
-                        df_sp.spatialReference)
-            sp_df_extent = os.path.join(scratch_gdb,"sp_df_extent_WGS84")
-            arcpy.Project_management(df_as_feature, sp_df_extent, srWGS84)
-            ### Select pipeline by dataframe extent to generate kml file
-            arcpy.SelectLayerByLocation_management(pipeline_lyr, 'intersect',sp_df_extent)
-            if int((arcpy.GetCount_management(pipeline_lyr).getOutput(0))) > 0:
-                pipeline_visible_fields = ['PLINE_ID','STATUS_CD','STATUS_CD','T4PERMIT','COMMODITY1','CMDTY_DESC','OPER_NM','SYS_NM','DIAMETER']
-                pipeline_field_info = ""
-                pipeline_field_list = arcpy.ListFields(pipeline_lyr.dataSource)
-                for field in pipeline_field_list:
-                    if field.name in pipeline_visible_fields:
-                            pipeline_field_info = pipeline_field_info + field.name + " " + field.name + " VISIBLE;"
-                    else:
-                        pipeline_field_info = pipeline_field_info + field.name + " " + field.name + " HIDDEN;"
-                # save Pipeline layer 
-                pipeline_lyr_file = os.path.join(scratch_folder,'pipeline.lyr')
-                arcpy.SaveToLayerFile_management(pipeline_lyr_file, pipeline_lyr_file, "ABSOLUTE")
-                
-                pipeline_tmp_lyr = arcpy.MakeFeatureLayer_management(pipeline_lyr, 'pipeline_tmp_lyr', "", "", pipeline_field_info[:-1])
-                arcpy.ApplySymbologyFromLayer_management(pipeline_tmp_lyr, pipeline_lyr_file)
-                
-                arcpy.LayerToKML_conversion(pipeline_tmp_lyr, os.path.join(viewerdir_kml,"pipeline.kmz"))
-            else:
-                arcpy.AddMessage('No Pipeline data for creating KML')
+            pipeline_tmp_lyr = arcpy.MakeFeatureLayer_management(pipeline_lyr, 'pipeline_tmp_lyr', "", "", pipeline_field_info[:-1])
+            arcpy.ApplySymbologyFromLayer_management(pipeline_tmp_lyr, pipeline_lyr_file)
             
-            ### Select Survey by dataframe extent to generate kml file
-            arcpy.SelectLayerByLocation_management(survey_lyr, 'intersect',sp_df_extent)
-            if int((arcpy.GetCount_management(survey_lyr).getOutput(0))) > 0:
-                survey_visible_fields = ['ANUM2','L1SURNAM']
-                survey_field_info = ""
-                survey_field_list = arcpy.ListFields(survey_lyr.dataSource)
-                for field in survey_field_list:
-                    if field.name in survey_visible_fields:
-                            survey_field_info = survey_field_info + field.name + " " + field.name + " VISIBLE;"
-                    else:
-                        survey_field_info = survey_field_info + field.name + " " + field.name + " HIDDEN;"
-                # save Survey layer 
-                survey_lyr_file = os.path.join(scratch_folder,'survey.lyr')
-                arcpy.SaveToLayerFile_management(survey_lyr, survey_lyr_file, "ABSOLUTE")
-                surveye_tmp_lyr = arcpy.MakeFeatureLayer_management(survey_lyr_file, 'surveye_tmp_lyr', "", "", survey_field_info[:-1])
-                arcpy.ApplySymbologyFromLayer_management(surveye_tmp_lyr, survey_lyr_file)
-                arcpy.LayerToKML_conversion(surveye_tmp_lyr, os.path.join(viewerdir_kml,"survey.kmz"))
-            else:
-                arcpy.AddMessage('No Pipeline data for creating KML')
-    else:
-        arcpy.AddMessage('There is no survey and pipeline data for this property')
-    
-    del mxd_sp
-    del mxd_sp_tmp
-    del df_sp
-
+            arcpy.LayerToKML_conversion(pipeline_tmp_lyr, os.path.join(viewerdir_kml,"pipeline.kmz"))
+        else:
+            arcpy.AddMessage('No Pipeline data for the order.')
+            
+        ### Select Survey by dataframe extent to generate kml file
+        arcpy.SelectLayerByLocation_management(survey_lyr, 'intersect',sp_df_extent)
+        if int((arcpy.GetCount_management(survey_lyr).getOutput(0))) > 0:
+            survey_visible_fields = ['ANUM2','L1SURNAM']
+            survey_field_info = ""
+            survey_field_list = arcpy.ListFields(survey_lyr.dataSource)
+            for field in survey_field_list:
+                if field.name in survey_visible_fields:
+                        survey_field_info = survey_field_info + field.name + " " + field.name + " VISIBLE;"
+                else:
+                    survey_field_info = survey_field_info + field.name + " " + field.name + " HIDDEN;"
+            # save Survey layer 
+            survey_lyr_file = os.path.join(scratch_folder,'survey.lyr')
+            arcpy.SaveToLayerFile_management(survey_lyr, survey_lyr_file, "ABSOLUTE")
+            surveye_tmp_lyr = arcpy.MakeFeatureLayer_management(survey_lyr_file, 'surveye_tmp_lyr', "", "", survey_field_info[:-1])
+            arcpy.ApplySymbologyFromLayer_management(surveye_tmp_lyr, survey_lyr_file)
+            arcpy.LayerToKML_conversion(surveye_tmp_lyr, os.path.join(viewerdir_kml,"survey.kmz"))
+        
+        else:
+            arcpy.AddMessage('No Survey data for the order. ')
+        del mxd_sp
+        del df_sp
+        del mxd_sp_tmp
+    arcpy.Delete_management(survey_lyr)
+    arcpy.Delete_management(pipeline_lyr)
 # current Topo map, no attributes ----------------------------------------------------------------------------------
-    print "--- starting Topo section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    arcpy.AddMessage( "--- starting Topo section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     bufferSHP_topo = os.path.join(scratch_folder,"buffer_topo.shp")
     arcpy.Buffer_analysis(orderGeometryPR, bufferSHP_topo, bufferDist_topo)
 
@@ -947,7 +948,7 @@ try:
                 del dfMM_topo
 
 # shaded relief map ----------------------------------------------------------------------------------------
-    print "--- starting relief " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    arcpy.AddMessage( "--- starting relief " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     mxd_relief = arcpy.mapping.MapDocument(mxdfile_relief)
     df_relief = arcpy.mapping.ListDataFrames(mxd_relief,"*")[0]
     df_relief.spatialReference = spatialRef
@@ -1123,7 +1124,7 @@ try:
         con.close()
 
 # Wetland Map only, no attributes ---------------------------------------------------------------------------------
-    print "--- starting Wetland section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    arcpy.AddMessage( "--- starting Wetland section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     bufferSHP_wetland = os.path.join(scratch_folder,"buffer_wetland.shp")
     arcpy.Buffer_analysis(orderGeometryPR, bufferSHP_wetland, bufferDist_wetland)
 
@@ -1220,7 +1221,7 @@ try:
 # NY Wetland Map only, no attributes ---------------------------------------------------------------------------------
     if ProvStateText =='NY':
 
-        print "--- starting NY Wetland section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+        arcpy.AddMessage( "--- starting NY Wetland section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
         bufferSHP_wetland = os.path.join(scratch_folder,"buffer_wetland.shp")
         # arcpy.Buffer_analysis(orderGeometryPR, bufferSHP_wetland, bufferDist_wetland)
 
@@ -1310,7 +1311,7 @@ try:
             con.close()
 
 # Floodplain -----------------------------------------------------------------------------------------------------
-    print "--- starting floodplain " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    arcpy.AddMessage( "--- starting floodplain " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
     bufferSHP_flood = os.path.join(scratch_folder,"buffer_flood.shp")
     arcpy.Buffer_analysis(orderGeometryPR, bufferSHP_flood, bufferDist_flood)
@@ -1494,7 +1495,7 @@ try:
             con.close()
 
 # GEOLOGY REPORT -------------------------------------------------------------------------------------------------
-    print "--- starting geology " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    arcpy.AddMessage("--- starting geology " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     bufferSHP_geol = os.path.join(scratch_folder,"buffer_geol.shp")
     arcpy.Buffer_analysis(orderGeometryPR, bufferSHP_geol, bufferDist_geol)
 
@@ -1640,7 +1641,7 @@ try:
             con.close()
 
 # SOIL REPORT ----------------------------------------------------------------------------------------------------------
-    print "--- starting Soil section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    arcpy.AddMessage("--- starting Soil section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     siteState = ProvStateText
     if siteState == 'HI':
         datapath_soil =PSR_config.datapath_soil_HI#r'\\cabcvan1fpr009\DATA_GIS\SSURGO\CONUS_2015\gSSURGO_HI.gdb'
@@ -1770,7 +1771,7 @@ try:
                     cursor = arcpy.SearchCursor(stable_muaggatt, "mukey = '" + str(mukey) + "'")
                     row = cursor.next()
                     mapunitdata['Map Unit Name'] = row.muname
-                    print '  map unit name: ' + row.muname
+                    # print '  map unit name: ' + row.muname
                     mapunitdata['Mukey'] = mukey          #note
                     mapunitdata['Musym'] = row.musym
                     row = None
@@ -1790,14 +1791,14 @@ try:
             mapunitdata["Soil_Percent"]  ="%s"%round(seqarray['SUM_Shape_'][i]/sum(seqarray['SUM_Shape_'])*100,2)+r'%'
             reportdata.append(mapunitdata)
 
-        for mapunit in reportdata:
-            print 'mapunit name: ' + mapunit['Map Unit Name']
-            if 'component' in mapunit.keys():
-                print 'Major component info are printed below'
-                for comp in mapunit['component']:
-                    print '    component name is ' + comp[0][0]
-                    for i in range(1,len(comp)):
-                        print '      '+comp[i][0] +': '+ comp[i][1]
+        # for mapunit in reportdata:
+        #     # print 'mapunit name: ' + mapunit['Map Unit Name']
+        #     if 'component' in mapunit.keys():
+        #         print 'Major component info are printed below'
+        #         for comp in mapunit['component']:
+        #             print '    component name is ' + comp[0][0]
+        #             for i in range(1,len(comp)):
+        #                 print '      '+comp[i][0] +': '+ comp[i][1]
 
         # create the map
         point = arcpy.Point()
@@ -1988,7 +1989,7 @@ try:
             con.close()
 
 # Water Wells and Oil and Gas Wells ------------------------------------------------------------------------------------------
-    print "--- starting WaterWells section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    arcpy.AddMessage("--- starting WaterWells section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     in_rows = arcpy.SearchCursor(orderGeometryPR)
     orderCentreSHP = os.path.join(scratch_folder, "SiteMarkerPR.shp")
     point1 = arcpy.Point()
@@ -2053,7 +2054,7 @@ try:
     wells_merge = os.path.join(scratch_folder, "wells_merge.shp")
     arcpy.Merge_management(mergelist, wells_merge)
     del eris_wells
-    print "--- WaterWells section, after merge " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    # print "--- WaterWells section, after merge " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
     # Calculate Distance with integration and spatial join- can be easily done with Distance tool along with direction if ArcInfo or Advanced license
     wells_mergePR= os.path.join(scratch_folder,"wells_mergePR.shp")
     arcpy.Project_management(wells_merge, wells_mergePR, out_coordinate_system)
@@ -2075,7 +2076,7 @@ try:
     arcpy.SpatialJoin_analysis(wells_sj, orderGeometryPR, wells_sja, "JOIN_ONE_TO_MANY", "KEEP_ALL","#", "CLOSEST","5000 Kilometers", "Dist_cent")  # this is used for mapkey calculation
 
     if int(arcpy.GetCount_management(os.path.join(wells_merge)).getOutput(0)) != 0:
-        print "--- WaterWells section, exists water wells "
+        # print "--- WaterWells section, exists water wells "
 
         wells_sja = getElevation(wells_sja,["X","Y","ID"])#wells_sja = arcpy.inhouseElevation_ERIS(wells_sja).getOutput(0)
         mxd_wells = arcpy.mapping.MapDocument(PSR_config.mxdfile_wells)
@@ -2219,7 +2220,7 @@ try:
     # send wells data to Oracle
     if (int(arcpy.GetCount_management(wells_sja).getOutput(0))== 0):
         # no records selected....
-        print 'No well records are selected....'
+        arcpy.AddMessage('No well records are selected....')
         try:
             con = cx_Oracle.connect(connectionString)
             cur = con.cursor()
@@ -2256,7 +2257,7 @@ try:
             con.close()
 
 # Radon -----------------------------------------------------------------------------------------------------------
-    print "--- starting Radon section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    arcpy.AddMessage("--- starting Radon section " + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
     bufferSHP_radon = os.path.join(scratch_folder,"buffer_radon.shp")
     arcpy.Buffer_analysis(orderGeometryPR, bufferSHP_radon, bufferDist_radon)
 
@@ -2275,7 +2276,7 @@ try:
     statelist = ''
     in_rows = arcpy.SearchCursor(states_clip)
     for in_row in in_rows:
-        print in_row.STUSPS
+        # print in_row.STUSPS
         statelist = statelist+ ',' + in_row.STUSPS
     statelist = statelist.strip(',')        #two letter state
     statelist_str = str(statelist)
@@ -2308,7 +2309,7 @@ try:
         arcpy.Clip_analysis(masterlyr_NHTowns, bufferSHP_radon, towns_clip)
         in_rows = arcpy.SearchCursor(towns_clip)
         for in_row in in_rows:
-            print in_row.NAME
+            # print in_row.NAME
             citylist = citylist + ','+in_row.NAME
         citylist = citylist.strip(',')
         del in_rows
@@ -2319,7 +2320,7 @@ try:
     ziplist = ''
     in_rows = arcpy.SearchCursor(zipcodes_clip)
     for in_row in in_rows:
-        print in_row.ZIP
+        # print in_row.ZIP
         ziplist = ziplist + ',' + in_row.ZIP
     ziplist = ziplist.strip(',')
     ziplist_str = str(ziplist)
@@ -2351,7 +2352,7 @@ try:
     arcpy.SelectLayerByLocation_management(masterLayer_dem, 'intersect', outBufferSHP)
 
     if (int((arcpy.GetCount_management(masterLayer_dem).getOutput(0)))== 0):
-        print "NO records selected for US"
+        arcpy.AddMEsssage("NO records selected for US")
         columns = arcpy.UpdateCursor(orderCentreSHP)
         for column in columns:
             column.Aspect = "Not Available"
@@ -2453,7 +2454,7 @@ try:
                     if float(asp.getOutput((0))) == -1:
                         asp_text = r'N/A'
                     row[2] = asp_text
-                    print "assign "+asp_text
+                    # print "assign "+asp_text
                     rows.updateRow(row)
                 else:
                     print "fail to use point XY to retrieve"
@@ -2481,25 +2482,25 @@ try:
     del in_row
     del in_rows
 
-    need_viewer = 'N'
-    try:
-        con = cx_Oracle.connect(connectionString)
-        cur = con.cursor()
+    # need_viewer = 'N'
+    # try:
+    #     con = cx_Oracle.connect(connectionString)
+    #     cur = con.cursor()
 
-        cur.execute("select psr_viewer from order_viewer where order_id =" + str(OrderIDText))
-        t = cur.fetchone()
-        if t != None:
-            need_viewer = t[0]
+    #     cur.execute("select psr_viewer from order_viewer where order_id =" + str(OrderIDText))
+    #     t = cur.fetchone()
+    #     if t != None:
+    #         need_viewer = t[0]
 
-    finally:
-        cur.close()
-        con.close()
+    # finally:
+    #     cur.close()
+    #     con.close()
 
     if need_viewer == 'Y':
         #clip wetland, flood, geology, soil and covnert .lyr to kml
         #for now, use clipFrame_topo to clip
         #added clip current topo
-      
+        
         viewerdir_topo = os.path.join(scratch_folder,OrderNumText+'_psrtopo')
         if not os.path.exists(viewerdir_topo):
             os.mkdir(viewerdir_topo)

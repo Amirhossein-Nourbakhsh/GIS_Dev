@@ -225,8 +225,8 @@ if __name__ == '__main__':
     input_doqq_footprint = r'\\cabcvan1nas003\doqq\AutoRebuild\DOQQ_INCREMENTAL\DOQQ_Incremental_05282021-06282021-FINAL\DOQQ_Incremental_05282021-06282021-FINAL_rectangle.shp'
     arcpy.AddMessage('Input file: %s' % input_doqq_footprint)
     # output_doqq_footprint = r'F:\Aerial_US\USImagery\Data\Seamless_Map.gdb\Aerial_Footprint_Mosaic'
-    sde_connection = r'C:\Users\HKiavarz\AppData\Roaming\ESRI\Desktop10.8\ArcCatalog\SDE_Test.sde'
-    output_doqq_footprint = r'C:\Users\HKiavarz\AppData\Roaming\ESRI\Desktop10.8\ArcCatalog\SDE_Test.sde\SDE.eris_aerial_footprint_DOQQ'
+    sde_connection = r'C:\Users\HKiavarz\AppData\Roaming\ESRI\Desktop10.8\ArcCatalog\SDE_Dev.sde'
+    output_doqq_footprint = os.path.join(sde_connection,'SDE.eris_aerial_footprint_DOQQ')
     # DQQQ_footprint_FC = r'\\cabcvan1nas003\doqq\DOQQ_ALL_11202020\DOQQ_ALL_WGS84.shp'
     log_file = os.path.join(arcpy.env.scratchFolder,'log_DOQQ_seamless.txt')
     arcpy.AddMessage(log_file)
