@@ -169,6 +169,7 @@ class LAYER():
         self.topowhite = os.path.join(machine_path,eris_report_path,'layer',"topo_white.lyr")
         self.road = os.path.join(machine_path,eris_report_path,r"layer","Roadadd_notransparency.lyr")
         self.eris_polygon = os.path.join(machine_path,eris_report_path,r"layer","eris_polygon.lyr")
+        self.erisPolys = os.path.join(machine_path,eris_report_path,r"layer","ErisPClip.lyr")
 
 class DATA():
     def __init__(self,machine_path):
@@ -326,8 +327,8 @@ def addERISpoint(pointInfo,mxd,output_folder,out_points=r'points.shp'):
     out_pointsSHP = os.path.join(output_folder,out_points)
     erisPointsLayer = config.LAYER.erisPoints
     #erisIDs_4points = dict((_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID'),[('m%sc'%(_.get("MAP_KEY_LOC"))) if _.get("MAP_KEY_NO_TOT")==1 else ('m%sc(%s)'%(_.get("MAP_KEY_LOC"), _.get("MAP_KEY_NO_TOT"))) ,float('%s'%(1 if round(_.get("ELEVATION_DIFF"),2)>0.0 else 0 if round(_.get("ELEVATION_DIFF"),2)==0.0 else -1 if round(_.get("ELEVATION_DIFF"),2)<0.0 else 100))]) for _ in pointInfo)
-    erisIDs_4points = dict((_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID'),[('m%sc'%(_.get("MAP_KEY_LOC"))) if _.get("MAP_KEY_NO_TOT")==1 else ('m%sc(%s)'%(_.get("MAP_KEY_LOC"), _.get("MAP_KEY_NO_TOT"))) ,float('%s'%(-2 if _.get("ELEVATION_DIFF")=='-' else 1 if float(_.get("ELEVATION_DIFF"))>0.0 else 0 if float(_.get("ELEVATION_DIFF"))==0.0 else -1 if float(_.get("ELEVATION_DIFF"))<0.0 else 100))]) for _ in pointInfo)
-    erispoints = dict((int(_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID')),(_.get("X"),_.get("Y"))) for _ in pointInfo)
+    erisIDs_4points = dict((_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID'),[('m%sc'%(_.get("MAP_KEY_LOC"))) if _.get("MAP_KEY_NO_TOT")==1 else ('m%sc(%s)'%(_.get("MAP_KEY_LOC"), _.get("MAP_KEY_NO_TOT"))) ,float('%s'%(-2 if _.get("ELEVATION_DIFF")=='-' else 1 if float(_.get("ELEVATION_DIFF"))>0.0 else 0 if float(_.get("ELEVATION_DIFF"))==0.0 else -1 if float(_.get("ELEVATION_DIFF"))<0.0 else 100))]) for _ in pointInfo if _.get('GEOMETRY_TYPE') == 'POINT' )
+    erispoints = dict((int(_.get('DATASOURCE_POINTS')[0].get('ERIS_DATA_ID')),(_.get("X"),_.get("Y"))) for _ in pointInfo if _.get('GEOMETRY_TYPE') == 'POINT')
     # print(erisIDs_4points)
     if erisIDs_4points != {}:
         arcpy.CreateFeatureclass_management(output_folder, out_points, "MULTIPOINT", "", "DISABLED", "DISABLED", arcpy.SpatialReference(4269))
@@ -352,6 +353,43 @@ def addERISpoint(pointInfo,mxd,output_folder,out_points=r'points.shp'):
         del rows
         mxd.addLayer(erisPointsLayer,output_folder,out_points)
     return erisPointsLayer
+
+def addERISpoly(polyInfo,mxd,output_folder,out_polys=r'polys.shp'):
+    out_polysSHP = os.path.join(output_folder,out_polys)
+    erisPolys = config.LAYER.eris_polygon
+    erisPolysLayer = config.LAYER.erisPolys
+    erisPolyIDs = {}
+    for _ in polyInfo:
+        elevation_diff = _.get('ELEVATION_DIFF')
+        if elevation_diff > 0:
+            elevation_diff = 1
+        elif elevation_diff < 0:
+            elevation_diff = -1
+        elif elevation_diff == 0:
+            elevation_diff = 0
+        else:
+            elevation_diff = 100
+
+        if _.get('GEOMETRY_TYPE') == 'POLYGON':
+            for PolyID in _.get('DATASOURCE_POINTS'):
+                erisPolyIDs[PolyID['ERIS_DATA_ID']] = {'MAP_KEY_NO_TOT':_.get('MAP_KEY_NO_TOT'),'MAP_KEY_LOC':_.get('MAP_KEY_LOC'),'ELEVATION_DIFF':elevation_diff}
+    arcpy.MakeFeatureLayer_management(erisPolys,'eris_polys')
+    arcpy.SelectLayerByAttribute_management('eris_polys','NEW_SELECTION','ID IN(%s)'%(str(erisPolyIDs.keys()).strip('[]')))
+    #arcpy.SelectLayerByAttribute_management('eris_polys','NEW_SELECTION','"ID" IN(888398812, 888398814)')
+    arcpy.CopyFeatures_management('eris_polys', out_polysSHP)
+    arcpy.AddField_management(out_polysSHP, "mapkey", "TEXT", "", "", "20", "", "NULLABLE", "NON_REQUIRED", "")
+    arcpy.AddField_management(out_polysSHP, "eleRank", "SHORT", "12", "6", "", "", "NULLABLE", "NON_REQUIRED", "")
+
+    cursor = arcpy.da.UpdateCursor(out_polysSHP, ['ID','mapkey','eleRank'])
+    for row in cursor:
+            #row[1]='m%sc'%(erisPolyIDs[row[0]]['MAP_KEY_LOC'])
+        row[1]='m%sc'%(erisPolyIDs[row[0]]['MAP_KEY_LOC']) if erisPolyIDs[row[0]]['MAP_KEY_NO_TOT']==1 else 'm%sc(%s)'%(erisPolyIDs[row[0]]['MAP_KEY_LOC'],erisPolyIDs[row[0]]['MAP_KEY_NO_TOT'])
+        row[2]=erisPolyIDs[row[0]]['ELEVATION_DIFF']
+        cursor.updateRow(row)
+    del cursor
+    mxd.addLayer(erisPolysLayer,output_folder,out_polys)
+    #mxd.replaceLayerSource("Eris Polygons",scratch,out_polys)
+    return erisPolysLayer
 
 def addRoadLayer(mxd,buffer_name, output_folder):
     road_clip = r"road_clip"
@@ -396,7 +434,7 @@ def exportMap(mxd,output_folder,map_name,UTMzone,buffer_dict,buffer_sizes_list,u
     mxd.mxd.saveACopy(os.path.join(output_folder,"mxd.mxd"))
     return temp
 
-def exportmulti_page(mxd,output_folder,map_name,UTMzone,grid_size,erisPointLayer,buffer_dict,buffer_sizes_list,unit_code, buffer_name=r"buffer_%s.shp"):
+def exportmulti_page(mxd,output_folder,map_name,UTMzone,grid_size,erisPointLayer,erisPolysLayer,buffer_dict,buffer_sizes_list,unit_code, buffer_name=r"buffer_%s.shp"):
     bufferLayer = config.LAYER.buffer
     gridlr = "gridlr"
     gridlrSHP = os.path.join(output_folder, gridlr+'.shp')
@@ -405,10 +443,12 @@ def exportmulti_page(mxd,output_folder,map_name,UTMzone,grid_size,erisPointLayer
     mxd.replaceLayerSource("Grid",output_folder,gridlr)
     arcpy.CalculateAdjacentFields_cartography(gridlrSHP, u'PageNumber')
     mxd.turnLabel(erisPointLayer,False)
+    mxd.turnLabel(erisPolysLayer,False)
     mxd.df.spatialReference = arcpy.SpatialReference('WGS 1984 UTM Zone %sN'%UTMzone)
     mxd.resolution =250
     temp = getMaps(mxd, output_folder,map_name, buffer_dict, buffer_sizes_list, unit_code, buffer_name=r"buffer_%s.shp", multi_page = True)
     mxd.turnLabel(erisPointLayer,True)
+    mxd.turnLabel(erisPolysLayer,True)
     mxd.addTextoMap("Map","Grid: ")
     mxd.addTextoMap("Grid",'<dyn type="page"  property="number"/>')
     ddMMDDP = mxd.mxd.dataDrivenPages
@@ -603,7 +643,7 @@ def exportAerial(mxd,output_folder,geometry_name,geometry_type,centroid,scale,ou
         mxd.df.spatialReference = arcpy.SpatialReference(3857)
         projectproperty = arcpy.mapping.ListLayers(mxd.mxd,"Project Property",df)[0]
         projectproperty.visible = False
-        arcpy.mapping.ExportToJPEG(mxd.mxd,os.path.join(scratchviewer,aerialYear+'_aerial.jpg'), df, 3825, 4950, world_file = True, jpeg_quality = 85)
+        arcpy.mapping.ExportToJPEG(mxd.mxd,os.path.join(scratchviewer,aerialYear+'_aerial.jpg'), df, 1900, 2450, world_file = True, jpeg_quality = 85)
         exportViewerTable(os.path.join(scratchviewer,aerialYear+'_aerial.jpg'),aerialYear+'_aerial.jpg')
     mxd.mxd.saveACopy(os.path.join(output_folder,"mapbing.mxd"))
 
@@ -651,68 +691,40 @@ def exportViewerTable(ImagePath,FileName):
 
     delete_query = "delete from overlay_image_info where order_id = '%s' and type = '%s' and filename = '%s'"%(order_id,metaitem['type'],FileName)
     insert_query = "insert into overlay_image_info values (%s, %s, %s, %.5f, %.5f, %.5f, %.5f, %s, '', '')" % (str(order_id), orderInfo['ORDER_NUM'], "'" + metaitem['type']+"'", metaitem['lat_sw'], metaitem['long_sw'], metaitem['lat_ne'], metaitem['long_ne'],"'"+metaitem['imagename']+"'" )
-    image_info = Oracle('test').insert_overlay(delete_query,insert_query)
+    image_info = Oracle(env).insert_overlay(delete_query,insert_query)
     
-def export_to_kml(order_number,mxd_doc):
+def export_to_kml(order_number,layer):
     scratch_kml_path = os.path.join(scratch,order_number +'_eris_kml')
     if not os.path.exists(scratch_kml_path):
         os.mkdir(scratch_kml_path)
-    df = arcpy.mapping.ListDataFrames(mxd_doc.mxd,'')[0]    # the spatial reference here is UTM zone #, need to change to WGS84 Web Mercator
-    df.spatialReference = srWGS84
-    #re-focus using Buffer layer for multipage
-    if multi_page:
-        buffer_layer = arcpy.mapping.ListLayers(mxd_doc.mxd, "Buffer", df)[0]
-        df.extent = buffer_layer.getSelectedExtent(False)
-        df.scale = df.scale * 1.1
-    df_as_feature = arcpy.Polygon(arcpy.Array([df.extent.lowerLeft, df.extent.lowerRight, df.extent.upperRight, df.extent.upperLeft]), df.spatialReference)
-    del df, mxd_doc
-    eris_kml_extend = os.path.join(scratch,"eris_kml_extend.shp")
-    arcpy.Project_management(df_as_feature, eris_kml_extend, srWGS84)
-    ### Select pipeline by dataframe extent
-    eris_polygon_lyr = arcpy.mapping.Layer(config.LAYER.eris_polygon)
-    arcpy.SelectLayerByLocation_management(eris_polygon_lyr, 'intersect',df_as_feature)
-    del df_as_feature
-    if int((arcpy.GetCount_management(eris_polygon_lyr).getOutput(0))) > 0:
-        desired_fields = ['source']
-        field_info = ""
-        field_list = arcpy.ListFields(eris_polygon_lyr.dataSource)
-        for field in field_list:
-            if field.name.lower() in desired_fields:
-                if field.name.lower() == 'source':
-                    field_info = field_info + field.name + " " + "Wetland CLASS" + " VISIBLE;"
-                else:
-                    pass
-            else:
-                field_info = field_info + field.name + " " + field.name + " HIDDEN;"
-       
-        eris_polygon_lyr = arcpy.MakeFeatureLayer_management(eris_polygon_lyr, 'eris_polygon_lyr', '', '', field_info)
-        arcpy.ApplySymbologyFromLayer_management(eris_polygon_lyr,config.LAYER.eris_polygon)
-        arcpy.LayerToKML_conversion(eris_polygon_lyr, os.path.join(scratch_kml_path,"eris_polygon.kmz"))
-        
+    if int((arcpy.GetCount_management(layer).getOutput(0))) > 0:
+        desired_fields = ['mapkey','elerank','ds_oid',]
+        field_info = arcpy.Describe(layer).fieldInfo
+        for i in range(0, field_info.count):
+            if field_info.getFieldName(i).lower() in desired_fields:
+                arcpy.DeleteField_management(layer,field_info.getFieldName(i))
+    arcpy.LayerToKML_conversion(layer, os.path.join(scratch_kml_path,"eris_polygon.kmz"))        
         ### copy kml to viewer folder
-        if os.path.exists(os.path.join(viewer_path, order_number + '_eris_kml')):
-                shutil.rmtree(os.path.join(viewer_path, order_number + '_eris_kml'))
-        shutil.copytree(scratch_kml_path, os.path.join(viewer_path, order_number + '_eris_kml'))
-        arcpy.AddMessage('      -- Create ERIS polygon kmz map: %s' % os.path.join(viewer_path, order_number + '_eris_kml'))
-        arcpy.Delete_management(eris_polygon_lyr)
-        ### upload kml from eris polygon into xplorer
-        kml_upload_url = kml_upload_service_url + order_num
-        urllib.urlopen(kml_upload_url)
-    
+    if os.path.exists(os.path.join(viewer_path, order_number + '_eris_kml')):
+        shutil.rmtree(os.path.join(viewer_path, order_number + '_eris_kml'))
+    shutil.copytree(scratch_kml_path, os.path.join(viewer_path, order_number + '_eris_kml'))
+    arcpy.AddMessage('      -- Create ERIS polygon kmz map: %s' % os.path.join(viewer_path, order_number + '_eris_kml'))
+    ### upload kml from eris polygon into xplorer
+    kml_upload_url = kml_upload_service_url + order_num
+    urllib.urlopen(kml_upload_url)
+
 if __name__ == '__main__': 
     try:
         # INPUT #####################################
         order_id = arcpy.GetParameterAsText(0).strip()
-        # order_id = '1080823'#'736799'#
         
         if arcpy.GetParameterAsText(1).lower()=='yes' or arcpy.GetParameterAsText(1).lower()=='y':
             multi_page = True
         else: 
             multi_page = False
         grid_size = arcpy.GetParameterAsText(2).strip()#0#
-        # grid_size = 1
         code = arcpy.GetParameterAsText(3).strip()#'usa'#
-        # code = 'USA'
+
        
         if arcpy.GetParameterAsText(4).lower()=='yes' or arcpy.GetParameterAsText(4).lower()=='y':
              is_instant = True
@@ -729,7 +741,7 @@ if __name__ == '__main__':
         srWGS84 = arcpy.SpatialReference(4326)
         # Server Setting ############################
         code = 9093 if code.strip().lower()=='usa' else 9036 if code.strip().lower()=='can' else 9049 if code.strip().lower()=='mex' else ValueError
-        config = DevConfig(code)
+        config = TestConfig(code)
 
         # PARAMETERS ################################
         order_geometry = r'order_geometry.shp'
@@ -799,7 +811,7 @@ if __name__ == '__main__':
 
         # 4-2 add ERIS points
         erisPointsInfo = Oracle(env).call_function('geterispointdetails',order_id)
-        
+        erisPolysLayer=addERISpoly(erisPointsInfo,map1,scratch)
         erisPointsLayer=addERISpoint(erisPointsInfo,map1,scratch)
         end = timeit.default_timer()
         arcpy.AddMessage(('4-3 add ERIS points to Map object', round(end -start,4)))
@@ -825,7 +837,7 @@ if __name__ == '__main__':
             zoneUTM =' %s'%zoneUTM
 
         if multi_page==True:
-            [maplist,map_mm] = exportmulti_page(map1,scratch,map_mm_name,zoneUTM,grid_size,erisPointsLayer,buffers,buffer_sizes,code,buffer_name)
+            [maplist,map_mm] = exportmulti_page(map1,scratch,map_mm_name,zoneUTM,grid_size,erisPointsLayer,erisPolysLayer,buffers,buffer_sizes,code,buffer_name)
             end = timeit.default_timer()
             arcpy.AddMessage(('4-4 MM map to pdf', round(end -start,4)))
             start=end
@@ -894,7 +906,7 @@ if __name__ == '__main__':
         # Xplorer
         if xplorerflag == 'Y':
             # os.path.join(scratch,'mxd.mxd')
-            export_to_kml(order_num,map1)
+            export_to_kml(order_num,erisPolysLayer)
             
             if os.path.exists(os.path.join(viewer_path,orderInfo['ORDER_NUM']+'_current')):
                 shutil.rmtree(os.path.join(viewer_path,orderInfo['ORDER_NUM']+'_current'))
