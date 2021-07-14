@@ -42,9 +42,9 @@ def getspatial_ref(infc,outfc):
     else:
         return infc
 indbconnection = 'TEST_US'#arcpy.GetParameterAsText(0)#r'\\cabcvan1gis005\GISData\Connection to GMTESTC.sde'#arcpy.GetParameterAsText(0) #location of connection file
-infc = r'\\Cabcvan1fpr001\data\12CTESTING\US\_Federal\NPL\2021_05_20\PYLOADER\NationalPrioritiesList.gdb\Region9_boundaries'#arcpy.GetParameterAsText(1)#r'C:\Users\JLoucks\Desktop\HFA_CO.shp'#arcpy.GetParameterAsText(1) This can be a shapefile or .gdb featureclass
-outfc = 'candelete4'#arcpy.GetParameterAsText(2)#'HFA_CO_test'#arcpy.GetParameterAsText(2) #name of table that will be imported to db
-scratch = r'C:\Users\JLoucks\Documents\JL\test9'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test1'
+infc = r'\\CABCVAN1FPR001\DATA\12CTESTING\US\_Federal\FUDS\2021_07_01\PYLOADER\Formerly_Used_Defense_Sites__FUDS__Public_Property_Boundaries.shp'#arcpy.GetParameterAsText(1)#r'C:\Users\JLoucks\Desktop\HFA_CO.shp'#arcpy.GetParameterAsText(1) This can be a shapefile or .gdb featureclass
+outfc = 'FUDS_PUB_PROPERTY_BOUND'#arcpy.GetParameterAsText(2)#'HFA_CO_test'#arcpy.GetParameterAsText(2) #name of table that will be imported to db
+scratch = r'C:\Users\JLoucks\Documents\JL\test2'#arcpy.env.scratchFolder#r'C:\Users\JLoucks\Documents\JL\test1'
 scratchgdb = os.path.join(scratch,'scratch.gdb')
 arcpy.CreateFileGDB_management(scratch,'scratch.gdb')
 geo_check_table = os.path.join(scratch,"checkGeometryResult")
@@ -61,6 +61,9 @@ try:
         arcpy.AddWarning(str(arcpy.GetCount_management(geo_check_table)[0]) + ' problems found with geometry, please check log here: '+geo_check_table)
     else:
         arcpy.AddMessage('Geometry OK')
+    if arcpy.Exists(os.path.join(indbconnection,outfc)):
+        arcpy.AddWarning('Deleting existing FC...')
+        arcpy.Delete_management(os.path.join(indbconnection,outfc))
     arcpy.AddMessage('Copying Feature Class to DB')
     arcpy.FeatureClassToFeatureClass_conversion(infc,indbconnection,outfc,config_keyword='SDO_GEOMETRY')
 except Exception as e:
