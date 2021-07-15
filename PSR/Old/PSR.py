@@ -188,7 +188,7 @@ try:
     arcpy.env.OverWriteOutput = True
 
 # LOCAL #######################################################################################################
-    OrderIDText = '1130099'
+    OrderIDText = '1130134'
     scratch_gdb = arcpy.CreateFileGDB_management(scratch_folder,r"scratch_gdb.gdb")   # for tables to make Querytable
     scratch_gdb = os.path.join(scratch_folder,r"scratch_gdb.gdb")
 ###############################################################################################################
@@ -705,7 +705,6 @@ try:
                 
             ### Select Survey by dataframe extent to generate kml file
             arcpy.SelectLayerByLocation_management(survey_lyr, 'intersect',sp_df_extent)
-            if 1 == 2:
             # if int((arcpy.GetCount_management(survey_lyr).getOutput(0))) > 0:
                 survey_visible_fields = ['ANUM2','L1SURNAM']
                 survey_field_info = ""
