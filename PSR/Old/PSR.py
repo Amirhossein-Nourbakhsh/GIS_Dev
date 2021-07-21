@@ -552,12 +552,12 @@ try:
         # if count_pipeline > 0 or count_survey > 0:
         survey_cursor = arcpy.SearchCursor(survey_lyr) # use it for inserting in DB 
         pipeline_cursor = arcpy.SearchCursor(pipeline_lyr) # use it for inserting in DB 
-        
+
         df_sp = arcpy.mapping.ListDataFrames(mxd_sp,"*")[0]
-        df_sp.spatialRef = out_coordinate_system
         df_sp.extent = data_frame_desc.extent
         addBuffertoMxd("buffer_sp",df_sp)
         addOrdergeomtoMxd("ordergeoNamePR", df_sp)
+        df_sp.spatialReference = out_coordinate_system
         for lyr in arcpy.mapping.ListLayers(mxd_sp):
             # clear selections
             if lyr.isFeatureLayer:
