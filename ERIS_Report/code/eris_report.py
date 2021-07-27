@@ -374,7 +374,10 @@ def addERISpoly(polyInfo,mxd,output_folder,out_polys=r'polys.shp'):
             for PolyID in _.get('DATASOURCE_POINTS'):
                 erisPolyIDs[PolyID['ERIS_DATA_ID']] = {'MAP_KEY_NO_TOT':_.get('MAP_KEY_NO_TOT'),'MAP_KEY_LOC':_.get('MAP_KEY_LOC'),'ELEVATION_DIFF':elevation_diff}
     arcpy.MakeFeatureLayer_management(erisPolys,'eris_polys')
-    arcpy.SelectLayerByAttribute_management('eris_polys','NEW_SELECTION','ID IN(%s)'%(str(erisPolyIDs.keys()).strip('[]')))
+    if len(erisPolyIDs.keys()) > 0:
+        arcpy.SelectLayerByAttribute_management('eris_polys','NEW_SELECTION','ID IN(%s)'%(str(erisPolyIDs.keys()).strip('[]')))
+    else:
+        arcpy.SelectLayerByAttribute_management('eris_polys','NEW_SELECTION','ID IN(' ')')
     #arcpy.SelectLayerByAttribute_management('eris_polys','NEW_SELECTION','"ID" IN(888398812, 888398814)')
     arcpy.CopyFeatures_management('eris_polys', out_polysSHP)
     arcpy.AddField_management(out_polysSHP, "mapkey", "TEXT", "", "", "20", "", "NULLABLE", "NON_REQUIRED", "")
