@@ -1,6 +1,8 @@
 import sys, os, string, arcpy, logging
 from arcpy import env, mapping
 import time
+from pdf2image import convert_from_path
+from PIL import Image
 
 def generate_map_key(input_fc):
     try:
