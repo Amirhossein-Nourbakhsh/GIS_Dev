@@ -116,7 +116,6 @@ def image_to_tiff_conversion(input_dir):
 
     print "Total number of input files: " + str(total_inputfile_count)   
     print "Total number of files converted to tiff: " + str(total_files_converted)       
-    if total_inputfile_count - total_files_converted > 0
     return total_files_converted
 
 
