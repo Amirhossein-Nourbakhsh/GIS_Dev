@@ -109,6 +109,8 @@ bufferlyrfile = os.path.join(mxdpath,"buffer.lyr")
 orderGeomlyrfile_point = os.path.join(mxdpath,"orderPoint.lyr")
 orderGeomlyrfile_polyline = os.path.join(mxdpath,"orderLine.lyr")
 orderGeomlyrfile_polygon = os.path.join(mxdpath,"orderPoly.lyr")
+orderGeomlyrred_polyline = os.path.join(mxdpath,"orderLine_red.lyr")
+orderGeomlyrred_polygon = os.path.join(mxdpath,"orderPoly_red.lyr")
 gridlyr = os.path.join(mxdpath,"grid.lyr")
 
 # pdfs

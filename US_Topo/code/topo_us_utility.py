@@ -446,7 +446,7 @@ class topo_us_rpt(object):
 
     def customrpt(self, order_obj):
         # Get company flag for custom colour border
-        if order_obj.company_id == 109085: # Mid-Atlantic Associates, Inc.
+        if order_obj.company_id in [109085,19803]: # Mid-Atlantic Associates, Inc.
             cfg.annot_poly = cfg.annot_poly_c
             cfg.annot_line = cfg.annot_line_c
             arcpy.AddMessage('...custom colour boundary set.')
@@ -571,9 +571,15 @@ class topo_us_rpt(object):
         if self.order_obj.geometry.type.lower() == 'point' or self.order_obj.geometry.type.lower() == 'multipoint':
             orderGeomlyrfile = cfg.orderGeomlyrfile_point
         elif self.order_obj.geometry.type.lower() == 'polyline':
-            orderGeomlyrfile = cfg.orderGeomlyrfile_polyline
+            if is_terracon == 'Y':
+                orderGeomlyrfile = cfg.orderGeomlyrred_polyline
+            else:
+                orderGeomlyrfile = cfg.orderGeomlyrfile_polyline
         else:
-            orderGeomlyrfile = cfg.orderGeomlyrfile_polygon
+            if is_terracon == 'Y':
+                orderGeomlyrfile = cfg.orderGeomlyrred_polygon
+            else:
+                orderGeomlyrfile = cfg.orderGeomlyrfile_polygon
 
         arcpy.Buffer_analysis(cfg.orderGeometryPR, cfg.orderBuffer, '0.5 KILOMETERS')                     # has to be not smaller than the search radius to void white page
 
