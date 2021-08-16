@@ -26,9 +26,18 @@ class Metadata_Export_Process():
                 directory = os.path.join(root, item)
                 directory_paths.append(directory)
 
+        fim_subdir = set()
+        nested_subdir = set()
         parsed_metadata = []              # List of parsed file paths to export to excel
-
+        
         for item in directory_paths:
+            for file in os.listdir(item):
+                if os.path.isfile(os.path.join(item,file)):
+                    fim_subdir.add(item)
+                else:
+                     nested_subdir.add(item)
+        
+        for item in fim_subdir:                  
             delimiter_count = item.count("\\")
             if delimiter_count == 8:
                 path = item                                   # \\10.6.246.73\Sanborn\Alaska\Anchorage\1916 C\Volume 2
@@ -260,7 +269,8 @@ if __name__ == '__main__':
 
     province = "Hawaii"    #Change prov 
     path = os.path.join(r"\\10.6.246.73\Sanborn", province)
-    outxlsx = r"\\10.6.246.73\Sanborn\GSFIM_Parsed_Metadata.xlsx"
+    # outxlsx = r"\\10.6.246.73\Sanborn\GSFIM_Parsed_Metadata.xlsx"
+    outxlsx = r"C:\Users\czhou\Desktop\gs_test.xlsx"
 
     metadata_export = Metadata_Export_Process()
     print "...Extracting metadata for the state of " + province
