@@ -408,8 +408,11 @@ class topo_us_rpt(object):
             # export mxd to pdf       
             outputpdf = os.path.join(cfg.scratch, "map_"+seriesText+"_"+year+".pdf")            
             arcpy.RefreshTOC()  
-            arcpy.RefreshActiveView()         
-            arcpy.mapping.ExportToPDF(mxd, outputpdf, "PAGE_LAYOUT", 640, 480, 350, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "LAYERS_AND_ATTRIBUTES", True, 90)
+            arcpy.RefreshActiveView()     
+            quality = 90    
+            if cfg.compression:
+                quality = 20
+            arcpy.mapping.ExportToPDF(mxd, outputpdf, "PAGE_LAYOUT", 640, 480, 350, "BEST", "RGB", True, "ADAPTIVE", "RASTERIZE_BITMAP", False, True, "LAYERS_AND_ATTRIBUTES", True, quality)
             
             mxd.saveACopy(os.path.join(cfg.scratch, seriesText + "_" + year + ".mxd"))
 
@@ -1008,15 +1011,20 @@ class topo_us_rpt(object):
 
                     if multipage == "Y":
                         pdfmm = PdfFileReader(open(os.path.join(cfg.scratch,"map_" + seriesText + "_" + year + "_mm.pdf"),'rb'))
-                        
+                        if cfg.compression:
+                            pdf.getPage(0).compressContentStreams()
                         output.addPage(pdf.getPage(0))
                         output.addBookmark(year + "_" + seriesText.replace("75", "7.5"), n+2)   #n+1 to accommodate the summary page                        
                         
                         for x in range(pdfmm.getNumPages()):
+                            if cfg.compression:
+                                pdfmm.getPage(x).compressContentStreams()
                             output.addPage(pdfmm.getPage(x))
                             n = n + 1
                         n = n + 1
                     else:
+                        if cfg.compression:
+                            pdf.getPage(0).compressContentStreams()
                         output.addPage(pdf.getPage(0))
                         output.addBookmark(year + "_" + seriesText.replace("75", "7.5"), n+2)   #n+1 to accommodate the summary page
                         n = n + 1

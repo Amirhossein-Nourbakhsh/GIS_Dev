@@ -25,31 +25,33 @@ def server_loc_config(configpath,environment):
     server_config = {'dbconnection':dbconnection,'reportcheck':reportcheck,'viewer':reportviewer,'instant':reportinstant,'noninstant':reportnoninstant,'viewer_upload':upload_viewer}
     return server_config
 
-# def createScratch():
-#     scratch = r'C:\Users\JLoucks\Documents\JL\test1'
-#     scratchgdb = "scratch.gdb"
-#     if not os.path.exists(scratch):
-#         os.mkdir(scratch)
-#     if not os.path.exists(os.path.join(scratch, scratchgdb)):
-#         arcpy.CreateFileGDB_management(scratch, "scratch.gdb")
-#     return scratch, scratchgdb
+def createScratch():
+    # scratch = r'C:\Users\JLoucks\Documents\JL\test1'
+    scratchgdb = "scratch.gdb"
+    # if not os.path.exists(scratch):
+    #     os.mkdir(scratch)
+    if not os.path.exists(os.path.join(scratch, scratchgdb)):
+        arcpy.CreateFileGDB_management(scratch, "scratch.gdb")
+    return scratchgdb
 
-# arcpy parameters
+##arcpy parameters
 OrderIDText = arcpy.GetParameterAsText(0)
 BufsizeText = arcpy.GetParameterAsText(1)
-yesBoundary = (arcpy.GetParameterAsText(2)).lower()
+yesBoundary = 'yes' #if arcpy.GetParameterAsText(2).lower()=='yes' or arcpy.GetParameterAsText(2).lower()=='arrow' else ('fixed' if arcpy.GetParameterAsText(2).lower()=='fixed' else 'no')
 multipage = arcpy.GetParameterAsText(3)
 gridsize = arcpy.GetParameterAsText(4)
-scratch = arcpy.env.scratchFolder
-scratchgdb = arcpy.env.scratchGDB
-
-# OrderIDText = 1080305
-# BufsizeText = '2.4'
-# yesBoundary = 'yes'
-# multipage = 'no'
-# gridsize = '0'
-# scratch = r'C:\Users\JLoucks\Documents\JL\test1'
+compression = arcpy.GetParameterAsText(5)
+#scratch = arcpy.env.scratchFolder
+scratch = r"C:\Amir\scratch"
 # scratchgdb = arcpy.env.scratchGDB
+
+OrderIDText = '1260924'
+BufsizeText = '2.4'
+yesBoundary = 'yes'#'yes' if arcpy.GetParameterAsText(2).lower()=='yes' or arcpy.GetParameterAsText(2).lower()=='arrow' else ('fixed' if arcpy.GetParameterAsText(2).lower()=='fixed' else 'no')
+gridsize = '0'
+multipage = 'no'
+compression = True
+scratchgdb = createScratch()
 
 # order info
 order_obj = models.Order().get_order(OrderIDText)

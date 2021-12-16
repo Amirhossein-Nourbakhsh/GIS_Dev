@@ -125,10 +125,13 @@ if __name__ == '__main__':
             # create blank pdf and append cover and summary pages
             tf.goCoverPage(cfg.coverPdf)
             sort_order = tf.goSummaryPage(dictlist, cfg.summaryPdf)
-
+            
             coverPages = PdfFileReader(open(cfg.coverPdf,'rb'))
             summaryPages = PdfFileReader(open(cfg.summaryPdf,'rb'))
             output = PdfFileWriter()
+            if cfg.compression == 'Y':
+                coverPages.getPage(0).compressContentStreams()
+                summaryPages.getPage(0).compressContentStreams()
             output.addPage(coverPages.getPage(0))
             output.addPage(summaryPages.getPage(0))
             output.addBookmark("Cover Page",0)
